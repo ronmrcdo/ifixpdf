@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-29T07:00:34.663919+00:00",
+  "title": "Design System: iFixPDF",
+  "extensions": {
+    "colorMeta": {
+      "editor-accent": {
+        "role": "primary",
+        "displayName": "Editor muted blue"
+      },
+      "library-accent": {
+        "role": "primary",
+        "displayName": "Library forest green"
+      },
+      "desk-accent": {
+        "role": "primary",
+        "displayName": "Desk warm amber"
+      }
+    },
+    "shadows": [
+      {
+        "name": "editor-toast",
+        "value": "0 6px 24px #17223126",
+        "purpose": "Transient editor feedback only."
+      },
+      {
+        "name": "home-notice",
+        "value": "0 5px 20px #0002",
+        "purpose": "Transient Home feedback only."
+      },
+      {
+        "name": "desktop-menu",
+        "value": "0 6px 18px #0002",
+        "purpose": "Open File, View, and Help menu popovers."
+      },
+      {
+        "name": "recent-file-menu",
+        "value": "0 6px 18px #17223126",
+        "purpose": "Transient Home right-click or More actions menu."
+      },
+      {
+        "name": "document-dialog",
+        "value": "0 12px 40px #17223133",
+        "purpose": "Password and split modal dialogs above the muted backdrop."
+      }
+    ],
+    "motion": [
+      {
+        "name": "editor-ease",
+        "value": "cubic-bezier(.23,1,.32,1)",
+        "purpose": "Editor transform and toast easing."
+      },
+      {
+        "name": "control-transition",
+        "value": "120ms",
+        "purpose": "Control state changes."
+      },
+      {
+        "name": "cover-reveal",
+        "value": "150ms",
+        "purpose": "Opacity and 4px translation."
+      },
+      {
+        "name": "toast-enter",
+        "value": "180ms",
+        "purpose": "Editor notification entrance."
+      },
+      {
+        "name": "pressed",
+        "value": "scale(.98)",
+        "purpose": "Button press feedback."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation:none!important;transition:none!important",
+        "purpose": "Applied under prefers-reduced-motion:reduce."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "editor-wide",
+        "value": "1500px"
+      },
+      {
+        "name": "editor-compress",
+        "value": "1150px"
+      },
+      {
+        "name": "editor-rail",
+        "value": "960px"
+      },
+      {
+        "name": "home-wide",
+        "value": "1600px"
+      },
+      {
+        "name": "home-compress",
+        "value": "1200px"
+      },
+      {
+        "name": "home-three-column",
+        "value": "1000px"
+      },
+      {
+        "name": "compact",
+        "value": "760px"
+      },
+      {
+        "name": "narrow",
+        "value": "520px"
+      }
+    ],
+    "branding": {
+      "mark": "public/brand/ifixpdf-mark.svg",
+      "lockup": "public/brand/ifixpdf-logo.svg",
+      "masterSize": "48px",
+      "cornerRadius": "10px",
+      "tile": "#3465A7",
+      "fold": "#BED2EE",
+      "letter": "#FFFFFF",
+      "wordmark": "#253245",
+      "wordmarkFont": "IBM Plex Sans 600, embedded WOFF2 in standalone SVG",
+      "titlebarMark": "24px",
+      "alternateTitlebarMark": "22px",
+      "rasterSizes": [
+        32,
+        128,
+        256,
+        512
+      ],
+      "rasterDirectory": "public/brand/",
+      "bundleIcons": [
+        "src-tauri/icons/icon.png",
+        "src-tauri/icons/icon.ico"
+      ],
+      "motion": "none"
+    }
+  },
+  "components": [
+    {
+      "name": "Editor primary",
+      "kind": "button",
+      "refersTo": "editor-primary",
+      "description": "Primary action within the editor concept.",
+      "html": "<button class=\"ds-editor-primary\">Open PDF</button>",
+      "css": ".ds-editor-primary{font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:5px;background:#3465a7;color:#fff;padding:7px 10px;font-size:12px;min-height:32px;cursor:pointer;transition:background 120ms,color 120ms}.ds-editor-primary:hover{background:#28568f}.ds-editor-primary:focus-visible{outline:2px solid #3465a7;outline-offset:3px}.ds-editor-primary:active{transform:scale(.98)}@media(prefers-reduced-motion:reduce){.ds-editor-primary{transition:none!important}}"
+    },
+    {
+      "name": "Library primary",
+      "kind": "button",
+      "refersTo": "library-primary",
+      "description": "Primary action within the library concept.",
+      "html": "<button class=\"ds-library-primary\">Open PDF</button>",
+      "css": ".ds-library-primary{font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:5px;background:#286449;color:#fff;padding:11px 18px;font-size:12px;min-height:38px;cursor:pointer;transition:background 120ms,color 120ms}.ds-library-primary:hover{filter:brightness(.91)}.ds-library-primary:focus-visible{outline:2px solid #286449;outline-offset:4px}.ds-library-primary:active{transform:scale(.98)}@media(prefers-reduced-motion:reduce){.ds-library-primary{transition:none!important}}"
+    },
+    {
+      "name": "Desk primary",
+      "kind": "button",
+      "refersTo": "desk-primary",
+      "description": "Primary action within the desk concept.",
+      "html": "<button class=\"ds-desk-primary\">Open PDF</button>",
+      "css": ".ds-desk-primary{font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;display:inline-flex;align-items:center;gap:8px;border:0;border-radius:5px;background:#dfb075;color:#27221c;padding:9px 13px;font-size:12px;min-height:38px;cursor:pointer;transition:background 120ms,color 120ms}.ds-desk-primary:hover{filter:brightness(.91)}.ds-desk-primary:focus-visible{outline:2px solid #dfb075;outline-offset:4px}.ds-desk-primary:active{transform:scale(.98)}@media(prefers-reduced-motion:reduce){.ds-desk-primary{transition:none!important}}"
+    },
+    {
+      "name": "Library search",
+      "kind": "input",
+      "refersTo": "library-search",
+      "description": "Compact bordered search field.",
+      "html": "<input class=\"ds-search\" placeholder=\"Search PDFs\" aria-label=\"Search PDFs\">",
+      "css": ".ds-search{font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;background:var(--surface,#fff);color:var(--ink,#26362f);border:1px solid var(--line,#e0e7e1);border-radius:5px;padding:9px 11px;font-size:12px}.ds-search:hover{border-color:var(--accent,#286449)}.ds-search:focus-visible{outline:2px solid var(--accent,#286449);outline-offset:4px}"
+    },
+    {
+      "name": "Library navigation tree",
+      "kind": "nav",
+      "description": "Desktop navigation tree uses quiet selected rows.",
+      "html": "<nav class=\"ds-tree\"><button class=\"ds-tree-item ds-active\">Home</button><button class=\"ds-tree-item\">Pinned</button></nav>",
+      "css": ".ds-tree{font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;background:#f4f6f4;width:190px;padding:20px 10px;display:flex;flex-direction:column;gap:4px}.ds-tree-item{background:none;border:0;border-radius:4px;color:#26362f;text-align:left;padding:9px 12px;font:inherit;font-size:12px;cursor:pointer}.ds-tree-item:hover{background:#eaf0eb}.ds-tree-item.ds-active{background:#e3ebe5;font-weight:500}.ds-tree-item:focus-visible{outline:2px solid #286449;outline-offset:4px}.ds-tree-item:active{transform:scale(.98)}"
+    },
+    {
+      "name": "Library count badge",
+      "kind": "chip",
+      "description": "Quiet count beside a section label.",
+      "html": "<span class=\"ds-count\">4</span>",
+      "css": ".ds-count{font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;font-size:11px;background:var(--soft,#eef3ef);color:var(--muted,#627269);padding:1px 5px;border-radius:4px}"
+    },
+    {
+      "name": "Library document cover",
+      "kind": "card",
+      "refersTo": "library-cover",
+      "description": "Flat backplate with a rectangular document and focusable open action.",
+      "html": "<button class=\"ds-cover\"><span class=\"ds-paper\">Northstar<br>Project proposal</span><span class=\"ds-open\">Open PDF</span></button>",
+      "css": ".ds-cover{font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;position:relative;display:flex;width:230px;height:219px;padding:11px 19px 0;background:#e9eeeb;border:0;border-radius:3px;overflow:hidden;cursor:pointer}.ds-paper{display:block;width:100%;background:white;color:#26362f;padding:20px 10px;text-align:left;font-size:12px}.ds-open{position:absolute;left:10px;right:10px;bottom:10px;background:white;padding:7px;opacity:0;transform:translateY(4px);transition:opacity 150ms,transform 150ms}.ds-cover:hover .ds-open,.ds-cover:focus-visible .ds-open{opacity:1;transform:none}.ds-cover:focus-visible{outline:2px solid #286449;outline-offset:4px}.ds-cover:active{transform:scale(.98)}@media(prefers-reduced-motion:reduce){.ds-open{transition:none!important}}"
+    },
+    {
+      "name": "Desk selected document",
+      "kind": "custom",
+      "refersTo": "desk-row-selected",
+      "description": "Compact selected list row; metadata remains secondary.",
+      "html": "<button class=\"ds-row\" aria-pressed=\"true\"><span>Project proposal.pdf<small>8 pages · PDF document</small></span></button>",
+      "css": ".ds-row{font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;display:flex;align-items:center;width:330px;min-height:66px;padding:12px 13px;background:#30343b;color:#e4e5e7;border:0;border-bottom:1px solid #2b2e34;border-radius:0;text-align:left;cursor:pointer;font-size:12px}.ds-row small{display:block;margin-top:5px;font-size:11px;color:#a2a6ac}.ds-row:hover{background:#30343b}.ds-row:focus-visible{outline:2px solid #dfb075;outline-offset:4px}.ds-row:active{transform:scale(.98)}"
+    },
+    {
+      "name": "Desktop command menu",
+      "kind": "custom",
+      "description": "File menu with shortcuts and a bordered transient popover.",
+      "html": "<details class=\"ds-menu\"><summary>File</summary><div class=\"ds-menu-popup\"><button>Open PDF… <span>Ctrl+O</span></button><button>Merge PDFs…</button></div></details>",
+      "css": ".ds-menu{position:relative;font-family:\"IBM Plex Sans\",\"Segoe UI\",sans-serif;font-size:12px;color:var(--ink,#26362f)}.ds-menu summary{list-style:none;padding:5px 10px;border-radius:3px;cursor:pointer}.ds-menu summary:hover,.ds-menu[open] summary{background:var(--hover,#eaf0eb)}.ds-menu-popup{position:absolute;top:28px;left:0;min-width:235px;padding:4px;border:1px solid var(--line,#e0e7e1);border-radius:5px;background:var(--surface,#fff);box-shadow:0 6px 18px #0002;z-index:20}.ds-menu-popup button{display:flex;justify-content:space-between;width:100%;background:none;border:0;border-radius:5px;padding:8px 12px;text-align:left;color:inherit;font:inherit;cursor:pointer}.ds-menu-popup button:hover{background:var(--hover,#eaf0eb)}.ds-menu-popup span{font-size:11px;color:var(--muted,#627269);margin-left:30px}.ds-menu summary:focus-visible,.ds-menu-popup button:focus-visible{outline:2px solid var(--accent,#286449);outline-offset:4px}"
+    },
+    {
+      "name": "Original source selection",
+      "kind": "custom",
+      "description": "A real first-page thumbnail, filename, and compact page metadata inside a bordered source card.",
+      "html": "<div class=\"ds-source\"><button class=\"ds-source-select\"><span class=\"ds-source-thumb\" aria-hidden=\"true\">1</span><span class=\"ds-source-info\"><strong>Project proposal.pdf</strong><small>4 pages · Pages 1–4</small></span></button></div>",
+      "css": ".ds-source{font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;background:#edf3fb;border:1px solid #b8cde8;border-radius:7px;padding:9px 9px 6px;color:#252a32;width:230px}.ds-source-select{display:flex;align-items:center;gap:9px;min-height:54px;width:100%;padding:0;border:0;border-radius:3px;background:none;color:inherit;text-align:left;cursor:pointer}.ds-source-select:hover{background:transparent}.ds-source-select:focus-visible{outline:2px solid #3465a7;outline-offset:3px}.ds-source-thumb{display:block;flex:none;width:35px;height:48px;background:white;border:1px solid #d9e1ec;color:#5c6878;font-size:11px;text-align:center;padding-top:10px}.ds-source-info{display:block;min-width:0}.ds-source-info strong{display:block;font-size:12px;font-weight:500}.ds-source-info small{display:block;font-size:11px;color:#5c6878;margin-top:7px}"
+    },
+    {
+      "name": "Original page navigator",
+      "kind": "input",
+      "description": "Bounded page-number input in the preview footer.",
+      "html": "<label class=\"ds-page-jump\">Page <input type=\"number\" value=\"1\" min=\"1\" max=\"9\" aria-label=\"Go to page\"> <span>of 9</span></label>",
+      "css": ".ds-page-jump{font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;display:flex;align-items:center;gap:7px;font-size:12px;color:#536174;background:#e8edf3;padding:8px}.ds-page-jump input{width:40px;padding:4px 3px;text-align:center;font:inherit;border:1px solid #cdd6e3;border-radius:5px;background:#f9fbfe;appearance:textfield}.ds-page-jump input:hover{border-color:#3465a7}.ds-page-jump input:focus-visible{outline:2px solid #3465a7;outline-offset:3px}"
+    },
+    {
+      "name": "Merge workflow",
+      "kind": "nav",
+      "refersTo": "editor-workflow",
+      "description": "Four ordered task steps in the original workspace, with current and completed states.",
+      "html": "<nav class=\"ds-workflow\" aria-label=\"Merge progress\"><ol><li class=\"ds-complete\"><button><span>✓</span>Add PDFs</button></li><li class=\"ds-current\"><button aria-current=\"step\"><span>2</span>Arrange &amp; review</button></li><li><button disabled><span>3</span>Save PDF</button></li><li><button disabled><span>4</span>Done</button></li></ol></nav>",
+      "css": ".ds-workflow{font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;height:56px;display:flex;align-items:center;padding:0 24px;border-top:1px solid var(--line,#e6e9ed);border-bottom:1px solid var(--line,#e6e9ed);background:#f9fbfd}.ds-workflow ol{display:flex;gap:22px;list-style:none;padding:0;margin:0}.ds-workflow button{display:flex;align-items:center;gap:8px;padding:6px 0;border:0;background:none;color:#627084;font:inherit;font-size:12px;cursor:pointer}.ds-workflow button span{display:flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;background:#e9edf3;color:#5c6878;font-size:11px}.ds-workflow .ds-current button{color:#2d5b98;font-weight:500}.ds-workflow .ds-current span{background:#3465a7;color:white}.ds-workflow .ds-complete span{background:transparent;color:#4d7560}.ds-workflow button:disabled{color:#778392;cursor:default;opacity:1}.ds-workflow button:hover:not(:disabled){background:#e8ecf1}.ds-workflow button:focus-visible{outline:2px solid #3465a7;outline-offset:3px}"
+    },
+    {
+      "name": "Reorderable page card",
+      "kind": "custom",
+      "refersTo": "editor-page-card",
+      "description": "Retained page-image card with outer multi-selection, insertion mark, and keyboard/button move alternatives.",
+      "html": "<div class=\"ds-page-card ds-before\" draggable=\"true\"><label class=\"ds-page-check\"><input type=\"checkbox\" checked aria-label=\"Select page 2\"></label><button class=\"ds-page-preview\" aria-pressed=\"true\"><span class=\"ds-page-paper\">Project proposal</span><span class=\"ds-page-label\"><strong>2</strong><span>Project proposal.pdf</span></span></button><div class=\"ds-page-moves\"><button aria-label=\"Move page 2 earlier\">‹</button><span>Page 2</span><button aria-label=\"Move page 2 later\">›</button></div></div>",
+      "css": ".ds-page-card{font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;position:relative;width:160px;background:#d9e6f8;outline:1px solid #81a1cc;border-radius:5px;padding:5px;cursor:grab}.ds-page-card.ds-before:before{content:\"\";position:absolute;top:0;bottom:0;left:-8px;width:3px;background:#3465a7;border-radius:2px;pointer-events:none}.ds-page-card.ds-dragging{opacity:.5}.ds-page-preview{display:flex;flex-direction:column;gap:10px;width:100%;padding:5px;border:1px solid transparent;border-radius:5px;background:transparent;cursor:grab}.ds-page-paper{display:block;min-height:170px;width:100%;background:white;color:#344b69;padding-top:18px;font-size:12px}.ds-page-label{display:flex;gap:8px;width:100%;min-width:0;text-align:left}.ds-page-label strong{font-size:12px;font-weight:500;color:#344b69}.ds-page-label>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;color:#5c6878}.ds-page-preview:hover{background:#dce5f1}.ds-page-preview:focus-visible{outline:2px solid #3465a7;outline-offset:1px}.ds-page-moves{display:flex;align-items:center;justify-content:space-between;padding:3px 4px 0;font-size:11px;color:#5c6878}.ds-page-moves button{width:25px;min-height:25px;padding:4px;border:0;border-radius:5px;background:none;color:inherit;cursor:pointer}.ds-page-moves button:hover{background:#e8ecf1}.ds-page-moves button:focus-visible{outline:2px solid #3465a7;outline-offset:3px}.ds-page-check{position:absolute;left:10px;top:10px;z-index:2;background:#f8faff;padding:3px;border-radius:4px;display:flex}.ds-page-check input{margin:0;accent-color:#3465a7}"
+    },
+    {
+      "name": "Page selection toolbar",
+      "kind": "custom",
+      "description": "Sticky batch selection and delete/duplicate/extract controls; becomes non-sticky on compact screens.",
+      "html": "<div class=\"ds-selection\"><label><input type=\"checkbox\" checked>2 selected</label><button>Duplicate</button><button>Extract</button><button class=\"ds-delete\">Delete</button></div>",
+      "css": ".ds-selection{font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;position:sticky;top:-1px;z-index:4;display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:7px 9px;background:#f4f7fc;border-radius:5px;min-height:41px}.ds-selection label{display:flex;align-items:center;gap:7px;margin-right:auto;font-size:11px;color:#465d7b}.ds-selection input{accent-color:#3465a7}.ds-selection button{font:inherit;font-size:11px;min-height:27px;padding:5px 7px;border:0;border-radius:5px;background:none;color:#252a32;cursor:pointer}.ds-selection button:hover{background:#e8ecf1}.ds-selection .ds-delete:hover{background:#f6e5e3;color:#a03f36}.ds-selection button:focus-visible,.ds-selection input:focus-visible{outline:2px solid #3465a7;outline-offset:3px}@media(max-width:760px){.ds-selection{position:static}}"
+    },
+    {
+      "name": "Document action dialog",
+      "kind": "custom",
+      "description": "Shared password and split modal: compact fields, inline validation, processing label, and download-request completion. Passwords match, require at least eight characters, and are not persisted; AES-256 creates a protected copy. Split ranges or every page export numbered PDF parts as a ZIP without changing the workspace.",
+      "html": "<section class=\"ds-dialog\" role=\"dialog\" aria-modal=\"true\" aria-labelledby=\"ds-dialog-title\"><header><h2 id=\"ds-dialog-title\">Add password</h2><button aria-label=\"Close\">×</button></header><p>Save a protected copy. A password will be required to open it.</p><label>Password<input type=\"password\" minlength=\"8\" autocomplete=\"new-password\"></label><label>Confirm password<input type=\"password\" autocomplete=\"new-password\"></label><small>Use at least 8 characters. iFixPDF does not store it.</small><p class=\"ds-error\" role=\"alert\"></p><footer><button>Cancel</button><button class=\"ds-primary\">Save protected copy</button></footer></section>",
+      "css": ".ds-dialog{font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;border:1px solid #c8d2df;border-radius:8px;padding:24px;color:#252a32;background:#fff;box-shadow:0 12px 40px #17223133}.ds-dialog header,.ds-dialog footer{display:flex;align-items:center;justify-content:space-between;gap:8px}.ds-dialog h2{font-size:18px;font-weight:600}.ds-dialog p{font-size:13px;line-height:1.6;color:#526174}.ds-dialog label{display:block;font-size:12px;margin-bottom:17px}.ds-dialog input{display:block;width:100%;padding:10px;border:1px solid #d9dfe6;border-radius:5px;margin-top:7px;font:inherit}.ds-dialog small{font-size:11px;line-height:1.65;color:#526174}.ds-dialog footer{justify-content:flex-end;margin-top:22px}.ds-dialog button{font:inherit;font-size:12px;min-height:32px;padding:7px 10px;border:1px solid #e6e9ed;border-radius:5px;background:white;color:#252a32;cursor:pointer}.ds-dialog button:hover{background:#e8ecf1}.ds-dialog .ds-primary{background:#3465a7;color:white}.ds-dialog .ds-primary:hover{background:#28568f}.ds-dialog button:focus-visible,.ds-dialog input:focus-visible{outline:2px solid #3465a7;outline-offset:3px}.ds-dialog .ds-error{color:#a03930;font-size:12px}.ds-dialog button:disabled{opacity:.5;cursor:default}"
+    },
+    {
+      "name": "Read-only page browser",
+      "kind": "custom",
+      "description": "Read-only thumbnail browsing opens a page; no selection, mutation, or drag controls.",
+      "html": "<div class=\"ds-read-pages\"><button class=\"ds-read-page\" aria-label=\"Preview page 1\"><span class=\"ds-read-paper\">Project proposal</span><span>Page 1</span></button></div>",
+      "css": ".ds-read-pages{font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,185px));align-content:start;gap:23px;justify-content:start}.ds-read-page{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:10px;padding:8px;background:#f4f7fb;border:0;border-radius:5px;min-width:0;align-self:start;cursor:pointer}.ds-read-page:hover{background:#dce7f5}.ds-read-paper{display:block;width:100%;min-height:150px;background:white;padding-top:15px;font-size:12px;color:#344b69}.ds-read-page>span:last-child{font-size:12px;color:#4d6480}.ds-read-page:focus-visible{outline:2px solid #3465a7;outline-offset:3px}.ds-read-page:active{transform:none}@media(max-width:520px){.ds-read-pages{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}}"
+    },
+    {
+      "name": "Recent-file context menu",
+      "kind": "custom",
+      "description": "Home right-click or More actions menu. Supports arrow/Home/End navigation, Escape and focus restoration; Merge combines the clicked document with checked rows.",
+      "html": "<div class=\"ds-recent-menu\" role=\"menu\" aria-label=\"Document actions\"><button role=\"menuitem\">View PDF</button><button role=\"menuitem\">Edit PDF</button><button role=\"menuitem\">Merge PDFs</button><div class=\"ds-divider\"></div><button role=\"menuitem\">Add password…</button></div>",
+      "css": ".ds-recent-menu{font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;background:white;color:#252a32;border:1px solid #d4dde9;border-radius:5px;padding:5px;min-width:205px;box-shadow:0 6px 18px #17223126}.ds-recent-menu button{display:flex;width:100%;justify-content:flex-start;gap:10px;padding:9px 11px;text-align:left;font:inherit;font-size:12px;border:0;border-radius:5px;background:none;color:inherit;cursor:pointer}.ds-recent-menu button:hover,.ds-recent-menu button:focus{background:#eaf0f9}.ds-recent-menu button:focus-visible{outline:2px solid #3465a7;outline-offset:3px}.ds-divider{height:1px;background:#e6e9ed;margin:4px}"
+    },
+    {
+      "name": "iFixPDF identity",
+      "kind": "custom",
+      "description": "Static folded F mark and IBM Plex Sans 600 wordmark. Original titlebar mark is 24px; alternate titlebars use 22px. Standalone SVG lockup embeds its font.",
+      "html": "<div class=\"ds-brand\"><svg class=\"ds-brand-mark\" xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 48 48\" fill=\"none\"><rect width=\"48\" height=\"48\" rx=\"10\" fill=\"#3465A7\"/><path d=\"M13 10h16l7 8H20v6h10v7H20v8h-7V10Z\" fill=\"#fff\"/><path d=\"M29 10v8h7l-7-8Z\" fill=\"#BED2EE\"/></svg>\n<span>iFixPDF</span></div>",
+      "css": ".ds-brand{display:flex;align-items:center;gap:8px;color:#252a32;font-family:\"IBM Plex Sans\",\"Segoe UI\",Arial,sans-serif;font-size:16px;font-weight:600;letter-spacing:-.35px;line-height:1}.ds-brand-mark{display:block;width:24px;height:24px;flex:none;animation:none;transition:none}"
+    }
+  ],
+  "narrative": {
+    "northStar": "A document assembly desk",
+    "overview": "The preferred original blue-grey framed-sheet editor retains its white workspace and three-pane composition, refined with real source thumbnails, fit-whole-page preview, page-number input, persistent custom export ranges, and export summary. Its matching Home is a flat recent-PDF list in the same shell, with row selection, Merge selected, and a right-click/More actions menu. Password and split dialogs download copies while preserving the workspace. Print Jobs and This Session / Project Pack navigation have been removed; visible Combine labels now say Merge while legacy internal keys remain. Alternate green Explorer and charcoal/amber workbench concepts remain separately documented. The Tauri/Rust shell is uncompiled on Windows.",
+    "keyCharacteristics": [
+      "Real document previews",
+      "Bundled IBM Plex Sans and Lucide icons",
+      "Flat tonal surfaces",
+      "Keyboard focus and reduced motion",
+      "Guided merge stages and individually reorderable pages within the original frame",
+      "Retained keyed page thumbnails, multi-selection, and undo/redo",
+      "Locally persisted draft recovery",
+      "Dedicated read-only Preview and separate Edit PDF workspace",
+      "Home row selection and keyboard-accessible document action menus",
+      "AES-256 password-protected copies and split-to-ZIP downloads without workspace changes"
+    ],
+    "rules": [
+      {
+        "name": "The Concept Boundary Rule",
+        "body": "Each concept owns its palette and composition.",
+        "section": "colors"
+      },
+      {
+        "name": "The Flat Surface Rule",
+        "body": "Resting panes remain flat; transient notifications, open menu popovers, and modal dialogs use shadows.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Fixed Identity Rule",
+        "body": "Preserve the folded F geometry, solid blue tile, pale fold, and iFixPDF spelling across concepts; scale the supplied artwork proportionally and keep it static.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do preserve final cascade and responsive overrides.",
+      "Do preserve visible focus and reduced motion."
+    ],
+    "donts": [
+      "Don't merge the concept palettes.",
+      "Don't add promotional bands, website navigation, or a website footer.",
+      "Don't add shadows to resting paper, cards, navigation, or panes.",
+      "Don't claim native Windows print or installer verification."
+    ]
+  }
+}

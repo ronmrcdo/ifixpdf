@@ -1,0 +1,46 @@
+# Verification
+
+Production build passes (`npm run build`). Vite warns about the PDF engine chunk size; the engine and worker are bundled locally.
+
+Browser checks passed:
+- Three sample PDFs combine to 9 pages; source removal produces 6 pages.
+- Export downloads a real PDF; reimport confirms its expected page count.
+- Preview navigation, 9 page thumbnails, rotation controls, and source reordering operate without page errors.
+- Prototype queue add/pause/resume and empty-state controls work.
+- Home recent documents persist after reload. Search, pin filters, list/grid switching and selection work.
+- Opening Estimate.pdf from either Home reopens a 2-page PDF in the editor.
+- Desk reopening also passes at 390px after the review fix.
+- Library and Desk have no document-level horizontal overflow at 390px.
+
+Design Taste source lint: 0 failures. Browser inspector: editor at 1440/1280/768/390 and both Homes at 1440/768/390 report 0 failures. Compact 11–12px secondary text remains an advisory appropriate to the desktop utility prototype. Desk's empty preview triggers an empty-area advisory on a fresh database; populated screenshots show the actual PDF preview. Inspector Home screenshots use empty-state storage; supplied user-facing screenshots use generated sample PDFs.
+
+Impeccable's engine-based context and detector could not run because its engine is not installed and its default cache is not writable. References, craft-floor review and a separate finish reviewer were used. Reviewer disposition: ship as a design prototype; no desktop-blocking defect found. A mobile-only reopening issue was subsequently corrected and verified.
+
+Windows compilation, native dialog/download behavior, Windows spooler, printer driver, installer and DPI/accessibility verification on Windows have not been performed. No Windows executable is claimed.
+
+## Desktop revision
+Browser checks confirm File menu interaction, Library details/large-icon switching, document filtering and PDF reopening, and Workbench preview selection. Both revised layouts fit 1280/768/390 widths without document-level horizontal overflow. Zero browser page errors. Title controls invoke Tauri window methods only inside Tauri; the browser shows an explanatory notification. Windows execution remains unverified.
+
+## First-concept refinement
+Exporting custom range 1-2, 5 produces 3 PDF pages and preserves the 90-degree rotation of page 1. Current-page mode produces 1 page. Invalid range1-90 reports the valid9-page limit. Output range text survives rotation, and navigating to page5 highlights Statement of work.pdf. Reordering the rotated proposal to the second position moves its current page to4 and preserves90 degrees in the exported file. In-app Home lists recent PDFs and reopens Estimate.pdf with2 pages; queue add still works. Fit shows the full page. No page errors or horizontal overflow at1280/768/390.
+
+## Guided Combine flow and per-page ordering
+Browser checks pass Add/previous-draft recovery/import4pages/review/save/download4pages/completion/redownload/back/Home entry and compact save-panel visibility. Review layouts have no document overflow at1280/768/390. Native drag moved CHARLIE before ALPHA/BRAVO across file boundaries; button and Alt-arrow alternatives worked. Text extraction from the exported PDF confirmed CHARLIE, ALPHA, BRAVO in that exact order. Per-page rotation is checked after reordering. No page errors were observed.
+
+## Priority editing and simulation update
+
+Production build and source lint pass. Real browser checks confirm Shift-range selection, checkbox selection, duplicate (4→7), undo (7→4), redo (4→7), delete (4→1), extraction of 3 real pages, and recovery of a four-page draft after returning to the main editor. A native drag retained the exact grid and thumbnail image DOM elements, with zero editor subtree rebuilds. Export text extraction verified ALPHA, ALPHA, BRAVO, CHARLIE, DELTA and rotations 90,90,0,0,0 after duplication/rotation. Page editing uses original source documents and assembles output lazily.
+
+The Save/Done demo routes label completion as a preview without claiming a download. Actual Save still downloads. Print simulation progress advances to completion; pause holds progress, resume queues behind any active job, cancel stops a job, and restart resets it. No documents are sent to a printer. Desktop/compact captures showed no document overflow at 1280/768/390. Browser page errors: none in the main editing/export/simulation checks.
+
+Review fixes guard deleted selection anchors, restore anchors with history, scope page Delete/Backspace/Ctrl+A and undo/redo shortcuts to the visible editor, and preserve focus across repeated Alt-arrow moves. Targeted regression checks cover Shift-click after deleting its anchor and Delete/Ctrl+A/Ctrl+Z while Print Jobs is active.
+
+Home recent-file routing was corrected to Preview PDF. The document tab and Preview navigation are selected, and the Combine stepper is absent. Both Home Open and direct recent-file links were checked; Home Combine still starts the Add PDFs workflow.
+
+## Separate Preview/Edit workspaces
+
+Preview has zero output forms and zero mutation controls. Its Pages view shows nine read-only thumbnails and no draggable page cards; Delete/Ctrl+A do not change the document. Entering Edit exposes the four batch tools. Undo remains in Edit PDF, edited export produces the expected nine-page PDF and stays in Edit, and Home recent-file opening continues to use Preview. Both layouts passed the inspector at1440/768/390 with no failures; compact text remains an advisory.
+
+## Home actions, Merge, password protection, and Split (29 October 2026)
+
+Chrome workflow checks passed with no page errors: no Print Jobs or session project navigation; Home right-click and More menus; checkbox selection into Merge; password mismatch validation; protected-copy download; Edit PDF split ranges to ZIP; no document overflow at 1440, 768, and 390px. PDF.js independently rejected missing and incorrect passwords and opened the AES-256 output with the correct password (2 pages). Both ZIP entries parsed as valid 2-page PDFs. Production build passed. The finish reviewer approved the extension after preserving accessible names in both dialog success states.
