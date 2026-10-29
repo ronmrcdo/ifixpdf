@@ -1,30 +1,76 @@
-# iFixPDF — Windows PDF workspace
+# iFixPDF
 
-The preferred interface is `index.html`: Home, Merge PDFs, read-only Preview PDF, Edit PDF and Settings. `library.html` and `desk.html` are earlier alternative concepts. The product uses a custom folded-F logo, IBM Plex Sans and Lucide icons.
+A Windows desktop PDF workspace for previewing, editing, merging, splitting and password-protecting PDFs. Built with vanilla JavaScript + Vite inside a Tauri 2 shell. All PDF processing runs locally in the frontend (PDF.js, pdf-lib, pdf-lib-encrypt, fflate).
 
-## Run
+## Getting started
+
+Requires Node.js and pnpm.
 
 ```sh
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm dev
 ```
 
-For production preview, run `npm run build` then `npm run preview -- --port 4173`. Open `/index.html?view=home`.
+Open `/index.html?view=home`.
 
-On a Windows machine with the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/), use `npm run tauri dev` or `npm run tauri build`. The Rust shell and NSIS/icon configuration are supplied, but a Windows executable and installer have not been built or verified here.
+| Command | Purpose |
+| --- | --- |
+| `pnpm dev` | Vite dev server |
+| `pnpm build` | Production build to `dist/` |
+| `pnpm preview --port 4173` | Serve the production build |
+| `pnpm check:updates` | Playwright check of Settings → Updates against a mocked Tauri bridge (set `PLAYWRIGHT` and `CHROME`) |
+| `pnpm tauri dev` / `pnpm tauri build` | Native app and NSIS installer (Windows with the [Tauri prerequisites](https://v2.tauri.app/start/prerequisites/)) |
 
-## Working prototype
+## Features
 
-Import unlocked PDFs; read, merge, rearrange, rotate, duplicate, delete, extract and save pages. Home has recent PDFs, multi-file selection and right-click/More actions for View, Edit, Merge and Add password. Password protection downloads a protected copy. Edit → Pages → Split PDF exports page ranges or every page into a ZIP.
+- **Home** — recent PDFs, multi-file selection, right-click/More actions: View, Edit, Merge, Add password.
+- **Preview** — read-only page browsing, zoom, fit and printing via the PDF viewer.
+- **Edit** — reorder (drag or keyboard), rotate, duplicate, delete, extract, undo/redo, save an edited copy. Split exports page ranges or every page as a ZIP.
+- **Merge** — Add PDFs → Arrange & review → Save PDF → Done, with source and cross-source page ordering. Originals are never modified.
+- **Add password** — downloads an AES-256 protected copy.
+- **Settings → Updates** — check, release notes, download progress and restart-to-install.
 
-Preview remains read-only with no output inspector. Edit has page controls and Save edited PDF. Merge uses Add → Arrange & review → Save PDF → Done. Page dragging retains the live grid and images. Multi-selection supports checkboxes, Ctrl/Cmd-click, Shift-click and Ctrl/Cmd+A; history uses Ctrl/Cmd+Z, Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y. Alt+Left/Right moves a focused page. Ctrl+O opens files, Ctrl+S saves and Ctrl+P uses the PDF viewer for printing.
+The app ships no sample documents; open your own PDFs.
 
-Recents/drafts retain PDF bytes in local IndexedDB. Browser data deletion removes them; undo history lasts for the session. This is prototype storage, not a filesystem index. Exports use browser downloads, and manual printing opens a PDF viewer. Print Jobs and This Session / Project Pack have been removed.
+### Keyboard shortcuts
 
-Useful routes: `?view=home`, `?view=preview`, `?view=edit`, `?combine=new` (new Merge), `?demo=save`, `?demo=done`. Demo Done explicitly claims no download. Northstar samples are synthetic documents.
+| Action | Keys |
+| --- | --- |
+| Open / Save / Print | Ctrl+O / Ctrl+S / Ctrl+P |
+| Select all, add to selection, range select | Ctrl/Cmd+A, Ctrl/Cmd-click, Shift-click |
+| Undo / Redo | Ctrl/Cmd+Z / Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y |
+| Move focused page | Alt+Left / Alt+Right |
 
-## Production work and Claude handoff
+### Routes
 
-Start Claude with [CLAUDE.md](CLAUDE.md) and [CLAUDE_HANDOFF.md](CLAUDE_HANDOFF.md). [IMPLEMENTATION.md](IMPLEMENTATION.md) contains the native Windows roadmap, export compression, signed installed-PC updates and release acceptance criteria. Compression and the updater are planned, not implemented. [DESIGN.md](DESIGN.md) records the accepted design; [VERIFICATION.md](VERIFICATION.md) records historical checks and their scope.
+`?view=home`, `?view=preview`, `?view=edit`, `?combine=new` (new Merge), `?recent=<id>`. `library.html` and `desk.html` are earlier alternative concepts.
 
-PDF.js/pdf-lib and the encryption library run in the frontend; Rust supplies only the shell. Native open/save services, storage migration, Windows installation/upgrades/signing, large/complex PDF fidelity and password-required source import need implementation or production validation. Virtual-printer integration is outside the current release scope. The metadata option “Use file names as PDF title” writes a title, not outline bookmarks.
+## Project structure
+
+```
+src/            frontend (app shell, document actions, storage, updates)
+public/brand/   logo and icons
+src-tauri/      Rust shell, Tauri config and capabilities
+tests/          Playwright checks
+licenses/       third-party licenses
+```
+
+## Status
+
+Working in the browser; not yet production-ready.
+
+- Recents and drafts store PDF bytes in browser IndexedDB, and exports are browser downloads. Clearing browser data deletes them. Native open/save and a document repository are pending.
+- The updater is wired but has no release endpoint or signing key, and is unverified on Windows.
+- A Windows executable and installer have not been built or verified.
+- Export compression is planned, not implemented.
+- Opening password-protected PDFs is not supported.
+- Fidelity with large or complex PDFs still needs validation.
+- “Use file names as PDF title” sets the document title, not outline bookmarks.
+
+## Documentation
+
+- [IMPLEMENTATION.md](IMPLEMENTATION.md) — native Windows roadmap, compression, signed updates, release criteria
+- [DESIGN.md](DESIGN.md) — accepted interface design
+- [PRODUCT.md](PRODUCT.md) — product scope
+- [VERIFICATION.md](VERIFICATION.md) — historical checks and their scope
+- [CLAUDE.md](CLAUDE.md) — guide for coding agents

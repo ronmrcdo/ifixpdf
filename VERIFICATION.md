@@ -44,3 +44,11 @@ Preview has zero output forms and zero mutation controls. Its Pages view shows n
 ## Home actions, Merge, password protection, and Split (29 October 2026)
 
 Chrome workflow checks passed with no page errors: no Print Jobs or session project navigation; Home right-click and More menus; checkbox selection into Merge; password mismatch validation; protected-copy download; Edit PDF split ranges to ZIP; no document overflow at 1440, 768, and 390px. PDF.js independently rejected missing and incorrect passwords and opened the AES-256 output with the correct password (2 pages). Both ZIP entries parsed as valid 2-page PDFs. Production build passed. The finish reviewer approved the extension after preserving accessible names in both dialog success states.
+
+## Settings → Updates (29 October 2026, Linux)
+
+`npm run check:updates` passed in Chrome against a mocked `__TAURI_INTERNALS__` bridge with no page errors: the browser build shows version 0.1.0 and no update controls; native states cover not configured, up to date, offline, check error with Retry, a quiet launch check when nothing is available, a launch toast when 0.2.0 is available, release notes rendered as text (an HTML payload did not execute), download failure with Retry, 40% progress, and the ready state. Restart and install was deferred while a real export was running, refused without installing when the IndexedDB draft write failed, and otherwise invoked install only after a 3-file draft had been saved. Disabling the export guard made the check fail. After the change, header export still downloaded a valid 9-page PDF. Production build passed with the existing chunk-size warning.
+
+`cargo generate-lockfile` resolved `tauri` 2.12.5 with `tauri-plugin-updater` 2.14.0; `tauri info` read the config. The Rust crate was not compiled because WebKitGTK/libsoup development libraries are absent on this Linux machine. No Windows build, signature verification or real upgrade has been performed.
+
+Older scripts in `../../work/` (`check-combine-workflow`, `check-selection-regressions`, `check-page-drag`, `check-output-history`) fail identically on the pre-change build: they expect the removed Print Jobs/"New combine" UI or skip Merge's Continue-to-save step.

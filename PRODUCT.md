@@ -6,4 +6,4 @@ Working frontend features include PDF.js preview, pdf-lib merge/export, page reo
 
 Compression in Edit/Merge save settings and installed-PC updates are planned in IMPLEMENTATION.md. Neither is implemented. Native document services, filesystem saves, durable native storage, Windows build/installer verification and signing remain pending. Rust currently supplies only the shell; there is no shipped Windows executable. Manual PDF-viewer printing is available; a virtual printer is outside current release scope.
 
-Synthetic Northstar PDFs demonstrate the prototype. Browser PDF bytes are stored locally in origin-scoped IndexedDB; production should use an explicitly designed native document repository and retention policy. See CLAUDE_HANDOFF.md for continuation context.
+The app ships no sample documents and starts with an empty workspace. Browser PDF bytes are stored locally in origin-scoped IndexedDB; production should use an explicitly designed native document repository and retention policy.
