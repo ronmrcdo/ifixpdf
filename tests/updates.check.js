@@ -21,7 +21,7 @@ function mockTauri() {
   const send = (channel, index, message) => callbacks.get(channel.id)?.({index, message});
   const readDraft = () => new Promise(resolve => {
     const r = indexedDB.open('ifixpdf-workspace-draft', 1);
-    r.onsuccess = () => { const g = r.result.transaction('draft').objectStore('draft').get('workspace'); g.onsuccess = () => resolve(g.result) };
+    r.onsuccess = () => { const g = r.result.transaction('draft').objectStore('draft').get('merge'); g.onsuccess = () => resolve(g.result) };
   });
   window.__TAURI_INTERNALS__ = {
     transformCallback(cb) { const id = next++; callbacks.set(id, cb); return id },
