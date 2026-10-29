@@ -118,7 +118,7 @@ assert.match(await current(), /Save PDF/);
 assert.equal(await recents(), before, 'failed write adds no recent');
 await set('__failWrite', false);
 // Switch to Preview while the dialog is open: the result still lands in Merge.
-await page.evaluate(() => { const real = window.__tauri['plugin:dialog|save']; window.__tauri['plugin:dialog|save'] = async args => { await new Promise(r => { window.__release = r }); return real(args) } });
+await page.evaluate(() => { const real = window.__tauri['plugin:dialog|save']; window.__tauri['plugin:dialog|save'] = async args => { window.__tauri['plugin:dialog|save'] = real; await new Promise(r => { window.__release = r }); return real(args) } });
 await page.click('[data-action=export]');
 await page.waitForFunction(() => window.__release, null, {timeout: 5000});
 await page.click('.sidebar [data-view=preview]');
@@ -131,6 +131,23 @@ await page.click('.sidebar [data-view=combine]');
 await page.locator('.combine-workflow li.current', {hasText: 'Done'}).waitFor({timeout: 5000});
 assert.equal(await recents(), before + 1);
 assert.equal(await pagesOf(await written()), 3);
+
+// Switch to Preview while the merge bytes are still being built: the written PDF is the merge's.
+// pdf-lib's parser yields with setTimeout(0) every 100 objects; holding those callbacks pauses the build mid-load.
+const big = await file('Big.pdf', 150);
+await page.locator('[data-action=new-combine]:visible').first().click();
+await page.setInputFiles('#file-input', [big, a]);
+await page.waitForFunction(() => document.querySelector('#status')?.textContent.includes('2 files · 151 pages'), null, {timeout: 10000});
+await page.click('[data-action=export]');
+await page.locator('.combine-workflow li.current', {hasText: 'Save PDF'}).waitFor();
+const built = (await page.evaluate(() => window.__calls.filter(c => c.cmd === 'plugin:fs|write_file').length));
+await page.evaluate(() => { const real = window.setTimeout; window.__held = []; window.setTimeout = (fn, ms, ...rest) => { if (window.__hold && !ms) { window.__held.push(() => fn(...rest)); return 0 } return real(fn, ms, ...rest) }; window.__hold = true });
+await page.click('[data-action=export]');
+await page.waitForFunction(() => window.__held.length > 0, null, {timeout: 5000});
+await page.click('.sidebar [data-view=preview]');
+await page.evaluate(() => { window.__hold = false; window.__held.splice(0).forEach(f => f()) });
+await page.waitForFunction(n => window.__calls.filter(c => c.cmd === 'plugin:fs|write_file').length === n, built + 1, {timeout: 10000});
+assert.equal(await pagesOf(await written()), 151, 'merge pages written, not the document');
 
 // Ctrl+S on Home with the document workspace active saves nothing.
 await page.click('.sidebar [data-view=preview]');
