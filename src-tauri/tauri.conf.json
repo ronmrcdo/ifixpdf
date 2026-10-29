@@ -27,6 +27,7 @@
   },
   "bundle": {
     "active": true,
+    "licenseFile": "../EULA.txt",
     "targets": [
       "nsis"
     ],

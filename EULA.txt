@@ -1,0 +1,27 @@
+Your PDFs are opened, edited and saved only on this computer. iFixPDF has no account, no analytics and no tracking. iFixPDF only connects to the internet when you press Check for updates.
+
+In plain words: iFixPDF works offline on your own files and collects no data. It is provided with no warranty, so keep a backup of any important PDF before you change it. If Microsoft WebView2 is missing on your PC, the installer downloads it from Microsoft; Windows components such as WebView2 are governed by Microsoft's own terms.
+
+The full license of iFixPDF follows.
+
+MIT License
+
+Copyright (c) 2026 Ron Mercado
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
