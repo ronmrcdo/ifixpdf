@@ -53,7 +53,22 @@ await waitStatus('3 files');
 assert.equal(await text('#view-title'), 'Merge PDFs');
 await previewIsReport(2);
 
-// Separate undo.
+// Switching to Preview mid-import still lands every file in Merge.
+await view('combine');
+await page.evaluate(() => {
+  window.__realArrayBuffer = File.prototype.arrayBuffer;
+  window.__gate = new Promise(r => { window.__release = r });
+  let calls = 0;
+  File.prototype.arrayBuffer = async function () { window.__reads = ++calls; if (calls === 2) await window.__gate; return window.__realArrayBuffer.call(this) };
+});
+await page.setInputFiles('#file-input', [a, b]);
+await page.waitForFunction(() => window.__reads === 2, null, {timeout: 5000});
+await view('preview');
+await page.evaluate(() => { window.__release(); File.prototype.arrayBuffer = window.__realArrayBuffer });
+await waitStatus('5 files');
+assert.equal(await text('#view-title'), 'Merge PDFs', 'import finishes in Merge');
+await previewIsReport(2);
+
 await view('combine');
 await page.click('[data-action=rotate]');
 assert.equal(await page.isDisabled('[data-edit=undo]'), false);
@@ -67,8 +82,11 @@ await page.click('.header-actions [data-action=new-combine]');
 await mergeIsEmpty();
 await previewIsReport(2);
 await page.goto(noParams());
-await waitStatus('files');
-await previewIsReport();
+await page.waitForFunction(() => document.querySelector('#view-title').textContent === 'Preview PDF', null, {timeout: 5000});
+assert.equal(await text('#view-subtitle'), 'Report.pdf', 'document draft restored after New merge');
+assert.deepEqual(await keys(), ['document'], 'New merge deleted only the merge draft');
+await view('combine');
+await mergeIsEmpty();
 
 // Recents → Merge leaves the document alone.
 await view('home');
