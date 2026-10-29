@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict';
 import {PDFDocument} from 'pdf-lib';
 import {start, pdf} from './harness.js';
+import {splitPath} from '../src/save.js';
 
 const app = await start(4182);
 const file = async (name, pages) => ({name, mimeType: 'application/pdf', buffer: await pdf(pages)});
@@ -14,6 +15,7 @@ const {context, page, errors} = await app.page({tauri: true});
 await page.addInitScript(() => {
   window.__tauri = {
     'plugin:dialog|save': ({options}) => window.__savePath === undefined ? '/home/ron/Docs/' + options.defaultPath : window.__savePath,
+    'plugin:opener|open_path': () => null, 'plugin:opener|reveal_item_in_dir': () => null,
     'plugin:fs|write_file': (bytes, options) => { if (window.__failWrite) throw Error('disk full'); window.__written = {bytes: [...bytes], path: decodeURIComponent(options.headers.path)} }
   };
 });
@@ -149,6 +151,54 @@ await page.evaluate(() => { window.__hold = false; window.__held.splice(0).forEa
 await page.waitForFunction(n => window.__calls.filter(c => c.cmd === 'plugin:fs|write_file').length === n, built + 1, {timeout: 10000});
 assert.equal(await pagesOf(await written()), 151, 'merge pages written, not the document');
 
+// Done (native): Windows path shows name + folder, Open PDF / Show in folder go through the opener plugin.
+const opens = () => page.evaluate(() => window.__calls.filter(c => c.cmd === 'plugin:opener|open_path').length);
+assert.deepEqual(splitPath('C:\\x.pdf'), {name: 'x.pdf', folder: 'C:\\'});
+assert.deepEqual(splitPath('/x.pdf'), {name: 'x.pdf', folder: '/'});
+const winPath = 'C:\\Users\\Ron\\Docs\\Merged.pdf';
+await page.click('.sidebar [data-view=combine]');
+await page.locator('[data-action=new-combine]:visible').first().click();
+await page.setInputFiles('#file-input', [a, b]);
+await page.waitForFunction(() => document.querySelector('#status')?.textContent.includes('2 files'), null, {timeout: 5000});
+await page.click('[data-action=export]');
+await page.locator('.combine-workflow li.current', {hasText: 'Save PDF'}).waitFor();
+await set('__savePath', null);
+const openBefore = await opens();
+await page.click('[data-action=export]');
+await page.waitForTimeout(300);
+assert.equal(await opens(), openBefore, 'cancelled save opens nothing');
+await set('__savePath', winPath);
+await page.click('[data-action=export]');
+await page.locator('.combine-done').waitFor({timeout: 5000});
+const done = await page.locator('.combine-done').textContent();
+assert.match(done, /Merged\.pdf/);
+assert.ok(done.includes('C:\\Users\\Ron\\Docs'), done);
+assert.ok(!done.includes('C:\\Users\\Ron\\Docs\\Merged.pdf'), 'folder, not the whole path');
+assert.match(done, /saved/i);
+assert.doesNotMatch(done, /download/i);
+assert.equal(await page.locator('[data-action=download-result]').count(), 0);
+assert.equal(await opens(), openBefore + 1, 'open after saving opens the saved file once');
+await page.click('[data-action=open-result]');
+await waitCalls('plugin:opener|open_path', openBefore + 2);
+assert.equal((await page.evaluate(() => window.__calls.filter(c => c.cmd === 'plugin:opener|open_path').at(-1).args.path)), winPath);
+await page.click('[data-action=reveal-result]');
+await waitCalls('plugin:opener|reveal_item_in_dir', 1);
+assert.deepEqual(await page.evaluate(() => window.__calls.find(c => c.cmd === 'plugin:opener|reveal_item_in_dir').args.paths), [winPath]);
+// Open after saving off: no open_path.
+await page.click('.sidebar [data-view=settings]');
+await page.uncheck('#pref-open');
+await page.click('.sidebar [data-view=combine]');
+await page.locator('[data-action=new-combine]:visible').first().click();
+await page.setInputFiles('#file-input', [a, b]);
+await page.waitForFunction(() => document.querySelector('#status')?.textContent.includes('2 files'), null, {timeout: 5000});
+await page.click('[data-action=export]');
+await page.locator('.combine-workflow li.current', {hasText: 'Save PDF'}).waitFor();
+const openOff = await opens();
+await page.click('[data-action=export]');
+await page.locator('.combine-done').waitFor({timeout: 5000});
+assert.equal(await opens(), openOff, 'preference off opens nothing');
+assert.equal(await page.locator('[data-action=reveal-result]').count(), 1);
+
 // Ctrl+S on Home with the document workspace active saves nothing.
 await page.click('.sidebar [data-view=preview]');
 await page.click('.sidebar [data-view=home]');
@@ -188,6 +238,23 @@ const [download] = await Promise.all([p.waitForEvent('download', {timeout: 5000}
 assert.equal(download.suggestedFilename(), 'Final.pdf');
 assert.deepEqual(browser.errors, []);
 await browser.context.close();
+
+// Browser picker: Done shows the name only, no Show in folder, Open PDF opens a tab.
+const picker = await app.page();
+await picker.page.addInitScript(() => { window.showSaveFilePicker = async o => ({name: o.suggestedName, createWritable: async () => ({write: async () => {}, close: async () => {}})}) });
+await picker.page.goto(app.url('combine=new'));
+await picker.page.setInputFiles('#file-input', [a, b]);
+await picker.page.waitForFunction(() => document.querySelector('#status')?.textContent.includes('2 files'), null, {timeout: 5000});
+await picker.page.click('[data-action=export]');
+await picker.page.locator('.combine-workflow li.current', {hasText: 'Save PDF'}).waitFor();
+await picker.page.click('[data-action=export]');
+await picker.page.locator('.combine-done').waitFor({timeout: 5000});
+assert.match(await picker.page.locator('.combine-done').textContent(), /Merged document\.pdf/);
+assert.equal(await picker.page.locator('[data-action=reveal-result]').count(), 0);
+const [tab] = await Promise.all([picker.context.waitForEvent('page'), picker.page.click('[data-action=open-result]')]);
+assert.ok(tab);
+assert.deepEqual(picker.errors, []);
+await picker.context.close();
 
 await app.close();
 console.log('save check passed');
