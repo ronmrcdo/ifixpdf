@@ -22,7 +22,7 @@ Windows desktop PDF tool. Frontend is vanilla JavaScript + Vite (not React) insi
 | `src/recents.js`, `src/draft.js` | IndexedDB storage of recent PDF bytes and the workspace drafts (separate `document` and `merge` workspaces; legacy `workspace` key is migrated once) |
 | `src/save.js` | One native Save as (dialog + fs) for every export, plus `openSaved`, `showInFolder`, `openExternal` |
 | `src/about.js` | Settings → About: version, developer, privacy text (first paragraph of `EULA.txt`), MIT `LICENSE`, `licenses/*`, GitHub link |
-| `src/updates.js`, `src/work.js` | Updates state machine and launch check; in-flight export tracking that defers install |
+| `src/updates.js`, `src/work.js` | Updates state machine (manual only); in-flight export tracking that defers install |
 | `src/home.js`, `src/home.css`, `library.html`, `desk.html` | Earlier Library/Desk concepts; keep unless deliberately retired |
 | `src/brand.js`, `public/brand/` | Brand mark, wordmark, icons |
 | `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS target, CSP), capabilities (window, updater, dialog save, fs write-file, opener: reveal-item, open-path `**/*.pdf`, open-url for the GitHub repo only) |
