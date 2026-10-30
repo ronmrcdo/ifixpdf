@@ -52,3 +52,16 @@ Chrome workflow checks passed with no page errors: no Print Jobs or session proj
 `cargo generate-lockfile` resolved `tauri` 2.12.5 with `tauri-plugin-updater` 2.14.0; `tauri info` read the config. The Rust crate was not compiled because WebKitGTK/libsoup development libraries are absent on this Linux machine. No Windows build, signature verification or real upgrade has been performed.
 
 Older scripts in `../../work/` (`check-combine-workflow`, `check-selection-regressions`, `check-page-drag`, `check-output-history`) fail identically on the pre-change build: they expect the removed Print Jobs/"New combine" UI or skip Merge's Continue-to-save step.
+
+## Save flows, Preview paging, About and manual updates (30 October 2026, Linux browser)
+
+Passed in Chrome against a mocked Tauri bridge, no page errors: `pnpm check:workspaces`, `check:save`, `check:preview`, `check:legal`, `check:about`, `check:updates`; `pnpm build` succeeded (chunk size warning expected); `cargo check --manifest-path src-tauri/Cargo.toml` finished.
+
+`check:about`: Settings shows About with the brand mark, version 0.1.0, developer Ron Mercado, the EULA privacy paragraph, the MIT license text, 7 open-source license entries with text, and Check for updates inside About; the GitHub link calls `window.open` in the browser and `plugin:opener|open_url` with the repository URL in the mocked native bridge; the sidebar Settings item matches Home in size and hover style at 1440, 1100, 900 and 500px. `check:updates`: no `plugin:updater|check` within 4 s of a mocked native launch; an update is found only after pressing Check for updates.
+
+Pending Windows evidence (nothing below was run on Windows or against real plugins):
+- Save as dialog writes real files, and cancel writes nothing.
+- Open PDF and Show in folder after saving; the opener `**/*.pdf` scope is a case-sensitive glob on Windows, so a `.PDF` file may fail Open PDF.
+- GitHub link opens in the default browser.
+- Installer shows the license page from `EULA.txt`.
+- Installed-app update check, download and install.

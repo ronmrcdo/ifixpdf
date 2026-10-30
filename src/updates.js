@@ -60,9 +60,3 @@ export function updateAction(action,ctx){
   if(action==='download')return download();
   if(action==='install')return install(ctx);
 }
-
-// Quiet launch check: only speaks up when there is something to install.
-export function startUpdates(toast){
-  if(!native)return;
-  setTimeout(async()=>{try{const u=await (await updater()).check();if(!u||ui.update)return u?.close();ui.update=u;set('available');toast(`iFixPDF ${u.version} is available. Open Settings to update.`)}catch{}},3000);
-}
