@@ -1,6 +1,6 @@
 # iFixPDF
 
-Windows desktop PDF tool. Frontend is vanilla JavaScript + Vite (not React) inside a Tauri 2 shell. All PDF work runs in the frontend (PDF.js, pdf-lib, pdf-lib-encrypt, fflate); Rust only hosts the window and the updater plugin.
+Windows desktop PDF tool. Frontend is vanilla JavaScript + Vite (not React) inside a Tauri 2 shell. All PDF work runs in the frontend (PDF.js, pdf-lib, pdf-lib-encrypt, fflate); Rust only hosts the window and the updater, dialog, fs and opener plugins.
 
 - [IMPLEMENTATION.md](IMPLEMENTATION.md) — milestones and release criteria, including export compression and installed-PC updates.
 - [DESIGN.md](DESIGN.md) — accepted interface; read before UI changes.

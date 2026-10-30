@@ -59,7 +59,7 @@ const setMock = (page, value) => page.evaluate(v => Object.assign(window.__mock,
   await context.close();
 }
 
-// Native: unconfigured, up to date, offline, error + retry, .
+// Native: unconfigured, up to date, offline, error + retry.
 {
   const {context, page, errors} = await open(true);
   await page.waitForTimeout(4000);
