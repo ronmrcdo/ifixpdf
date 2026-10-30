@@ -1,4 +1,4 @@
-// Browser check: mouse wheel flips pages in Preview/Edit, one page per gesture.
+// Browser check: mouse wheel flips pages in Preview/Edit, one page per gesture; Ctrl+wheel zooms.
 // Run: PLAYWRIGHT=<path to playwright> CHROME=<chrome binary> pnpm check:preview
 import assert from 'node:assert/strict';
 import {start, pdf} from './harness.js';
@@ -39,11 +39,26 @@ await goto(1);
 await gesture(-100);
 assert.equal(await current(), '1', 'first page stays');
 
-// Ctrl+wheel is left alone.
-await page.keyboard.down('Control');
-await gesture(100);
-await page.keyboard.up('Control');
+// Ctrl+wheel zooms (one step per notch, small trackpad-pinch deltas add up) instead of flipping or zooming the whole window.
+const zoom = async () => Number((await page.textContent('.zoom-value')).replace('%', '')) || 0;
+const ctrl = async (deltaY, n = 1) => { await page.keyboard.down('Control'); await gesture(deltaY, n, 15); await page.keyboard.up('Control') };
+await page.evaluate(() => window.addEventListener('wheel', e => { window.__prevented = e.defaultPrevented }));
+assert.equal(await page.textContent('.zoom-value'), 'Fit');
+await ctrl(-100);
+const zoomedIn = await zoom();
+assert.ok(zoomedIn > 0, 'ctrl+wheel up leaves Fit for a zoom level');
+assert.equal(await page.evaluate(() => window.__prevented), true, 'browser zoom is suppressed');
+await ctrl(-100);
+assert.equal(await zoom(), zoomedIn + 10, 'ctrl+wheel up zooms in one step');
+await ctrl(100);
+assert.equal(await zoom(), zoomedIn, 'ctrl+wheel down zooms out one step');
+await ctrl(-10, 5);
+assert.equal(await zoom(), zoomedIn + 10, 'pinch deltas add up to one step');
+await ctrl(100); await ctrl(100); await ctrl(100); await ctrl(100); await ctrl(100); await ctrl(100); await ctrl(100); await ctrl(100); await ctrl(100); await ctrl(100);
+assert.equal(await zoom(), 25, 'zoom out stops at 25%');
 assert.equal(await current(), '1', 'ctrl+wheel does not flip');
+await page.click('[data-action=fit]');
+await page.waitForTimeout(300);
 
 // Zoomed: scroll inside the page first, then flip, landing at the matching edge.
 for (let i = 0; i < 12 && !(await stage()).tall; i++) { await page.click('[data-action=zoom-in]'); await page.waitForTimeout(300) }

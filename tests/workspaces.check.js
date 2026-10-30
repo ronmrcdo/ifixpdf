@@ -1,4 +1,4 @@
-// Browser check: Preview/Edit (document) and Merge keep separate files, undo history and drafts.
+// Browser check: Preview/Edit (document) and Merge keep separate files and undo history; only the document draft survives a restart.
 // Run: PLAYWRIGHT=<path to playwright> CHROME=<chrome binary> pnpm check:workspaces
 import assert from 'node:assert/strict';
 import {start, pdf} from './harness.js';
@@ -98,14 +98,15 @@ await waitStatus('2 files');
 assert.equal(await text('#view-title'), 'Merge PDFs');
 await previewIsReport();
 
-// Drafts per workspace.
-await page.waitForFunction(() => document.querySelector('#draft-status').textContent === 'Draft saved on this device', null, {timeout: 5000});
-assert.deepEqual(await keys(), ['document', 'merge']);
+// Only the document draft survives a restart; Merge starts empty.
+await page.waitForTimeout(600);
+assert.deepEqual(await keys(), ['document'], 'Merge is never saved as a draft');
 await page.goto(noParams());
-await waitStatus('2 files');
-assert.equal(await text('#view-title'), 'Merge PDFs', 'opens the newer draft');
+await page.waitForFunction(() => document.querySelector('#view-title').textContent === 'Preview PDF', null, {timeout: 5000});
 await page.locator('.toast', {hasText: 'Your saved draft has been restored.'}).waitFor();
 await previewIsReport();
+await view('combine');
+await mergeIsEmpty();
 
 // Migration of the legacy single draft.
 async function legacy(view) {
@@ -121,9 +122,10 @@ async function legacy(view) {
   await page.goto(noParams());
 }
 await legacy('combine');
-await waitStatus('1 files · 2 pages');
-assert.equal(await text('#view-title'), 'Merge PDFs');
-assert.deepEqual(await keys(), ['merge'], 'legacy combine draft moved to merge');
+await page.waitForFunction(() => document.querySelector('#view-title').textContent === 'Home', null, {timeout: 5000});
+assert.deepEqual(await keys(), [], 'legacy merge draft dropped');
+await view('combine');
+await mergeIsEmpty();
 await legacy('edit');
 await waitStatus('1 files · 2 pages');
 assert.equal(await text('#view-title'), 'Edit PDF');

@@ -14,7 +14,7 @@ function mockUpdater() {
   const send = (channel, index, message) => window.__callbacks.get(channel.id)?.({index, message});
   const readDraft = () => new Promise(resolve => {
     const r = indexedDB.open('ifixpdf-workspace-draft', 1);
-    r.onsuccess = () => { const g = r.result.transaction('draft').objectStore('draft').get('merge'); g.onsuccess = () => resolve(g.result) };
+    r.onsuccess = () => { const g = r.result.transaction('draft').objectStore('draft').get('document'); g.onsuccess = () => resolve(g.result) };
   });
   window.__tauri = {
     'plugin:updater|check'() {
@@ -110,8 +110,9 @@ const setMock = (page, value) => page.evaluate(v => Object.assign(window.__mock,
   // Put documents in the workspace, then come back: Settings keeps the ready state.
   const pdf = await PDFDocument.create();
   pdf.addPage();
+  await page.click('[data-view=preview]');
   await page.setInputFiles('#file-input', {name: 'Report.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await pdf.save())});
-  await page.waitForFunction(() => document.querySelector('#status')?.textContent.includes('1 files'));
+  await page.waitForFunction(() => document.querySelector('#view-subtitle')?.textContent === 'Report.pdf');
   await page.click('[data-view=settings]');
   const install = updates(page).getByRole('button', {name: 'Restart and install'});
 

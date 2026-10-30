@@ -19,7 +19,7 @@ Windows desktop PDF tool. Frontend is vanilla JavaScript + Vite (not React) insi
 | `src/main.js` | App shell, Home, Preview, Edit, Merge, selection/history, drafts, import/export, routes, shortcuts |
 | `src/document-actions.js` | Add password (AES-256 protected copy) and Split (ZIP) dialogs |
 | `src/style.css` | Desktop interface and responsive overrides |
-| `src/recents.js`, `src/draft.js` | IndexedDB storage of recent PDF bytes and the workspace drafts (separate `document` and `merge` workspaces; legacy `workspace` key is migrated once) |
+| `src/recents.js`, `src/draft.js` | IndexedDB storage of recent PDF bytes and the Preview/Edit `document` draft. Merge is a separate in-memory workspace that starts empty on every launch (no `merge` draft; a stale `merge` or legacy Merge `workspace` key is deleted on read) |
 | `src/save.js` | One native Save as (dialog + fs) for every export, plus `openSaved`, `showInFolder`, `openExternal` |
 | `src/about.js` | Settings → About: version, developer, privacy text (first paragraph of `EULA.txt`), MIT `LICENSE`, `licenses/*`, GitHub link |
 | `src/updates.js`, `src/work.js` | Updates state machine (manual only); in-flight export tracking that defers install |
