@@ -34,8 +34,17 @@ const drop = (files: PickedFile[]) =>
   act(async () => {
     emit({type: 'drop', files});
   });
-// The import runs detached from the event, so give it time to finish.
-const settle = () => act(() => new Promise((r) => setTimeout(r, 100)));
+// The import runs detached from the event: wait for the state it ends in, not a fixed time.
+const until = (done: () => void) => vi.waitFor(done, {timeout: 5000});
+// An ignored import does no I/O, so one macrotask lets every queued microtask run.
+const flush = () => act(() => new Promise((r) => setTimeout(r, 0)));
+const opened = () => expect(documentStore.getState().files[0]?.recentId).toBeDefined();
+const merged = (n: number) => () => {
+  const {files} = mergeStore.getState();
+  expect(files).toHaveLength(n);
+  expect(files.every((f) => f.recentId)).toBe(true);
+};
+const toasted = () => expect(useApp.getState().toast).not.toBeNull();
 
 beforeEach(async () => {
   vi.spyOn(platform, 'onFileDrop').mockImplementation((cb) => {
@@ -54,18 +63,19 @@ afterEach(async () => {
   await mergeStore.getState().reset();
 });
 
-const importAs = async (view: View, files: PickedFile[]) => {
+/** `done` throws until the import has finished; omit it for an import that is ignored. */
+const importAs = async (view: View, files: PickedFile[], done?: () => void) => {
   useApp.setState({view});
   render(<Host />);
   await drop(files);
-  await settle();
+  await (done ? until(done) : flush());
 };
 
 describe('dropping files', () => {
   it.each(['home', 'preview'] as const)(
     'on %s opens the first PDF only and goes to Preview',
     async (view) => {
-      await importAs(view, [await pdf('a.pdf', 2), await pdf('b.pdf')]);
+      await importAs(view, [await pdf('a.pdf', 2), await pdf('b.pdf')], opened);
       const {files} = documentStore.getState();
       expect(files.map((f) => f.name)).toEqual(['a.pdf']);
       expect(useApp.getState().view).toBe('preview');
@@ -76,7 +86,7 @@ describe('dropping files', () => {
   );
 
   it('on edit replaces the document and stays in Edit', async () => {
-    await importAs('edit', [await pdf('a.pdf')]);
+    await importAs('edit', [await pdf('a.pdf')], opened);
     expect(documentStore.getState().files.map((f) => f.name)).toEqual(['a.pdf']);
     expect(useApp.getState().view).toBe('edit');
   });
@@ -84,7 +94,7 @@ describe('dropping files', () => {
   it.each(['merge', 'settings'] as const)(
     'on %s adds every PDF to Merge and goes to Merge',
     async (view) => {
-      await importAs(view, [await pdf('a.pdf'), await pdf('b.pdf', 3)]);
+      await importAs(view, [await pdf('a.pdf'), await pdf('b.pdf', 3)], merged(2));
       expect(mergeStore.getState().files.map((f) => f.name)).toEqual(['a.pdf', 'b.pdf']);
       expect(documentStore.getState().files).toEqual([]);
       expect(useApp.getState().view).toBe('merge');
@@ -99,7 +109,7 @@ describe('dropping files', () => {
   });
 
   it('an invalid PDF shows the error, records nothing and does not change view', async () => {
-    await importAs('home', [{name: 'bad.pdf', bytes: new Uint8Array([1, 2, 3])}]);
+    await importAs('home', [{name: 'bad.pdf', bytes: new Uint8Array([1, 2, 3])}], toasted);
     expect(useApp.getState().toast).toMatchObject({
       text: 'Could not open bad.pdf. Use a valid PDF without a password.',
       tone: 'error',
@@ -109,16 +119,24 @@ describe('dropping files', () => {
   });
 
   it('in Merge, a bad file is reported while the good one is added and recorded', async () => {
-    await importAs('merge', [{name: 'bad.pdf', bytes: new Uint8Array([1])}, await pdf('ok.pdf')]);
+    await importAs(
+      'merge',
+      [{name: 'bad.pdf', bytes: new Uint8Array([1])}, await pdf('ok.pdf')],
+      merged(1),
+    );
     expect(mergeStore.getState().files.map((f) => f.name)).toEqual(['ok.pdf']);
     expect((await recents()).map((r) => r.name)).toEqual(['ok.pdf']);
   });
 
   it('links each added file to its own pick when names collide', async () => {
-    await importAs('merge', [
-      {name: 'a.pdf', bytes: new Uint8Array([1]), path: 'X/a.pdf'},
-      await pdf('a.pdf', 1, 'Y/a.pdf'),
-    ]);
+    await importAs(
+      'merge',
+      [
+        {name: 'a.pdf', bytes: new Uint8Array([1]), path: 'X/a.pdf'},
+        await pdf('a.pdf', 1, 'Y/a.pdf'),
+      ],
+      merged(1),
+    );
     expect((await recents()).map((r) => r.path)).toEqual(['Y/a.pdf']);
   });
 
@@ -126,7 +144,10 @@ describe('dropping files', () => {
     vi.spyOn(indexedDB, 'open').mockImplementation(() => {
       throw new Error('blocked');
     });
-    await importAs('home', [await pdf('a.pdf')]);
+    // The recents write fails, so opening (navigate to Preview) is the last observable step.
+    await importAs('home', [await pdf('a.pdf')], () =>
+      expect(useApp.getState().view).toBe('preview'),
+    );
     expect(documentStore.getState().files.map((f) => f.name)).toEqual(['a.pdf']);
     expect(documentStore.getState().files[0]?.recentId).toBeUndefined();
     expect(useApp.getState().view).toBe('preview');
@@ -141,9 +162,13 @@ describe('dropping files', () => {
 
   it('opening the same file twice keeps one recent row (browser: same bytes)', async () => {
     const f = await pdf('a.pdf');
-    await importAs('home', [f]);
+    await importAs('home', [f], opened);
+    const first = documentStore.getState().files;
     await drop([{...f}]);
-    await settle();
+    await until(() => {
+      expect(documentStore.getState().files).not.toBe(first);
+      opened();
+    });
     expect(await recents()).toHaveLength(1);
   });
 });
@@ -151,13 +176,17 @@ describe('dropping files', () => {
 describe('parsing', () => {
   it('parses each opened file exactly once, single open', async () => {
     vi.mocked(loadPdf).mockClear();
-    await importAs('home', [await pdf('a.pdf', 2), await pdf('b.pdf')]);
+    await importAs('home', [await pdf('a.pdf', 2), await pdf('b.pdf')], opened);
     expect(loadPdf).toHaveBeenCalledTimes(1);
   });
 
   it('parses each file exactly once in Merge', async () => {
     vi.mocked(loadPdf).mockClear();
-    await importAs('merge', [await pdf('a.pdf'), await pdf('b.pdf', 2), await pdf('c.pdf')]);
+    await importAs(
+      'merge',
+      [await pdf('a.pdf'), await pdf('b.pdf', 2), await pdf('c.pdf')],
+      merged(3),
+    );
     expect(loadPdf).toHaveBeenCalledTimes(3);
   });
 
@@ -168,7 +197,7 @@ describe('parsing', () => {
   });
 
   it('in Merge, attaches each recent id to its file', async () => {
-    await importAs('merge', [await pdf('a.pdf'), await pdf('b.pdf', 2)]);
+    await importAs('merge', [await pdf('a.pdf'), await pdf('b.pdf', 2)], merged(2));
     const rows = await recents();
     expect(
       mergeStore
