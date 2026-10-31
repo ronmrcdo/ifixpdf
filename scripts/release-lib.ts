@@ -48,3 +48,47 @@ export function cargoPackageVersion(toml: string): string | null {
 export function setCargoPackageVersion(toml: string, version: string): string {
   return toml.replace(PACKAGE_VERSION, `$1${version}$3`);
 }
+
+export function checkVersions(tag: string, pkg: string, cargo: string): string | null {
+  const version = tag.startsWith('v') ? tag.slice(1) : '';
+  if (!parseVersion(version)) return `Tag "${tag}" is not in the form vX.Y.Z`;
+  if (pkg !== version) return `Tag ${tag} does not match package.json version ${pkg}`;
+  if (cargo !== version) return `Tag ${tag} does not match src-tauri/Cargo.toml version ${cargo}`;
+  return null;
+}
+
+export function releaseBody(version: string, notes: string): string {
+  const f = (suffix: string) => `iFixPDF_${version}_${suffix}`;
+  return `## What's new
+
+${notes}
+
+## Downloads
+
+| Your computer | Download |
+| --- | --- |
+| Windows 10 or 11 | ${f('x64-setup.exe')} |
+| Mac | ${f('universal.dmg')} |
+| Linux | ${f('amd64.AppImage')} or ${f('amd64.deb')} |
+
+## If your computer warns you
+
+iFixPDF is not signed with a paid certificate yet, so Windows and macOS may warn you the first time. The app is safe to open.
+
+**Windows:** if you see "Windows protected your PC", click **More info**, then **Run anyway**.
+
+**Mac:** if macOS blocks the app, right-click it and choose **Open**. You can also go to **System Settings > Privacy & Security** and click **Open Anyway**. If macOS says the app "is damaged", open Terminal and run:
+
+\`\`\`
+xattr -cr /Applications/iFixPDF.app
+\`\`\`
+
+## Updating on Linux
+
+The AppImage updates itself from Settings. If you installed the \`.deb\`, update by downloading the new \`.deb\` from this page.
+
+## Privacy
+
+Read our [privacy statement](https://github.com/ronmrcdo/ifixpdf/blob/main/EULA.txt).
+`;
+}
