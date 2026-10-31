@@ -2,7 +2,12 @@ import {describe, expect, it} from 'vitest';
 import {clearSelection, clickSelect, pruneSelection, selectAll} from './selection';
 import type {PageInstance, Selection} from './types';
 
-const pages: PageInstance[] = ['a', 'b', 'c', 'd'].map((uid, local) => ({uid, fileId: 'f', local, rotation: 0}));
+const pages: PageInstance[] = ['a', 'b', 'c', 'd'].map((uid, local) => ({
+  uid,
+  fileId: 'f',
+  local,
+  rotation: 0,
+}));
 const sel = (anchor: string | null, ...u: string[]): Selection => ({uids: new Set(u), anchor});
 const plain = {ctrl: false, shift: false};
 

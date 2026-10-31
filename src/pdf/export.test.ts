@@ -11,7 +11,11 @@ describe('export.ts without Worker', () => {
   it('falls back to export-core', async () => {
     vi.stubGlobal('Worker', undefined);
     const {buildPdf} = await import('./export');
-    const out = await buildPdf({title: 't', sources: {a: await makePdf(2)}, pages: [{fileId: 'a', local: 1, rotation: 90}]});
+    const out = await buildPdf({
+      title: 't',
+      sources: {a: await makePdf(2)},
+      pages: [{fileId: 'a', local: 1, rotation: 90}],
+    });
     expect((await PDFDocument.load(out)).getPageCount()).toBe(1);
   });
 });
@@ -22,7 +26,7 @@ describe('export.ts fallback snapshot', () => {
     const {buildPdf} = await import('./export');
     const pages: Array<{fileId: string; local: number; rotation: 0}> = [
       {fileId: 'a', local: 0, rotation: 0},
-      {fileId: 'a', local: 1, rotation: 0}
+      {fileId: 'a', local: 1, rotation: 0},
     ];
     const p = buildPdf({title: 't', sources: {a: await makePdf(2)}, pages});
     pages.length = 0;
@@ -36,9 +40,15 @@ describe('export.ts with a Worker', () => {
     const workers: FakeWorker[] = [];
     class FakeWorker {
       onmessage: ((e: MessageEvent) => void) | null = null;
-      constructor() { workers.push(this); }
-      postMessage(msg: {id: number; op: string}, transfer: Transferable[]) { posted.push({msg, transfer}); }
-      reply(data: unknown) { this.onmessage?.({data} as MessageEvent); }
+      constructor() {
+        workers.push(this);
+      }
+      postMessage(msg: {id: number; op: string}, transfer: Transferable[]) {
+        posted.push({msg, transfer});
+      }
+      reply(data: unknown) {
+        this.onmessage?.({data} as MessageEvent);
+      }
     }
     vi.stubGlobal('Worker', FakeWorker);
     const {protectPdf, buildPdf} = await import('./export');
@@ -59,7 +69,12 @@ describe('export.ts with a Worker', () => {
   });
 
   const fake = () => {
-    interface Fw { onerror: (() => void) | null; onmessageerror: (() => void) | null; terminate: ReturnType<typeof vi.fn>; posted: unknown[] }
+    interface Fw {
+      onerror: (() => void) | null;
+      onmessageerror: (() => void) | null;
+      terminate: ReturnType<typeof vi.fn>;
+      posted: unknown[];
+    }
     const workers: Fw[] = [];
     let throwOnPost = false;
     class FakeWorker {
@@ -68,11 +83,21 @@ describe('export.ts with a Worker', () => {
       onmessageerror: (() => void) | null = null;
       terminate = vi.fn();
       posted: unknown[] = [];
-      constructor() { workers.push(this); }
-      postMessage(msg: unknown) { if (throwOnPost) throw new Error('clone failed'); this.posted.push(msg); }
+      constructor() {
+        workers.push(this);
+      }
+      postMessage(msg: unknown) {
+        if (throwOnPost) throw new Error('clone failed');
+        this.posted.push(msg);
+      }
     }
     vi.stubGlobal('Worker', FakeWorker);
-    return {workers, failPost: () => { throwOnPost = true; }};
+    return {
+      workers,
+      failPost: () => {
+        throwOnPost = true;
+      },
+    };
   };
   const timeout = new Promise((r) => setTimeout(() => r('hung'), 200));
 
@@ -115,7 +140,15 @@ describe('export.ts with a Worker', () => {
     expect(workers.length).toBe(2);
     a.onerror!(); // late event from the dead worker
     expect(pendingCount()).toBe(1);
-    expect(await Promise.race([b.then(() => 'settled', () => 'settled'), new Promise((r) => setTimeout(() => r('open'), 50))])).toBe('open');
+    expect(
+      await Promise.race([
+        b.then(
+          () => 'settled',
+          () => 'settled',
+        ),
+        new Promise((r) => setTimeout(() => r('open'), 50)),
+      ]),
+    ).toBe('open');
     protectPdf(new Uint8Array([1]), 'secret-pass').catch(() => undefined);
     expect(workers.length).toBe(2); // B was not orphaned
   });
@@ -123,7 +156,10 @@ describe('export.ts with a Worker', () => {
   it('posts a snapshot of pages, not the live array', async () => {
     const {workers} = fake();
     const {buildPdf} = await import('./export');
-    const pages: Array<{fileId: string; local: number; rotation: 0}> = [{fileId: 'a', local: 0, rotation: 0}, {fileId: 'a', local: 1, rotation: 0}];
+    const pages: Array<{fileId: string; local: number; rotation: 0}> = [
+      {fileId: 'a', local: 0, rotation: 0},
+      {fileId: 'a', local: 1, rotation: 0},
+    ];
     buildPdf({title: 't', sources: {a: new Uint8Array([1])}, pages}).catch(() => undefined);
     pages.reverse();
     const msg = workers[0]!.posted[0] as {spec: {pages: Array<{local: number}>}};

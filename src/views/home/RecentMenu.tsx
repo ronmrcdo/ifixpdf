@@ -5,8 +5,11 @@ import {prefersReducedMotion} from '../../shell/viewTransition';
 
 export type Command = 'view' | 'edit' | 'merge' | 'password' | 'remove';
 const ITEMS: Array<[Command, LucideIcon, string]> = [
-  ['view', Eye, 'View PDF'], ['edit', Pencil, 'Edit PDF'], ['merge', Files, 'Merge PDFs'],
-  ['password', LockKeyhole, 'Add password…'], ['remove', Trash2, 'Remove from recents']
+  ['view', Eye, 'View PDF'],
+  ['edit', Pencil, 'Edit PDF'],
+  ['merge', Files, 'Merge PDFs'],
+  ['password', LockKeyhole, 'Add password…'],
+  ['remove', Trash2, 'Remove from recents'],
 ];
 const MARGIN = 8;
 const FADE_OUT_MS = 100;
@@ -58,7 +61,12 @@ export function RecentMenu({name, x, y, onClose, onCommand}: Props) {
         e.preventDefault(); // Tab must not move focus on after it is returned to the trigger
         return onClose(true);
       }
-      const next: Record<string, number> = {Home: 0, End: items.length - 1, ArrowDown: (at + 1) % items.length, ArrowUp: (at - 1 + items.length) % items.length};
+      const next: Record<string, number> = {
+        Home: 0,
+        End: items.length - 1,
+        ArrowDown: (at + 1) % items.length,
+        ArrowUp: (at - 1 + items.length) % items.length,
+      };
       const target = next[e.key];
       if (target === undefined) return;
       e.preventDefault();
@@ -80,10 +88,12 @@ export function RecentMenu({name, x, y, onClose, onCommand}: Props) {
       {ITEMS.map(([command, Icon, label]) => (
         <div key={command} style={{display: 'contents'}}>
           {command === 'password' && <div className="menu-divider" />}
-          <button type="button" role="menuitem" onClick={() => onCommand(command)}><Icon aria-hidden="true" /> {label}</button>
+          <button type="button" role="menuitem" onClick={() => onCommand(command)}>
+            <Icon aria-hidden="true" /> {label}
+          </button>
         </div>
       ))}
     </div>,
-    document.body
+    document.body,
   );
 }

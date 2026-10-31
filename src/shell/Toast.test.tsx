@@ -5,10 +5,16 @@ import {Toast} from './Toast';
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.stubGlobal('matchMedia', vi.fn(() => ({matches: false})));
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({matches: false})),
+  );
   useApp.setState({toast: null});
 });
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals() });
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 const text = () => document.querySelector('.toast');
 
@@ -24,10 +30,14 @@ describe('Toast', () => {
   it('slides out for 160ms after its 4.5s, then leaves', () => {
     render(<Toast />);
     act(() => useApp.getState().notify('Saved'));
-    act(() => { vi.advanceTimersByTime(4500) });
+    act(() => {
+      vi.advanceTimersByTime(4500);
+    });
     expect(text()).toHaveClass('leaving');
     expect(screen.getByRole('status')).toBeInTheDocument();
-    act(() => { vi.advanceTimersByTime(160) });
+    act(() => {
+      vi.advanceTimersByTime(160);
+    });
     expect(text()).toBeNull();
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
@@ -35,18 +45,27 @@ describe('Toast', () => {
   it('a new toast replaces the leaving one at once', () => {
     render(<Toast />);
     act(() => useApp.getState().notify('One'));
-    act(() => { vi.advanceTimersByTime(4500) });
+    act(() => {
+      vi.advanceTimersByTime(4500);
+    });
     act(() => useApp.getState().notify('Two'));
     expect(text()).not.toHaveClass('leaving');
     expect(text()).toHaveTextContent('Two');
   });
 
   it('under reduced motion it leaves without a slide', () => {
-    vi.stubGlobal('matchMedia', vi.fn(() => ({matches: true})));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({matches: true})),
+    );
     render(<Toast />);
     act(() => useApp.getState().notify('Saved'));
-    act(() => { vi.advanceTimersByTime(4500) });
-    act(() => { vi.advanceTimersByTime(0) });
+    act(() => {
+      vi.advanceTimersByTime(4500);
+    });
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
     expect(text()).toBeNull();
   });
 });

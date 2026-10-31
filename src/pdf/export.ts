@@ -3,8 +3,15 @@ import type {ExportRequest} from './export.worker';
 
 export type {ExportSpec} from './export-core';
 
-interface Pending { resolve: (b: Uint8Array) => void; reject: (e: Error) => void; onProgress?: Progress }
-type Reply = {id: number; progress: [number, number]} | {id: number; result: Uint8Array} | {id: number; error: string};
+interface Pending {
+  resolve: (b: Uint8Array) => void;
+  reject: (e: Error) => void;
+  onProgress?: Progress;
+}
+type Reply =
+  | {id: number; progress: [number, number]}
+  | {id: number; result: Uint8Array}
+  | {id: number; error: string};
 type Call = DistributiveOmit<ExportRequest>;
 type DistributiveOmit<T> = T extends unknown ? Omit<T, 'id'> : never;
 
@@ -49,7 +56,9 @@ function getWorker(): Worker | null {
 const snapshot = (spec: ExportSpec, copyBytes: boolean): ExportSpec => ({
   ...spec,
   pages: spec.pages.map((p) => ({...p})),
-  sources: copyBytes ? Object.fromEntries(Object.entries(spec.sources).map(([k, v]) => [k, v.slice()])) : spec.sources
+  sources: copyBytes
+    ? Object.fromEntries(Object.entries(spec.sources).map(([k, v]) => [k, v.slice()]))
+    : spec.sources,
 });
 
 function inWorker(w: Worker, call: Call, onProgress?: Progress): Promise<Uint8Array> {
@@ -58,7 +67,9 @@ function inWorker(w: Worker, call: Call, onProgress?: Progress): Promise<Uint8Ar
     pending.set(id, {resolve, reject, onProgress});
     const req = {...call, id} as ExportRequest;
     const transfer: Transferable[] =
-      req.op === 'protect' ? [req.bytes.buffer] : Object.values(req.spec.sources).map((b) => b.buffer);
+      req.op === 'protect'
+        ? [req.bytes.buffer]
+        : Object.values(req.spec.sources).map((b) => b.buffer);
     try {
       w.postMessage(req, transfer);
     } catch (e) {
@@ -82,7 +93,12 @@ export async function protectPdf(bytes: Uint8Array, password: string): Promise<U
   return (await import('./export-core')).protectPdf(copy, password);
 }
 
-export async function splitZip(spec: ExportSpec, groups: number[][], baseName: string, onProgress?: Progress): Promise<Uint8Array> {
+export async function splitZip(
+  spec: ExportSpec,
+  groups: number[][],
+  baseName: string,
+  onProgress?: Progress,
+): Promise<Uint8Array> {
   const w = getWorker();
   const snap = snapshot(spec, !!w);
   const parts = groups.map((g) => [...g]);

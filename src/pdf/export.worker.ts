@@ -5,7 +5,10 @@ export type ExportRequest =
   | {id: number; op: 'protect'; bytes: Uint8Array; password: string}
   | {id: number; op: 'split'; spec: ExportSpec; groups: number[][]; baseName: string};
 
-const run = (req: ExportRequest, progress: (done: number, total: number) => void): Promise<Uint8Array> => {
+const run = (
+  req: ExportRequest,
+  progress: (done: number, total: number) => void,
+): Promise<Uint8Array> => {
   if (req.op === 'build') return buildPdf(req.spec, progress);
   if (req.op === 'protect') return protectPdf(req.bytes, req.password);
   return splitZip(req.spec, req.groups, req.baseName, progress);
@@ -17,7 +20,9 @@ const ctx = self as unknown as {postMessage(message: unknown, transfer?: Transfe
 self.onmessage = async (e: MessageEvent<ExportRequest>) => {
   const {id} = e.data;
   try {
-    const result = await run(e.data, (done, total) => ctx.postMessage({id, progress: [done, total]}));
+    const result = await run(e.data, (done, total) =>
+      ctx.postMessage({id, progress: [done, total]}),
+    );
     ctx.postMessage({id, result}, [result.buffer]);
   } catch (err) {
     // Never echo the request: it may carry a password.

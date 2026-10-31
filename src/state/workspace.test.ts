@@ -8,7 +8,10 @@ import {useApp} from './app';
 import type {PickedFile} from '../platform/types';
 import type {DraftRecord} from '../storage/draft';
 
-vi.mock('../pdf/load', async (orig) => ({...(await orig<typeof import('../pdf/load')>()), loadPdf: vi.fn()}));
+vi.mock('../pdf/load', async (orig) => ({
+  ...(await orig<typeof import('../pdf/load')>()),
+  loadPdf: vi.fn(),
+}));
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
 vi.mock('../pdf/bytes', async (orig) => {
   const real = await orig<typeof import('../pdf/bytes')>();
@@ -19,11 +22,13 @@ const pdf = (name: string, size = 3): PickedFile => ({name, bytes: new Uint8Arra
 const pageCount: Record<string, number> = {'a.pdf': 2, 'b.pdf': 3, 'c.pdf': 1};
 
 beforeEach(() => {
-  vi.mocked(loadPdf).mockReset().mockImplementation(async (name) => {
-    const pages = pageCount[name];
-    if (pages === undefined) throw new InvalidPdfError(name);
-    return {pages};
-  });
+  vi.mocked(loadPdf)
+    .mockReset()
+    .mockImplementation(async (name) => {
+      const pages = pageCount[name];
+      if (pages === undefined) throw new InvalidPdfError(name);
+      return {pages};
+    });
   vi.mocked(release).mockClear();
   vi.mocked(retain).mockClear();
   vi.mocked(putBytes).mockClear();
@@ -38,11 +43,16 @@ afterEach(async () => {
 /** loadPdf calls that resolve when the test says so. */
 const deferLoads = () => {
   const resolvers: Record<string, () => void> = {};
-  vi.mocked(loadPdf).mockImplementation((name) => new Promise((r) => (resolvers[name] = () => r({pages: pageCount[name] ?? 1}))));
+  vi.mocked(loadPdf).mockImplementation(
+    (name) => new Promise((r) => (resolvers[name] = () => r({pages: pageCount[name] ?? 1}))),
+  );
   return resolvers;
 };
 
-const make = async (kind: 'document' | 'merge' = 'document', files = [pdf('a.pdf'), pdf('b.pdf')]) => {
+const make = async (
+  kind: 'document' | 'merge' = 'document',
+  files = [pdf('a.pdf'), pdf('b.pdf')],
+) => {
   const store = createWorkspaceStore(kind);
   await store.getState().addFiles(files);
   return store;
@@ -53,9 +63,16 @@ describe('addFiles', () => {
   it('loads, stores bytes, retains and appends pages', async () => {
     const store = await make('merge');
     const {files, pages, workflow, completed} = store.getState();
-    expect(files.map((f) => [f.name, f.pages, f.size])).toEqual([['a.pdf', 2, 3], ['b.pdf', 3, 3]]);
+    expect(files.map((f) => [f.name, f.pages, f.size])).toEqual([
+      ['a.pdf', 2, 3],
+      ['b.pdf', 3, 3],
+    ]);
     expect(pages.map((p) => [p.fileId, p.local, p.rotation])).toEqual([
-      [files[0]!.id, 0, 0], [files[0]!.id, 1, 0], [files[1]!.id, 0, 0], [files[1]!.id, 1, 0], [files[1]!.id, 2, 0]
+      [files[0]!.id, 0, 0],
+      [files[0]!.id, 1, 0],
+      [files[1]!.id, 0, 0],
+      [files[1]!.id, 1, 0],
+      [files[1]!.id, 2, 0],
     ]);
     expect(getBytes(files[0]!.id)).toHaveLength(3);
     expect(retain).toHaveBeenCalledWith(files[0]!.id, 'merge');
@@ -73,7 +90,10 @@ describe('addFiles', () => {
   it('notifies about a corrupt file and still adds the others', async () => {
     const notify = vi.spyOn(useApp.getState(), 'notify');
     const store = await make('merge', [pdf('a.pdf'), pdf('broken.pdf'), pdf('b.pdf')]);
-    expect(notify).toHaveBeenCalledWith('Could not open broken.pdf. Use a valid PDF without a password.', 'error');
+    expect(notify).toHaveBeenCalledWith(
+      'Could not open broken.pdf. Use a valid PDF without a password.',
+      'error',
+    );
     expect(store.getState().files.map((f) => f.name)).toEqual(['a.pdf', 'b.pdf']);
     notify.mockRestore();
   });
@@ -178,7 +198,13 @@ describe('page actions', () => {
     const [a, b] = store.getState().files;
     store.getState().moveFile(b!.id, -1);
     expect(store.getState().files.map((f) => f.id)).toEqual([b!.id, a!.id]);
-    expect(store.getState().pages.map((p) => p.fileId)).toEqual([b!.id, b!.id, b!.id, a!.id, a!.id]);
+    expect(store.getState().pages.map((p) => p.fileId)).toEqual([
+      b!.id,
+      b!.id,
+      b!.id,
+      a!.id,
+      a!.id,
+    ]);
     store.getState().removeFile(b!.id);
     expect(store.getState().files.map((f) => f.id)).toEqual([a!.id]);
     expect(store.getState().pages).toHaveLength(2);
@@ -189,7 +215,13 @@ describe('page actions', () => {
     const [a, b] = store.getState().files;
     store.getState().moveFileTo(a!.id, 1);
     expect(store.getState().files.map((f) => f.id)).toEqual([b!.id, a!.id]);
-    expect(store.getState().pages.map((p) => p.fileId)).toEqual([b!.id, b!.id, b!.id, a!.id, a!.id]);
+    expect(store.getState().pages.map((p) => p.fileId)).toEqual([
+      b!.id,
+      b!.id,
+      b!.id,
+      a!.id,
+      a!.id,
+    ]);
     store.getState().undo();
     expect(store.getState().files.map((f) => f.id)).toEqual([a!.id, b!.id]);
   });
@@ -227,7 +259,14 @@ describe('page actions', () => {
   it('moving a file with no pages left still reorders files as an undoable step', async () => {
     const store = await make();
     const [a, b] = store.getState().files;
-    store.getState().remove(new Set(store.getState().pages.filter((p) => p.fileId === b!.id).map((p) => p.uid)));
+    store.getState().remove(
+      new Set(
+        store
+          .getState()
+          .pages.filter((p) => p.fileId === b!.id)
+          .map((p) => p.uid),
+      ),
+    );
     store.getState().moveFile(b!.id, -1);
     expect(store.getState().files.map((f) => f.id)).toEqual([b!.id, a!.id]);
     store.getState().undo();
@@ -339,7 +378,12 @@ describe('navigation', () => {
   it('setTab, setZoom and setExportSettings update fields', async () => {
     const store = createWorkspaceStore('document');
     expect(store.getState().zoom).toBe('fit');
-    expect(store.getState().exportSettings).toEqual({name: 'Merged document.pdf', rangeMode: 'all', customRange: '', useFileNamesAsTitle: true});
+    expect(store.getState().exportSettings).toEqual({
+      name: 'Merged document.pdf',
+      rangeMode: 'all',
+      customRange: '',
+      useFileNamesAsTitle: true,
+    });
     store.getState().setTab('pages');
     store.getState().setZoom(150);
     store.getState().setExportSettings({name: 'x.pdf'});
@@ -357,7 +401,13 @@ describe('navigation', () => {
   });
 });
 
-const saved: SavedResult = {name: 'out.pdf', folder: 'C:\\out', pages: 5, size: 10, bytes: new Uint8Array(10)};
+const saved: SavedResult = {
+  name: 'out.pdf',
+  folder: 'C:\\out',
+  pages: 5,
+  size: 10,
+  bytes: new Uint8Array(10),
+};
 
 describe('export', () => {
   it('canUndo and canRedo are false while exporting', async () => {
@@ -417,7 +467,9 @@ describe('replaceWith and reset', () => {
     store.getState().goTo(3);
     store.getState().setZoom(200);
     await store.getState().replaceWith(pdf('c.pdf'));
-    expect(old.map((id) => vi.mocked(release).mock.calls.some(([f, o]) => f === id && o === 'document'))).toEqual([true, true]);
+    expect(
+      old.map((id) => vi.mocked(release).mock.calls.some(([f, o]) => f === id && o === 'document')),
+    ).toEqual([true, true]);
     const s = store.getState();
     expect(s.files.map((f) => f.name)).toEqual(['c.pdf']);
     expect(s.pages).toHaveLength(1);
@@ -464,7 +516,10 @@ describe('replaceWith and reset', () => {
     await store.getState().replaceWith(pdf('broken.pdf'));
     expect(release).not.toHaveBeenCalled();
     expect(store.getState().files).toHaveLength(2);
-    expect(useApp.getState().toast).toMatchObject({text: 'Could not open broken.pdf. Use a valid PDF without a password.', tone: 'error'});
+    expect(useApp.getState().toast).toMatchObject({
+      text: 'Could not open broken.pdf. Use a valid PDF without a password.',
+      tone: 'error',
+    });
   });
 
   it('reset releases every file it retained, including removed ones, and clears state', async () => {
@@ -490,19 +545,43 @@ describe('replaceWith and reset', () => {
 
 describe('restore', () => {
   const record = (over: Partial<DraftRecord> = {}): DraftRecord => ({
-    files: [{id: 'f1', name: 'a.pdf', pages: 2, size: 3, recentId: 'r1'}, {id: 'f2', name: 'b.pdf', pages: 1, size: 4}],
-    pages: [{uid: 'u1', fileId: 'f1', local: 0, rotation: 90}, {uid: 'u2', fileId: 'f1', local: 1, rotation: 0}, {uid: 'u3', fileId: 'f2', local: 0, rotation: 0}],
-    currentPage: 2, view: 'edit', selection: ['u2', 'gone'], anchor: 'u2',
-    exportSettings: {name: 'Mine.pdf', rangeMode: 'custom', customRange: '1-2', useFileNamesAsTitle: false}, savedAt: 1, ...over
+    files: [
+      {id: 'f1', name: 'a.pdf', pages: 2, size: 3, recentId: 'r1'},
+      {id: 'f2', name: 'b.pdf', pages: 1, size: 4},
+    ],
+    pages: [
+      {uid: 'u1', fileId: 'f1', local: 0, rotation: 90},
+      {uid: 'u2', fileId: 'f1', local: 1, rotation: 0},
+      {uid: 'u3', fileId: 'f2', local: 0, rotation: 0},
+    ],
+    currentPage: 2,
+    view: 'edit',
+    selection: ['u2', 'gone'],
+    anchor: 'u2',
+    exportSettings: {
+      name: 'Mine.pdf',
+      rangeMode: 'custom',
+      customRange: '1-2',
+      useFileNamesAsTitle: false,
+    },
+    savedAt: 1,
+    ...over,
   });
-  const bytesFor = () => new Map([['f1', new Uint8Array([1])], ['f2', new Uint8Array([2])]]);
+  const bytesFor = () =>
+    new Map([
+      ['f1', new Uint8Array([1])],
+      ['f2', new Uint8Array([2])],
+    ]);
 
   it('puts the bytes back, retains each file and sets the draft fields with no undo step', async () => {
     const store = createWorkspaceStore('document');
     const bytes = bytesFor();
     await store.getState().restore(record(), bytes);
     expect(getBytes('f1')).toBe(bytes.get('f1'));
-    expect(vi.mocked(retain).mock.calls).toEqual([['f1', 'document'], ['f2', 'document']]);
+    expect(vi.mocked(retain).mock.calls).toEqual([
+      ['f1', 'document'],
+      ['f2', 'document'],
+    ]);
     const s = store.getState();
     expect(s.files.map((f) => f.id)).toEqual(['f1', 'f2']);
     expect(s.files[0]!.recentId).toBe('r1');
@@ -529,7 +608,12 @@ describe('restore', () => {
     for (const id of old) expect(release).toHaveBeenCalledWith(id, 'document');
     vi.mocked(release).mockClear();
     await store.getState().reset();
-    expect(vi.mocked(release).mock.calls.map(([id]) => id).sort()).toEqual(['f1', 'f2']);
+    expect(
+      vi
+        .mocked(release)
+        .mock.calls.map(([id]) => id)
+        .sort(),
+    ).toEqual(['f1', 'f2']);
   });
 });
 

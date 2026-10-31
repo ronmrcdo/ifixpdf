@@ -4,7 +4,12 @@ import {busy, track} from './work';
 
 describe('useApp', () => {
   it('starts on home with no toast and openAfter on', () => {
-    expect(useApp.getState()).toMatchObject({view: 'home', toast: null, openAfter: true, workspace: 'merge'});
+    expect(useApp.getState()).toMatchObject({
+      view: 'home',
+      toast: null,
+      openAfter: true,
+      workspace: 'merge',
+    });
   });
 
   it('setView changes the view and remembers the last document view', () => {

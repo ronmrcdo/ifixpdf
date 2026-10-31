@@ -14,7 +14,12 @@ const ZOOM_STEP = 50; // one mouse notch is one step; small pinch deltas add up
  * One wheel gesture either scrolls the zoomed page or flips one page, never both; Ctrl+wheel zooms.
  * The state lives in this closure, so inertia that spans a re-render can't flip twice.
  */
-export function createWheelFlip({gap, onFlip, onZoom, canScroll}: WheelFlipOptions): (e: WheelEvent) => void {
+export function createWheelFlip({
+  gap,
+  onFlip,
+  onZoom,
+  canScroll,
+}: WheelFlipOptions): (e: WheelEvent) => void {
   let gestureAt = -Infinity;
   let gestureDone = false;
   let zoomAt = -Infinity;

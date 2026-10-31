@@ -13,7 +13,14 @@ vi.mock('../../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () =
 vi.mock('../../pdf/thumbnails', () => ({renderBlob: vi.fn(async () => new Blob(['png']))}));
 vi.mock('../../pdf/bytes', () => ({putBytes: vi.fn()}));
 
-const entry = (id: string, over: Partial<RecentEntry> = {}): RecentEntry => ({id, name: `${id}.pdf`, pages: 2, size: 2048, modified: Date.UTC(2026, 2, 5, 12), ...over});
+const entry = (id: string, over: Partial<RecentEntry> = {}): RecentEntry => ({
+  id,
+  name: `${id}.pdf`,
+  pages: 2,
+  size: 2048,
+  modified: Date.UTC(2026, 2, 5, 12),
+  ...over,
+});
 let rows: RecentEntry[];
 let repo: {[K in keyof RecentsRepository]: ReturnType<typeof vi.fn>};
 const onAddPassword = vi.fn();
@@ -29,10 +36,15 @@ beforeEach(() => {
   repo = {
     list: vi.fn(async () => rows),
     record: vi.fn(async (input: {name: string; thumbnail?: Blob}) => ({...entry('A'), ...input})),
-    open: vi.fn(async (id: string) => ({entry: rows.find((r) => r.id === id)!, bytes: await makePdf(1)})),
+    open: vi.fn(async (id: string) => ({
+      entry: rows.find((r) => r.id === id)!,
+      bytes: await makePdf(1),
+    })),
     relocate: vi.fn(async () => entry('A')),
     updateThumbnail: vi.fn(async (id: string) => rows.find((r) => r.id === id)),
-    remove: vi.fn(async (id: string) => { rows = rows.filter((r) => r.id !== id) })
+    remove: vi.fn(async (id: string) => {
+      rows = rows.filter((r) => r.id !== id);
+    }),
   };
   Object.assign(recents, repo); // the shared instance; this file's module graph is isolated
   useApp.setState({view: 'home', toast: null});
@@ -54,7 +66,11 @@ describe('list', () => {
     expect(names).toEqual(['Select A.pdf', 'Select B.pdf']);
     expect(screen.getByText('2 pages · 2 KB')).toBeInTheDocument();
     expect(screen.getByText('1 pages · 1.9 MB')).toBeInTheDocument();
-    expect(screen.getAllByText(new Date(rows[0]!.modified).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}))).toHaveLength(2);
+    expect(
+      screen.getAllByText(
+        new Date(rows[0]!.modified).toLocaleDateString(undefined, {month: 'short', day: 'numeric'}),
+      ),
+    ).toHaveLength(2);
     expect(screen.getByRole('button', {name: 'Open A.pdf'})).toBeInTheDocument();
   });
 
@@ -68,7 +84,9 @@ describe('list', () => {
   it('shows an error text when listing fails', async () => {
     repo.list.mockRejectedValue(new Error('idb'));
     render(<HomeView onAddPassword={onAddPassword} />);
-    expect(await screen.findByText('Recent documents could not be loaded. Add a PDF to continue.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('Recent documents could not be loaded. Add a PDF to continue.'),
+    ).toBeInTheDocument();
   });
 
   it('Merge selected is disabled at 0 and shows the count', async () => {
@@ -78,7 +96,9 @@ describe('list', () => {
     await user().click(screen.getByRole('checkbox', {name: 'Select A.pdf'}));
     await user().click(screen.getByRole('checkbox', {name: 'Select B.pdf'}));
     expect(screen.getByRole('button', {name: 'Merge selected (2)'})).toBeEnabled();
-    expect(screen.getByRole('checkbox', {name: 'Select A.pdf'}).closest('.recent-file')).toHaveClass('recent-selected');
+    expect(
+      screen.getByRole('checkbox', {name: 'Select A.pdf'}).closest('.recent-file'),
+    ).toHaveClass('recent-selected');
     await user().click(screen.getByRole('checkbox', {name: 'Select A.pdf'}));
     expect(screen.getByRole('button', {name: 'Merge selected (1)'})).toBeEnabled();
   });
@@ -96,7 +116,9 @@ describe('opening', () => {
   it('a file that went missing flips the row to missing and shows an error toast', async () => {
     await show();
     repo.open.mockRejectedValueOnce(new FileMissingError('gone'));
-    repo.list.mockImplementation(async () => rows.map((r) => (r.id === 'A' ? {...r, missing: true} : r)));
+    repo.list.mockImplementation(async () =>
+      rows.map((r) => (r.id === 'A' ? {...r, missing: true} : r)),
+    );
     await user().click(screen.getByRole('button', {name: 'Open A.pdf'}));
     expect(await screen.findByText('File not found')).toBeInTheDocument();
     expect(useApp.getState().toast).toMatchObject({tone: 'error'});
@@ -107,12 +129,18 @@ describe('opening', () => {
     await show();
     repo.open.mockRejectedValueOnce(new Error('bad'));
     await user().click(screen.getByRole('button', {name: 'Open A.pdf'}));
-    await waitFor(() => expect(useApp.getState().toast?.text).toBe('Could not open that PDF. Choose a valid, unlocked PDF.'));
+    await waitFor(() =>
+      expect(useApp.getState().toast?.text).toBe(
+        'Could not open that PDF. Choose a valid, unlocked PDF.',
+      ),
+    );
   });
 });
 
 describe('missing entries', () => {
-  beforeEach(() => { rows = [entry('A', {name: 'A.pdf', missing: true, path: 'C:\\A.pdf'})]; });
+  beforeEach(() => {
+    rows = [entry('A', {name: 'A.pdf', missing: true, path: 'C:\\A.pdf'})];
+  });
 
   it('shows File not found with Locate and Remove', async () => {
     render(<HomeView onAddPassword={onAddPassword} />);
@@ -125,8 +153,13 @@ describe('missing entries', () => {
     render(<HomeView onAddPassword={onAddPassword} />);
     await screen.findByText('File not found');
     const bytes = new Uint8Array([1]);
-    const pick = vi.spyOn(platform, 'pickPdfs').mockResolvedValue([{name: 'New.pdf', bytes, path: 'D:\\New.pdf'}]);
-    repo.relocate.mockImplementation(async () => { rows = [entry('A', {name: 'New.pdf'})]; return rows[0]! });
+    const pick = vi
+      .spyOn(platform, 'pickPdfs')
+      .mockResolvedValue([{name: 'New.pdf', bytes, path: 'D:\\New.pdf'}]);
+    repo.relocate.mockImplementation(async () => {
+      rows = [entry('A', {name: 'New.pdf'})];
+      return rows[0]!;
+    });
     await user().click(screen.getByRole('button', {name: 'Locate…'}));
     expect(pick).toHaveBeenCalledWith({multiple: false});
     expect(repo.relocate).toHaveBeenCalledWith('A', {name: 'New.pdf', bytes, path: 'D:\\New.pdf'});
@@ -146,10 +179,17 @@ describe('missing entries', () => {
   it('a failing relocate shows an error toast', async () => {
     render(<HomeView onAddPassword={onAddPassword} />);
     await screen.findByText('File not found');
-    vi.spyOn(platform, 'pickPdfs').mockResolvedValue([{name: 'x.pdf', bytes: new Uint8Array(1), path: 'D:\\x.pdf'}]);
+    vi.spyOn(platform, 'pickPdfs').mockResolvedValue([
+      {name: 'x.pdf', bytes: new Uint8Array(1), path: 'D:\\x.pdf'},
+    ]);
     repo.relocate.mockRejectedValue(new Error('idb'));
     await user().click(screen.getByRole('button', {name: 'Locate…'}));
-    await waitFor(() => expect(useApp.getState().toast).toMatchObject({text: 'Could not locate that PDF.', tone: 'error'}));
+    await waitFor(() =>
+      expect(useApp.getState().toast).toMatchObject({
+        text: 'Could not locate that PDF.',
+        tone: 'error',
+      }),
+    );
   });
 
   it('Remove deletes the row', async () => {
@@ -162,18 +202,30 @@ describe('missing entries', () => {
 });
 
 describe('context menu', () => {
-  const items = () => within(screen.getByRole('menu')).getAllByRole('menuitem').map((i) => i.textContent?.trim());
+  const items = () =>
+    within(screen.getByRole('menu'))
+      .getAllByRole('menuitem')
+      .map((i) => i.textContent?.trim());
 
   it('opens from More with the five items and focuses the first', async () => {
     await show();
     await user().click(more('A.pdf'));
-    expect(items()).toEqual(['View PDF', 'Edit PDF', 'Merge PDFs', 'Add password…', 'Remove from recents']);
+    expect(items()).toEqual([
+      'View PDF',
+      'Edit PDF',
+      'Merge PDFs',
+      'Add password…',
+      'Remove from recents',
+    ]);
     expect(screen.getByRole('menuitem', {name: 'View PDF'})).toHaveFocus();
   });
 
   it('opens on right-click of the row', async () => {
     await show();
-    await user().pointer({keys: '[MouseRight]', target: screen.getByRole('checkbox', {name: 'Select A.pdf'}).closest('.recent-file')!});
+    await user().pointer({
+      keys: '[MouseRight]',
+      target: screen.getByRole('checkbox', {name: 'Select A.pdf'}).closest('.recent-file')!,
+    });
     expect(screen.getByRole('menu', {name: 'Actions for A.pdf'})).toBeInTheDocument();
   });
 
@@ -216,7 +268,9 @@ describe('context menu', () => {
     await u.click(document.body);
     expect(screen.queryByRole('menu')).toBeNull();
     await u.click(more('A.pdf'));
-    act(() => { window.dispatchEvent(new Event('resize')) });
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
@@ -224,7 +278,11 @@ describe('context menu', () => {
     await show();
     vi.stubGlobal('innerWidth', 300);
     vi.stubGlobal('innerHeight', 300);
-    await user().pointer({keys: '[MouseRight]', target: screen.getByRole('checkbox', {name: 'Select A.pdf'}).closest('.recent-file')!, coords: {clientX: 0, clientY: 0}});
+    await user().pointer({
+      keys: '[MouseRight]',
+      target: screen.getByRole('checkbox', {name: 'Select A.pdf'}).closest('.recent-file')!,
+      coords: {clientX: 0, clientY: 0},
+    });
     const menu = screen.getByRole('menu');
     expect(menu.style.left).toBe('8px');
     expect(menu.style.top).toBe('8px');
@@ -249,7 +307,9 @@ describe('context menu', () => {
 
   it('Remove from recents removes the row and touches no platform file API', async () => {
     await show();
-    const spies = (['readPath', 'saveAs', 'openPath', 'reveal', 'pickPdfs'] as const).map((k) => vi.spyOn(platform, k));
+    const spies = (['readPath', 'saveAs', 'openPath', 'reveal', 'pickPdfs'] as const).map((k) =>
+      vi.spyOn(platform, k),
+    );
     const u = user();
     await u.click(more('A.pdf'));
     await u.click(screen.getByRole('menuitem', {name: 'Remove from recents'}));
@@ -261,7 +321,8 @@ describe('context menu', () => {
 });
 
 describe('Merge from Home', () => {
-  const merge = async (label: RegExp | string) => user().click(screen.getByRole('button', {name: label}));
+  const merge = async (label: RegExp | string) =>
+    user().click(screen.getByRole('button', {name: label}));
 
   it('Merge selected opens the checked files on the Pages tab in review', async () => {
     await show();
@@ -313,13 +374,21 @@ describe('Merge from Home', () => {
     vi.spyOn(mergeStore.getState(), 'addFiles').mockRejectedValueOnce(new Error('idb'));
     await user().click(more('A.pdf'));
     await user().click(screen.getByRole('menuitem', {name: 'Merge PDFs'}));
-    await waitFor(() => expect(useApp.getState().toast).toMatchObject({text: 'Could not prepare those PDFs for merging.', tone: 'error'}));
+    await waitFor(() =>
+      expect(useApp.getState().toast).toMatchObject({
+        text: 'Could not prepare those PDFs for merging.',
+        tone: 'error',
+      }),
+    );
     expect(useApp.getState().view).toBe('home');
   });
 
   it('counts only the files actually added, and stays Home when none were', async () => {
     await show();
-    repo.open.mockImplementation(async (id: string) => ({entry: rows.find((r) => r.id === id)!, bytes: id === 'B' ? new Uint8Array([1]) : await makePdf(1)}));
+    repo.open.mockImplementation(async (id: string) => ({
+      entry: rows.find((r) => r.id === id)!,
+      bytes: id === 'B' ? new Uint8Array([1]) : await makePdf(1),
+    }));
     const u = user();
     await u.click(screen.getByRole('checkbox', {name: 'Select B.pdf'}));
     await u.click(more('A.pdf'));
@@ -331,14 +400,20 @@ describe('Merge from Home', () => {
 
   it('navigates nowhere when every file is invalid', async () => {
     await show();
-    repo.open.mockImplementation(async (id: string) => ({entry: rows.find((r) => r.id === id)!, bytes: new Uint8Array([1])}));
+    repo.open.mockImplementation(async (id: string) => ({
+      entry: rows.find((r) => r.id === id)!,
+      bytes: new Uint8Array([1]),
+    }));
     await user().click(more('A.pdf'));
     await user().click(screen.getByRole('menuitem', {name: 'Merge PDFs'}));
     await waitFor(() => expect(useApp.getState().toast?.text).toMatch(/^Could not open A\.pdf/));
     expect(useApp.getState().view).toBe('home');
   });
 
-  it.each([['Merge selected', true], ['the menu Merge PDFs', false]] as const)('%s while Merge is saving: one wait toast, no navigation', async (_, viaToolbar) => {
+  it.each([
+    ['Merge selected', true],
+    ['the menu Merge PDFs', false],
+  ] as const)('%s while Merge is saving: one wait toast, no navigation', async (_, viaToolbar) => {
     await show();
     await mergeStore.getState().addFiles([{name: 'Old.pdf', bytes: await makePdf(1)}]);
     mergeStore.getState().beginExport();
@@ -349,7 +424,12 @@ describe('Merge from Home', () => {
       await u.click(more('A.pdf'));
       await u.click(screen.getByRole('menuitem', {name: 'Merge PDFs'}));
     }
-    await waitFor(() => expect(useApp.getState().toast).toMatchObject({text: 'Wait for the save to finish.', tone: 'info'}));
+    await waitFor(() =>
+      expect(useApp.getState().toast).toMatchObject({
+        text: 'Wait for the save to finish.',
+        tone: 'info',
+      }),
+    );
     expect(useApp.getState().view).toBe('home');
     expect(repo.open).not.toHaveBeenCalled();
     expect(mergeStore.getState().files.map((f) => f.name)).toEqual(['Old.pdf']);
@@ -369,18 +449,26 @@ describe('thumbnails', () => {
   beforeEach(() => {
     fire = [];
     rows = [entry('A', {name: 'A.pdf'})];
-    vi.stubGlobal('IntersectionObserver', class {
-      constructor(cb: (e: Array<{isIntersecting: boolean}>) => void) { fire.push(cb) }
-      observe() {}
-      disconnect() {}
-    });
+    vi.stubGlobal(
+      'IntersectionObserver',
+      class {
+        constructor(cb: (e: Array<{isIntersecting: boolean}>) => void) {
+          fire.push(cb);
+        }
+        observe() {}
+        disconnect() {}
+      },
+    );
     URL.createObjectURL = vi.fn(() => 'blob:thumb');
     URL.revokeObjectURL = vi.fn();
   });
 
   it('renders a missing thumbnail once on first view and saves the Blob without changing modified', async () => {
     await show();
-    await act(async () => { observe(); observe() });
+    await act(async () => {
+      observe();
+      observe();
+    });
     await waitFor(() => expect(repo.updateThumbnail).toHaveBeenCalledTimes(1));
     expect(repo.updateThumbnail.mock.calls[0]![0]).toBe('A');
     expect(repo.updateThumbnail.mock.calls[0]![1]).toBeInstanceOf(Blob);
@@ -391,14 +479,23 @@ describe('thumbnails', () => {
   it('removing a row while its thumbnail renders does not bring it back', async () => {
     const {renderBlob} = await import('../../pdf/thumbnails');
     let finish!: (b: Blob) => void;
-    vi.mocked(renderBlob).mockImplementationOnce(() => new Promise<Blob>((r) => { finish = r }));
+    vi.mocked(renderBlob).mockImplementationOnce(
+      () =>
+        new Promise<Blob>((r) => {
+          finish = r;
+        }),
+    );
     await show();
-    await act(async () => { observe() });
+    await act(async () => {
+      observe();
+    });
     const u = user();
     await u.click(more('A.pdf'));
     await u.click(screen.getByRole('menuitem', {name: 'Remove from recents'}));
     await screen.findByText('No recent PDFs yet');
-    await act(async () => { finish(new Blob(['png'])) });
+    await act(async () => {
+      finish(new Blob(['png']));
+    });
     await waitFor(() => expect(repo.updateThumbnail).toHaveBeenCalled());
     expect(repo.record).not.toHaveBeenCalled();
     expect(screen.queryByText('A.pdf')).toBeNull();
@@ -418,8 +515,12 @@ describe('thumbnails', () => {
     const {renderBlob} = await import('../../pdf/thumbnails');
     vi.mocked(renderBlob).mockRejectedValue(new Error('boom'));
     await show();
-    await act(async () => { observe() });
-    await act(async () => { observe() });
+    await act(async () => {
+      observe();
+    });
+    await act(async () => {
+      observe();
+    });
     expect(renderBlob).toHaveBeenCalledTimes(1);
     expect(repo.record).not.toHaveBeenCalled();
     expect(document.querySelector('.recent-file img')).not.toHaveAttribute('src');

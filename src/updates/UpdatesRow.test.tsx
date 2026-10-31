@@ -12,21 +12,45 @@ beforeEach(() => set({status: 'idle'}));
 
 describe('UpdatesRow copy and controls', () => {
   it.each<[UpdateState, string, string | null]>([
-    [{status: 'browser'}, 'Updates are available in the installed desktop app. This browser preview cannot update itself.', null],
+    [
+      {status: 'browser'},
+      'Updates are available in the installed desktop app. This browser preview cannot update itself.',
+      null,
+    ],
     [{status: 'idle'}, 'Check whether a newer version is available.', 'Check for updates'],
     [{status: 'checking'}, 'Checking for updates…', null],
     [{status: 'current'}, 'iFixPDF is up to date.', 'Check for updates'],
-    [{status: 'unconfigured'}, 'The update service is not configured in this development build. Install new versions manually.', 'Check for updates'],
+    [
+      {status: 'unconfigured'},
+      'The update service is not configured in this development build. Install new versions manually.',
+      'Check for updates',
+    ],
     [{status: 'offline'}, "You're offline. Connect to the internet and try again.", 'Retry'],
     [{status: 'error'}, "Couldn't check for updates. Try again later.", 'Retry'],
     [{status: 'available', ...info}, 'iFixPDF 0.2.0 is available.', 'Download update'],
     [{status: 'downloading', ...info, progress: {done: 0}}, 'Downloading iFixPDF 0.2.0…', null],
-    [{status: 'download-error', ...info}, 'Download failed. Check your connection and try again.', 'Retry'],
-    [{status: 'ready', ...info}, 'iFixPDF 0.2.0 is ready. Your workspace is saved before restarting.', 'Restart and install'],
-    [{status: 'save-error', ...info}, "iFixPDF couldn't save your workspace, so the update was not installed. Save your PDF, then try again.", 'Restart and install'],
+    [
+      {status: 'download-error', ...info},
+      'Download failed. Check your connection and try again.',
+      'Retry',
+    ],
+    [
+      {status: 'ready', ...info},
+      'iFixPDF 0.2.0 is ready. Your workspace is saved before restarting.',
+      'Restart and install',
+    ],
+    [
+      {status: 'save-error', ...info},
+      "iFixPDF couldn't save your workspace, so the update was not installed. Save your PDF, then try again.",
+      'Restart and install',
+    ],
     [{status: 'installing', ...info}, 'Installing update…', null],
-    [{status: 'install-error', ...info}, "The update couldn't be installed. Try again, or install the new version manually.", 'Retry'],
-    [{status: 'restart', ...info}, 'Update installed. Restart iFixPDF to finish.', null]
+    [
+      {status: 'install-error', ...info},
+      "The update couldn't be installed. Try again, or install the new version manually.",
+      'Retry',
+    ],
+    [{status: 'restart', ...info}, 'Update installed. Restart iFixPDF to finish.', null],
   ])('%j', (state, text, button) => {
     set(state);
     render(<UpdatesRow />);
@@ -41,13 +65,16 @@ describe('UpdatesRow copy and controls', () => {
     expect(row().querySelector('.update-status')).toHaveAttribute('aria-live', 'polite');
   });
 
-  it.each(['available', 'download-error', 'ready', 'save-error'] as const)('shows release notes as text in %s', (status) => {
-    const notes = '<img src=x onerror="window.__xss=1">';
-    set({status, version: '0.2.0', notes});
-    render(<UpdatesRow />);
-    expect(within(row()).getByText(notes)).toBeInTheDocument();
-    expect(row().querySelector('img')).toBeNull();
-  });
+  it.each(['available', 'download-error', 'ready', 'save-error'] as const)(
+    'shows release notes as text in %s',
+    (status) => {
+      const notes = '<img src=x onerror="window.__xss=1">';
+      set({status, version: '0.2.0', notes});
+      render(<UpdatesRow />);
+      expect(within(row()).getByText(notes)).toBeInTheDocument();
+      expect(row().querySelector('img')).toBeNull();
+    },
+  );
 
   it.each(['idle', 'downloading', 'installing', 'restart'] as const)('no notes in %s', (status) => {
     set({status, version: '0.2.0', notes: 'hidden notes', progress: {done: 0}});
@@ -92,7 +119,17 @@ describe('UpdatesRow actions', () => {
   it('Check for updates runs the check through the injected updater', async () => {
     const check = vi.fn(async () => null);
     set({status: 'idle'});
-    render(<UpdatesRow deps={{check, online: () => true, busy: () => false, saveDraft: async () => {}, notify: vi.fn()}} />);
+    render(
+      <UpdatesRow
+        deps={{
+          check,
+          online: () => true,
+          busy: () => false,
+          saveDraft: async () => {},
+          notify: vi.fn(),
+        }}
+      />,
+    );
     await userEvent.setup().click(screen.getByRole('button', {name: 'Check for updates'}));
     expect(check).toHaveBeenCalledOnce();
     expect(await screen.findByText('iFixPDF is up to date.')).toBeInTheDocument();

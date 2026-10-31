@@ -19,7 +19,7 @@ export function cached(fileId: string, key: string, build: () => Promise<string>
   if (!pending) {
     const started = epochOf(fileId);
     const mine: Promise<string> = build()
-      .then(url => {
+      .then((url) => {
         if (epochOf(fileId) !== started) {
           URL.revokeObjectURL(url);
           return url;

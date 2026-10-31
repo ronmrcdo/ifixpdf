@@ -3,14 +3,23 @@ import type {ExportSpec} from '../pdf/export';
 import {PasswordDialog} from './PasswordDialog';
 import {SplitDialog} from './SplitDialog';
 
-interface PasswordTarget { name: string; bytes: Uint8Array }
-interface SplitTarget { count: number; name: string; spec: ExportSpec }
+interface PasswordTarget {
+  name: string;
+  bytes: Uint8Array;
+}
+interface SplitTarget {
+  count: number;
+  name: string;
+  spec: ExportSpec;
+}
 type Active = ({kind: 'password'} & PasswordTarget) | ({kind: 'split'} & SplitTarget) | null;
 
 // Holds which dialog is open and its document; never anything the user types.
 export const useDialogs = create<{active: Active}>()(() => ({active: null}));
-export const showPasswordDialog = (t: PasswordTarget) => useDialogs.setState({active: {kind: 'password', ...t}});
-export const showSplitDialog = (t: SplitTarget) => useDialogs.setState({active: {kind: 'split', ...t}});
+export const showPasswordDialog = (t: PasswordTarget) =>
+  useDialogs.setState({active: {kind: 'password', ...t}});
+export const showSplitDialog = (t: SplitTarget) =>
+  useDialogs.setState({active: {kind: 'split', ...t}});
 const close = () => useDialogs.setState({active: null});
 
 export function DialogHost() {

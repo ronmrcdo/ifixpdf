@@ -8,30 +8,70 @@ import {createWorkspaceStore, type WorkspaceStore} from '../../state/workspace';
 import {extractSelection} from '../../actions/save';
 import {PageGrid} from './PageGrid';
 
-vi.mock('../../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {}), acquire: vi.fn()}));
+vi.mock('../../pdf/registry', () => ({
+  retain: vi.fn(),
+  release: vi.fn(async () => {}),
+  acquire: vi.fn(),
+}));
 vi.mock('../../actions/save', () => ({extractSelection: vi.fn()}));
-vi.mock('../../pdf/thumbnails', () => ({thumbnail: vi.fn(async (fileId: string, local: number, rotation: number) => `blob:${fileId}-${local}-${rotation}`)}));
+vi.mock('../../pdf/thumbnails', () => ({
+  thumbnail: vi.fn(
+    async (fileId: string, local: number, rotation: number) =>
+      `blob:${fileId}-${local}-${rotation}`,
+  ),
+}));
 
 // One entry per observed element; `show` reports elements as intersecting, like the browser would on scroll.
-let observed: Array<{el: Element; cb: IntersectionObserverCallback; options?: IntersectionObserverInit; live: boolean}> = [];
+let observed: Array<{
+  el: Element;
+  cb: IntersectionObserverCallback;
+  options?: IntersectionObserverInit;
+  live: boolean;
+}> = [];
 class FakeObserver {
-  constructor(private cb: IntersectionObserverCallback, private options?: IntersectionObserverInit) {}
-  observe(el: Element) { observed.push({el, cb: this.cb, options: this.options, live: true}) }
-  unobserve(el: Element) { observed.filter((o) => o.el === el).forEach((o) => { o.live = false }) }
-  disconnect() { observed.filter((o) => o.cb === this.cb).forEach((o) => { o.live = false }) }
-}
-const report = (els: Element[], isIntersecting: boolean) => act(() => {
-  for (const o of observed.filter((o) => o.live && els.includes(o.el))) {
-    o.cb([{target: o.el, isIntersecting} as IntersectionObserverEntry], o as unknown as IntersectionObserver);
+  constructor(
+    private cb: IntersectionObserverCallback,
+    private options?: IntersectionObserverInit,
+  ) {}
+  observe(el: Element) {
+    observed.push({el, cb: this.cb, options: this.options, live: true});
   }
-});
+  unobserve(el: Element) {
+    observed
+      .filter((o) => o.el === el)
+      .forEach((o) => {
+        o.live = false;
+      });
+  }
+  disconnect() {
+    observed
+      .filter((o) => o.cb === this.cb)
+      .forEach((o) => {
+        o.live = false;
+      });
+  }
+}
+const report = (els: Element[], isIntersecting: boolean) =>
+  act(() => {
+    for (const o of observed.filter((o) => o.live && els.includes(o.el))) {
+      o.cb(
+        [{target: o.el, isIntersecting} as IntersectionObserverEntry],
+        o as unknown as IntersectionObserver,
+      );
+    }
+  });
 const imgs = () => [...document.querySelectorAll<HTMLImageElement>('.page-card img')];
 
-const make = (n: number): PageInstance[] => Array.from({length: n}, (_, i) => ({uid: `u${i}`, fileId: 'f', local: i, rotation: 0}));
+const make = (n: number): PageInstance[] =>
+  Array.from({length: n}, (_, i) => ({uid: `u${i}`, fileId: 'f', local: i, rotation: 0}));
 let store: WorkspaceStore;
 const setup = (n = 4, props: {onSplit?: () => void} = {}) => {
   store = createWorkspaceStore('document');
-  store.setState({files: [{id: 'f', name: 'A.pdf', pages: n, size: 1}], pages: make(n), tab: 'pages'});
+  store.setState({
+    files: [{id: 'f', name: 'A.pdf', pages: n, size: 1}],
+    pages: make(n),
+    tab: 'pages',
+  });
   return render(<PageGrid store={store} {...props} />);
 };
 const order = () => store.getState().pages.map((p) => p.uid);
@@ -91,7 +131,9 @@ describe('lazy thumbnails', () => {
     expect(document.querySelector('[data-uid="u0"]')).toBe(card);
     expect(card.querySelector('img')).toBe(img);
     expect(img).toHaveAttribute('src', 'blob:f-0-0');
-    expect([...document.querySelectorAll('.page-card')].map((c) => (c as HTMLElement).dataset.uid)).toEqual(['u1', 'u2', 'u0']);
+    expect(
+      [...document.querySelectorAll('.page-card')].map((c) => (c as HTMLElement).dataset.uid),
+    ).toEqual(['u1', 'u2', 'u0']);
     expect(thumbnail).not.toHaveBeenCalled();
   });
 
@@ -110,7 +152,10 @@ describe('card', () => {
     const card = screen.getByRole('group', {name: 'Page 2, A.pdf'});
     expect(card).toHaveAttribute('data-uid', 'u1');
     expect(within(card).getByRole('checkbox', {name: 'Select page 2'})).not.toBeChecked();
-    expect(within(card).getByRole('button', {name: 'Preview page 2'})).toHaveAttribute('aria-pressed', 'false');
+    expect(within(card).getByRole('button', {name: 'Preview page 2'})).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     expect(within(card).getByText('Page 2')).toBeInTheDocument();
     expect(within(card).getByTitle('A.pdf')).toHaveTextContent('A.pdf');
   });
@@ -284,13 +329,16 @@ describe('selection bar', () => {
     expect(store.getState().pages).toHaveLength(3);
   });
 
-  it.each(['Rotate', 'Duplicate', 'Extract', 'Delete'])('%s with nothing selected toasts and changes nothing', async (name) => {
-    setup(2);
-    const before = store.getState().pages;
-    await userEvent.click(screen.getByRole('button', {name: `${name} selected pages`}));
-    expect(useApp.getState().toast?.text).toBe('Select one or more pages first.');
-    expect(store.getState().pages).toBe(before);
-  });
+  it.each(['Rotate', 'Duplicate', 'Extract', 'Delete'])(
+    '%s with nothing selected toasts and changes nothing',
+    async (name) => {
+      setup(2);
+      const before = store.getState().pages;
+      await userEvent.click(screen.getByRole('button', {name: `${name} selected pages`}));
+      expect(useApp.getState().toast?.text).toBe('Select one or more pages first.');
+      expect(store.getState().pages).toBe(before);
+    },
+  );
 
   it('Split PDF shows only when the view supplies it', async () => {
     const onSplit = vi.fn();
@@ -304,6 +352,10 @@ describe('selection bar', () => {
 
   it('shows the drag hint', () => {
     setup(1);
-    expect(screen.getByText('Drag to reorder · Ctrl-click to select · Shift-click for a range · Double-click to preview')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'Drag to reorder · Ctrl-click to select · Shift-click for a range · Double-click to preview',
+      ),
+    ).toBeInTheDocument();
   });
 });

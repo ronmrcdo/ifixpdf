@@ -1,12 +1,19 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {withViewTransition} from './viewTransition';
 
-const reduced = (matches: boolean) => vi.stubGlobal('matchMedia', vi.fn(() => ({matches})));
+const reduced = (matches: boolean) =>
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({matches})),
+  );
 const supported = () => {
   // A superseded transition rejects ready/finished with AbortError; real ones always carry both promises.
   const aborted = () => Promise.reject(new DOMException('skipped', 'AbortError'));
   const skipTransition = vi.fn();
-  const start = vi.fn((cb: () => void) => { cb(); return {ready: aborted(), finished: aborted(), skipTransition} });
+  const start = vi.fn((cb: () => void) => {
+    cb();
+    return {ready: aborted(), finished: aborted(), skipTransition};
+  });
   Object.defineProperty(document, 'startViewTransition', {value: start, configurable: true});
   return Object.assign(start, {skipTransition});
 };
@@ -39,13 +46,16 @@ describe('withViewTransition', () => {
     await new Promise((r) => setTimeout(r, 0)); // vitest fails the run on an unhandled rejection
   });
 
-  it.each(['pointermove', 'pointerdown'])('ends the transition on %s so the click lands on the live page', (type) => {
-    reduced(false);
-    const start = supported();
-    withViewTransition(vi.fn());
-    document.dispatchEvent(new Event(type));
-    expect(start.skipTransition).toHaveBeenCalledTimes(1);
-  });
+  it.each(['pointermove', 'pointerdown'])(
+    'ends the transition on %s so the click lands on the live page',
+    (type) => {
+      reduced(false);
+      const start = supported();
+      withViewTransition(vi.fn());
+      document.dispatchEvent(new Event(type));
+      expect(start.skipTransition).toHaveBeenCalledTimes(1);
+    },
+  );
 
   it('never starts a transition under reduced motion, and still runs the update', () => {
     reduced(true);

@@ -6,8 +6,13 @@ vi.mock('./registry', () => ({acquire: async () => ({getPage: async () => page})
 function task() {
   let reject!: (e: unknown) => void;
   let resolve!: () => void;
-  const promise = new Promise<void>((res, rej) => ((resolve = res), (reject = rej)));
-  const cancel = vi.fn(() => reject(Object.assign(new Error('x'), {name: 'RenderingCancelledException'})));
+  const promise = new Promise<void>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  const cancel = vi.fn(() =>
+    reject(Object.assign(new Error('x'), {name: 'RenderingCancelledException'})),
+  );
   return {promise, cancel, resolve};
 }
 const ctx = {} as CanvasRenderingContext2D;
@@ -15,7 +20,11 @@ let canvas: HTMLCanvasElement;
 beforeEach(() => {
   canvas = document.createElement('canvas');
   vi.spyOn(canvas, 'getContext').mockReturnValue(ctx);
-  page.getViewport.mockReset().mockImplementation(({scale, rotation}) => ({width: 100 * scale, height: 100 * scale, rotation}));
+  page.getViewport.mockReset().mockImplementation(({scale, rotation}) => ({
+    width: 100 * scale,
+    height: 100 * scale,
+    rotation,
+  }));
   page.render.mockReset();
 });
 
@@ -44,7 +53,11 @@ describe('renderPage', () => {
     const t = task();
     page.render.mockReturnValue(t);
     t.resolve();
-    page.getViewport.mockImplementation(({scale, rotation}) => ({width: 5000 * scale, height: 5000 * scale, rotation}));
+    page.getViewport.mockImplementation(({scale, rotation}) => ({
+      width: 5000 * scale,
+      height: 5000 * scale,
+      rotation,
+    }));
     await renderPage(canvas, 'f', 0, 0, 4);
     expect(canvas.width).toBeLessThanOrEqual(8192);
     expect(canvas.width * canvas.height).toBeLessThanOrEqual(16_777_216);

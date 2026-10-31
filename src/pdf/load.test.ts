@@ -12,7 +12,9 @@ describe('loadPdf', () => {
     await expect(loadPdf('a.pdf', new Uint8Array())).rejects.toBeInstanceOf(InvalidPdfError);
   });
   it('rejects garbage', async () => {
-    await expect(loadPdf('a.pdf', new TextEncoder().encode('not a pdf'))).rejects.toBeInstanceOf(InvalidPdfError);
+    await expect(loadPdf('a.pdf', new TextEncoder().encode('not a pdf'))).rejects.toBeInstanceOf(
+      InvalidPdfError,
+    );
   });
   it('rejects an encrypted pdf', async () => {
     configure(pdfLib);
@@ -21,6 +23,8 @@ describe('loadPdf', () => {
   });
   it('rejects a pdf with 0 pages', async () => {
     const doc = await PDFDocument.create();
-    await expect(loadPdf('a.pdf', await doc.save({addDefaultPage: false}))).rejects.toBeInstanceOf(InvalidPdfError);
+    await expect(loadPdf('a.pdf', await doc.save({addDefaultPage: false}))).rejects.toBeInstanceOf(
+      InvalidPdfError,
+    );
   });
 });

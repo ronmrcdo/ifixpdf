@@ -5,9 +5,18 @@ import type {PageInstance} from '../../domain/types';
 import {createWorkspaceStore} from '../../state/workspace';
 import {Toolbar} from './Toolbar';
 
-vi.mock('../../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {}), acquire: vi.fn()}));
+vi.mock('../../pdf/registry', () => ({
+  retain: vi.fn(),
+  release: vi.fn(async () => {}),
+  acquire: vi.fn(),
+}));
 
-const pages: PageInstance[] = [0, 1, 2].map((i) => ({uid: `u${i}`, fileId: 'f', local: i, rotation: 0}));
+const pages: PageInstance[] = [0, 1, 2].map((i) => ({
+  uid: `u${i}`,
+  fileId: 'f',
+  local: i,
+  rotation: 0,
+}));
 let store: ReturnType<typeof createWorkspaceStore>;
 beforeEach(() => {
   store = createWorkspaceStore('document');

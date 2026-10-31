@@ -5,7 +5,10 @@ import {createWorkspaceStore} from './workspace';
 import {flushDraft, saveDraftNow, startDraftSync} from './draft-sync';
 import {useApp} from './app';
 
-vi.mock('../storage/draft', () => ({writeDraft: vi.fn(async () => {}), clearDraft: vi.fn(async () => {})}));
+vi.mock('../storage/draft', () => ({
+  writeDraft: vi.fn(async () => {}),
+  clearDraft: vi.fn(async () => {}),
+}));
 vi.mock('../pdf/load', () => ({loadPdf: vi.fn(async () => ({pages: 2}))}));
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
 
@@ -33,14 +36,22 @@ afterEach(() => {
 describe('draft sync', () => {
   it('5 rapid changes → 1 writeDraft after 300 ms', async () => {
     const store = await setup();
-    for (const n of ['1', '2', '3', '4', '5']) store.getState().setExportSettings({name: `${n}.pdf`});
+    for (const n of ['1', '2', '3', '4', '5'])
+      store.getState().setExportSettings({name: `${n}.pdf`});
     await vi.advanceTimersByTimeAsync(299);
     expect(writeDraft).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
     expect(writeDraft).toHaveBeenCalledTimes(1);
     const [record, bytes] = vi.mocked(writeDraft).mock.calls[0]!;
     const s = store.getState();
-    expect(record).toMatchObject({files: s.files, pages: s.pages, currentPage: 0, view: 'edit', selection: [], anchor: null});
+    expect(record).toMatchObject({
+      files: s.files,
+      pages: s.pages,
+      currentPage: 0,
+      view: 'edit',
+      selection: [],
+      anchor: null,
+    });
     expect(record.exportSettings.name).toBe('5.pdf');
     expect(typeof record.savedAt).toBe('number');
     expect([...bytes]).toEqual([[s.files[0]!.id, new Uint8Array([1, 2])]]);
@@ -110,7 +121,10 @@ describe('draft sync', () => {
     vi.mocked(writeDraft).mockRejectedValueOnce(new Error('quota'));
     store.getState().setExportSettings({name: 'x.pdf'});
     await vi.advanceTimersByTimeAsync(300);
-    expect(useApp.getState().toast).toMatchObject({text: 'Draft could not be saved. Export your PDF to keep your work.', tone: 'error'});
+    expect(useApp.getState().toast).toMatchObject({
+      text: 'Draft could not be saved. Export your PDF to keep your work.',
+      tone: 'error',
+    });
   });
 
   it('flushDraft writes immediately and cancels the pending debounce', async () => {

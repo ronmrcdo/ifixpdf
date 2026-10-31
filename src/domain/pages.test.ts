@@ -1,8 +1,23 @@
 import {describe, expect, it} from 'vitest';
-import {deletePages, dropTarget, duplicatePages, moveFile, moveFileTo, movePages, pagesForFile, removeFile, rotatePages} from './pages';
+import {
+  deletePages,
+  dropTarget,
+  duplicatePages,
+  moveFile,
+  moveFileTo,
+  movePages,
+  pagesForFile,
+  removeFile,
+  rotatePages,
+} from './pages';
 import type {PageInstance, Rotation, SourceFile} from './types';
 
-const pg = (uid: string, fileId = 'f', local = 0, rotation: Rotation = 0): PageInstance => ({uid, fileId, local, rotation});
+const pg = (uid: string, fileId = 'f', local = 0, rotation: Rotation = 0): PageInstance => ({
+  uid,
+  fileId,
+  local,
+  rotation,
+});
 const uids = (pages: PageInstance[]) => pages.map((p) => p.uid);
 const abcd = () => ['a', 'b', 'c', 'd'].map((u) => pg(u));
 const file = (id: string, pages = 1): SourceFile => ({id, name: `${id}.pdf`, pages, size: 1});

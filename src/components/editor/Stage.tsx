@@ -50,14 +50,17 @@ export function Stage({store, caption, readOnly = false, children}: Props) {
     const onWheel = createWheelFlip({
       gap: 250,
       onZoom: (dir) => stepFrom(store, actual.current, dir),
-      canScroll: (dir) => (dir === 1 ? stage.scrollTop + stage.clientHeight < stage.scrollHeight - 1 : stage.scrollTop > 0),
+      canScroll: (dir) =>
+        dir === 1
+          ? stage.scrollTop + stage.clientHeight < stage.scrollHeight - 1
+          : stage.scrollTop > 0,
       onFlip: (dir, bottom) => {
         const s = store.getState();
         const next = s.currentPage + dir;
         if (next < 0 || next >= s.pages.length) return;
         landOnBottom.current = bottom;
         s.goTo(next);
-      }
+      },
     });
     // React's onWheel is passive, so preventDefault would be ignored.
     const listener = (e: WheelEvent) => {
@@ -74,14 +77,21 @@ export function Stage({store, caption, readOnly = false, children}: Props) {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const observer = new ResizeObserver(() => {
       clearTimeout(timer);
-      timer = setTimeout(() => { if (store.getState().zoom === 'fit') setResized((n) => n + 1) }, 100);
+      timer = setTimeout(() => {
+        if (store.getState().zoom === 'fit') setResized((n) => n + 1);
+      }, 100);
     });
     observer.observe(stage);
-    return () => { clearTimeout(timer); observer.disconnect() };
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+    };
   }, [store]);
 
   useEffect(() => {
-    const stage = stageRef.current, wrap = wrapRef.current, canvas = canvasRef.current;
+    const stage = stageRef.current,
+      wrap = wrapRef.current,
+      canvas = canvasRef.current;
     if (!page || !stage || !wrap || !canvas || tab !== 'document' || stage.clientHeight < 1) {
       landOnBottom.current = false; // a flip that didn't render must not move a later zoom or resize render
       return;
@@ -91,13 +101,23 @@ export function Stage({store, caption, readOnly = false, children}: Props) {
       try {
         const pdfPage = await (await acquire(page.fileId)).getPage(page.local + 1);
         if (stale) return;
-        const base = pdfPage.getViewport({scale: 1, rotation: (pdfPage.rotate + page.rotation) % 360});
+        const base = pdfPage.getViewport({
+          scale: 1,
+          rotation: (pdfPage.rotate + page.rotation) % 360,
+        });
         const style = getComputedStyle(stage);
         const padding = {
           x: parseFloat(style.paddingLeft) + parseFloat(style.paddingRight),
-          y: parseFloat(style.paddingTop) + parseFloat(style.paddingBottom)
+          y: parseFloat(style.paddingTop) + parseFloat(style.paddingBottom),
         };
-        const factor = zoom === 'fit' ? fitScale({w: stage.clientWidth, h: stage.clientHeight}, {w: base.width, h: base.height}, padding) : zoom / 100;
+        const factor =
+          zoom === 'fit'
+            ? fitScale(
+                {w: stage.clientWidth, h: stage.clientHeight},
+                {w: base.width, h: base.height},
+                padding,
+              )
+            : zoom / 100;
         actual.current = Math.round(factor * 100);
         wrap.style.width = `${Math.max(1, base.width * factor)}px`;
         // renderPage sizes the canvas only after its own await; give it the new page's shape now so scrollHeight is right.
@@ -105,12 +125,21 @@ export function Stage({store, caption, readOnly = false, children}: Props) {
         stage.scrollTop = landOnBottom.current ? stage.scrollHeight : 0;
         landOnBottom.current = false;
         // Backing store at up to 2x device pixels, oversampled 1.5x as before; renderPage caps oversized canvases.
-        await renderPage(canvas, page.fileId, page.local, page.rotation, factor * Math.min(window.devicePixelRatio || 1, 2) * 1.5);
+        await renderPage(
+          canvas,
+          page.fileId,
+          page.local,
+          page.rotation,
+          factor * Math.min(window.devicePixelRatio || 1, 2) * 1.5,
+        );
       } catch {
-        if (!stale) useApp.getState().notify('This page could not be previewed. Try another PDF.', 'error');
+        if (!stale)
+          useApp.getState().notify('This page could not be previewed. Try another PDF.', 'error');
       }
     })();
-    return () => { stale = true };
+    return () => {
+      stale = true;
+    };
   }, [page, zoom, tab, resized]);
 
   // The jump input commits on change (Enter/blur), like the legacy app, so typing "12" doesn't visit page 1.
@@ -136,33 +165,101 @@ export function Stage({store, caption, readOnly = false, children}: Props) {
   const grid = tab === 'pages' ? children : undefined;
   return (
     <section
-      className={readOnly ? 'preview reader-preview' : 'preview'} data-shortcut-scope="stage"
-      role="tabpanel" id={TAB_PANEL_ID} aria-labelledby={tabId(tab)}
+      className={readOnly ? 'preview reader-preview' : 'preview'}
+      data-shortcut-scope="stage"
+      role="tabpanel"
+      id={TAB_PANEL_ID}
+      aria-labelledby={tabId(tab)}
     >
       <div className="preview-tools">
         <span id={readOnly ? undefined : 'preview-caption'}>{caption}</span>
         <span className="spacer"></span>
-        <button type="button" aria-label="Zoom out" onClick={() => zoomBy(-1)}><Minus aria-hidden="true" /></button>
+        <button type="button" aria-label="Zoom out" onClick={() => zoomBy(-1)}>
+          <Minus aria-hidden="true" />
+        </button>
         <span className="zoom-value">{zoom === 'fit' ? 'Fit' : `${zoom}%`}</span>
-        <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1)}><Plus aria-hidden="true" /></button>
-        <button type="button" aria-label="Fit page" aria-pressed={zoom === 'fit'} title={readOnly ? undefined : 'Fit whole page'} onClick={() => store.getState().setZoom('fit')}><Scan aria-hidden="true" /></button>
-        {!readOnly && <button type="button" aria-label="Rotate current page clockwise" onClick={() => page && store.getState().rotate(90, new Set([page.uid]))}><RotateCw aria-hidden="true" /></button>}
+        <button type="button" aria-label="Zoom in" onClick={() => zoomBy(1)}>
+          <Plus aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          aria-label="Fit page"
+          aria-pressed={zoom === 'fit'}
+          title={readOnly ? undefined : 'Fit whole page'}
+          onClick={() => store.getState().setZoom('fit')}
+        >
+          <Scan aria-hidden="true" />
+        </button>
+        {!readOnly && (
+          <button
+            type="button"
+            aria-label="Rotate current page clockwise"
+            onClick={() => page && store.getState().rotate(90, new Set([page.uid]))}
+          >
+            <RotateCw aria-hidden="true" />
+          </button>
+        )}
       </div>
-      {grid
-        ? <div className={readOnly ? 'paper-stage read-only-pages' : 'paper-stage pages-stage'} id="paper-stage" ref={stageRef}>{grid}</div>
-        : <div className="paper-stage" id="paper-stage" ref={stageRef} tabIndex={0}>
+      {grid ? (
+        <div
+          className={readOnly ? 'paper-stage read-only-pages' : 'paper-stage pages-stage'}
+          id="paper-stage"
+          ref={stageRef}
+        >
+          {grid}
+        </div>
+      ) : (
+        <div className="paper-stage" id="paper-stage" ref={stageRef} tabIndex={0}>
           <div className="paper-wrap" ref={wrapRef}>
-            <canvas className="paper" ref={canvasRef} role="img" aria-label={`Page ${current + 1} of ${total}, ${file?.name ?? ''}`}></canvas>
+            <canvas
+              className="paper"
+              ref={canvasRef}
+              role="img"
+              aria-label={`Page ${current + 1} of ${total}, ${file?.name ?? ''}`}
+            ></canvas>
           </div>
-        </div>}
+        </div>
+      )}
       <div className="page-nav">
-        {readOnly
-          ? <span className="reader-note">{total} {total === 1 ? 'page' : 'pages'} · Read-only</span>
-          : <span className="current-source" title={file?.name ?? ''}><FileText aria-hidden="true" /> {file?.name ?? 'No document'}</span>}
+        {readOnly ? (
+          <span className="reader-note">
+            {total} {total === 1 ? 'page' : 'pages'} · Read-only
+          </span>
+        ) : (
+          <span className="current-source" title={file?.name ?? ''}>
+            <FileText aria-hidden="true" /> {file?.name ?? 'No document'}
+          </span>
+        )}
         <div className="page-controls">
-          <button type="button" aria-label="Previous page" disabled={current <= 0} onClick={() => go(current - 1)}><ChevronLeft aria-hidden="true" /></button>
-          <label className="page-jump">Page <input id="page-jump" ref={jumpRef} type="number" min="1" max={total} defaultValue={current + 1} aria-label="Go to page" /> <span>of {total}</span></label>
-          <button type="button" aria-label="Next page" disabled={current >= total - 1} onClick={() => go(current + 1)}><ChevronRight aria-hidden="true" /></button>
+          <button
+            type="button"
+            aria-label="Previous page"
+            disabled={current <= 0}
+            onClick={() => go(current - 1)}
+          >
+            <ChevronLeft aria-hidden="true" />
+          </button>
+          <label className="page-jump">
+            Page{' '}
+            <input
+              id="page-jump"
+              ref={jumpRef}
+              type="number"
+              min="1"
+              max={total}
+              defaultValue={current + 1}
+              aria-label="Go to page"
+            />{' '}
+            <span>of {total}</span>
+          </label>
+          <button
+            type="button"
+            aria-label="Next page"
+            disabled={current >= total - 1}
+            onClick={() => go(current + 1)}
+          >
+            <ChevronRight aria-hidden="true" />
+          </button>
         </div>
       </div>
     </section>

@@ -4,15 +4,28 @@ import type {PageInstance, SourceFile} from '../domain/types';
 import {clearDraft, readDraft, writeDraft, type DraftRecord} from './draft';
 import {openDb, tx} from './idb';
 
-const file = (id: string): SourceFile => ({id, name: id + '.pdf', pages: 1, size: 1});
-const page = (fileId: string): PageInstance => ({uid: 'u-' + fileId, fileId, local: 0, rotation: 0});
+const file = (id: string): SourceFile => ({id, name: `${id}.pdf`, pages: 1, size: 1});
+const page = (fileId: string): PageInstance => ({
+  uid: `u-${fileId}`,
+  fileId,
+  local: 0,
+  rotation: 0,
+});
 const record = (...ids: string[]): DraftRecord => ({
-  files: ids.map(file), pages: ids.map(page), currentPage: 0, view: 'edit', selection: [], anchor: null,
-  exportSettings: {name: 'x', rangeMode: 'all', customRange: '', useFileNamesAsTitle: false}, savedAt: 1
+  files: ids.map(file),
+  pages: ids.map(page),
+  currentPage: 0,
+  view: 'edit',
+  selection: [],
+  anchor: null,
+  exportSettings: {name: 'x', rangeMode: 'all', customRange: '', useFileNamesAsTitle: false},
+  savedAt: 1,
 });
 const bytesOf = (...ids: string[]) => new Map(ids.map((id, i) => [id, new Uint8Array([i + 1])]));
 
-beforeEach(() => { globalThis.indexedDB = new IDBFactory(); });
+beforeEach(() => {
+  globalThis.indexedDB = new IDBFactory();
+});
 afterEach(() => vi.restoreAllMocks());
 
 describe('draft', () => {
@@ -52,7 +65,10 @@ describe('draft', () => {
       r.onsuccess = () => {
         const t = r.result.transaction('draft-files', 'readwrite');
         t.objectStore('draft-files').clear();
-        t.oncomplete = () => { r.result.close(); resolve(); };
+        t.oncomplete = () => {
+          r.result.close();
+          resolve();
+        };
       };
     });
     expect(await readDraft()).toBeNull();
@@ -70,9 +86,16 @@ describe('draft', () => {
     expect((await readDraft())?.record.files[0]?.id).toBe('z');
   });
   it('upgrades a legacy v1 database (only store `draft`): read and write work', async () => {
-    const legacy = await openDb('ifixpdf-workspace-draft', 1, (d) => { d.createObjectStore('draft'); });
+    const legacy = await openDb('ifixpdf-workspace-draft', 1, (d) => {
+      d.createObjectStore('draft');
+    });
     // a legacy-shaped draft (no `pages`, no draft-files) must not be restored
-    await tx(legacy, 'draft', 'readwrite', (t) => { t.objectStore('draft').put({files: [], pageOrder: null, view: 'preview', savedAt: 1}, 'document'); });
+    await tx(legacy, 'draft', 'readwrite', (t) => {
+      t.objectStore('draft').put(
+        {files: [], pageOrder: null, view: 'preview', savedAt: 1},
+        'document',
+      );
+    });
     legacy.close();
     expect(await readDraft()).toBeNull();
     await writeDraft(record('a'), bytesOf('a'));

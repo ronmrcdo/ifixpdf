@@ -5,10 +5,17 @@ import {test, expect, pdfFile, type App} from './fixtures';
 
 /** Zero serious or critical axe violations; the message lists rule ids and targets. */
 async function audit(page: Page, label: string) {
-  await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished.catch(() => {})))); // mid-fade colours read as low contrast
-  const {violations} = await new AxeBuilder({page}).withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa']).analyze();
-  const bad = violations.filter(v => v.impact === 'serious' || v.impact === 'critical');
-  expect(bad.map(v => `${v.id} (${v.impact}): ${v.nodes.map(n => n.target.join(' ')).join(', ')}`), label).toEqual([]);
+  await page.evaluate(() =>
+    Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))),
+  ); // mid-fade colours read as low contrast
+  const {violations} = await new AxeBuilder({page})
+    .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+    .analyze();
+  const bad = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  expect(
+    bad.map((v) => `${v.id} (${v.impact}): ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`),
+    label,
+  ).toEqual([]);
 }
 
 const openEdit = async (app: App) => {
@@ -38,10 +45,13 @@ test.describe('accessibility', () => {
     await audit(page, 'Edit Pages');
   });
 
-  test('the enlarged page checkbox keeps its clear hit border on hover, check and focus', async ({app, page}) => {
+  test('the enlarged page checkbox keeps its clear hit border on hover, check and focus', async ({
+    app,
+    page,
+  }) => {
     await openEdit(app);
     const box = page.getByRole('checkbox', {name: 'Select page 1'});
-    const border = () => box.evaluate(el => getComputedStyle(el).borderTopColor);
+    const border = () => box.evaluate((el) => getComputedStyle(el).borderTopColor);
     await box.hover();
     await expect.poll(border, {message: 'hover'}).toBe('rgba(0, 0, 0, 0)');
     await box.check();
@@ -51,7 +61,12 @@ test.describe('accessibility', () => {
   });
 
   test('every Merge stage', async ({app, page}) => {
-    await page.addInitScript(() => { window.showSaveFilePicker = async (o: {suggestedName: string}) => ({name: o.suggestedName, createWritable: async () => ({write: async () => {}, close: async () => {}})}) });
+    await page.addInitScript(() => {
+      window.showSaveFilePicker = async (o: {suggestedName: string}) => ({
+        name: o.suggestedName,
+        createWritable: async () => ({write: async () => {}, close: async () => {}}),
+      });
+    });
     await app.goto('combine=new');
     await expect(app.title).toHaveText('Merge PDFs');
     await audit(page, 'Merge Add');
@@ -67,7 +82,10 @@ test.describe('accessibility', () => {
     await audit(page, 'Merge Done');
   });
 
-  test('Add password: axe while open, real Esc closes it and focus returns to the opener', async ({app, page}) => {
+  test('Add password: axe while open, real Esc closes it and focus returns to the opener', async ({
+    app,
+    page,
+  }) => {
     await app.goto('view=home');
     await app.seedRecent('Report.pdf', 2);
     await app.goto('view=home');
@@ -81,7 +99,10 @@ test.describe('accessibility', () => {
     await expect(opener).toBeFocused();
   });
 
-  test('Split: axe while open, real Esc closes it and focus returns to the opener', async ({app, page}) => {
+  test('Split: axe while open, real Esc closes it and focus returns to the opener', async ({
+    app,
+    page,
+  }) => {
     await openEdit(app);
     const opener = page.getByRole('button', {name: 'Split PDF'});
     await opener.click();
@@ -94,7 +115,11 @@ test.describe('accessibility', () => {
 
   test('info toasts announce in role=status, errors in role=alert', async ({app, page}) => {
     await app.goto('view=home');
-    await app.addFiles({name: 'bad.pdf', mimeType: 'application/pdf', buffer: Buffer.from('not a pdf')});
+    await app.addFiles({
+      name: 'bad.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('not a pdf'),
+    });
     await expect(page.getByRole('alert').locator('.toast')).toContainText('Could not open bad.pdf');
     await expect(page.getByRole('status').locator('.toast')).toHaveCount(0);
     await app.dismissToast();

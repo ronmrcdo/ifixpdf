@@ -9,32 +9,64 @@ import {documentStore, mergeStore} from '../state/workspaces';
 import {FileMissingError} from '../platform/types';
 import {navigate, openRecent, parseRoute, startup, writeRoute} from './route';
 
-vi.mock('../pdf/load', async (orig) => ({...(await orig<typeof import('../pdf/load')>()), loadPdf: vi.fn()}));
+vi.mock('../pdf/load', async (orig) => ({
+  ...(await orig<typeof import('../pdf/load')>()),
+  loadPdf: vi.fn(),
+}));
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
 vi.mock('../storage/draft', () => ({readDraft: vi.fn()}));
-vi.mock('../state/draft-sync', () => ({startDraftSync: vi.fn(() => () => {}), flushDraft: vi.fn(async () => {})}));
+vi.mock('../state/draft-sync', () => ({
+  startDraftSync: vi.fn(() => () => {}),
+  flushDraft: vi.fn(async () => {}),
+}));
 
-const file = (id: string, recentId?: string): SourceFile => ({id, name: `${id}.pdf`, pages: 1, size: 1, ...(recentId ? {recentId} : {})});
-const draft = (view: 'preview' | 'edit', files = [file('f1')]): {record: DraftRecord; bytes: Map<string, Uint8Array>} => ({
+const file = (id: string, recentId?: string): SourceFile => ({
+  id,
+  name: `${id}.pdf`,
+  pages: 1,
+  size: 1,
+  ...(recentId ? {recentId} : {}),
+});
+const draft = (
+  view: 'preview' | 'edit',
+  files = [file('f1')],
+): {record: DraftRecord; bytes: Map<string, Uint8Array>} => ({
   record: {
-    files, pages: files.map((f, i) => ({uid: `u${i}`, fileId: f.id, local: 0, rotation: 0})), currentPage: 0, view,
-    selection: [], anchor: null, exportSettings: {name: 'Draft.pdf', rangeMode: 'all', customRange: '', useFileNamesAsTitle: true}, savedAt: 1
+    files,
+    pages: files.map((f, i) => ({uid: `u${i}`, fileId: f.id, local: 0, rotation: 0})),
+    currentPage: 0,
+    view,
+    selection: [],
+    anchor: null,
+    exportSettings: {
+      name: 'Draft.pdf',
+      rangeMode: 'all',
+      customRange: '',
+      useFileNamesAsTitle: true,
+    },
+    savedAt: 1,
   },
-  bytes: new Map(files.map((f) => [f.id, new Uint8Array([1])]))
+  bytes: new Map(files.map((f) => [f.id, new Uint8Array([1])])),
 });
 const recentsOpen = vi.fn();
 const at = (search: string) => window.history.replaceState(null, '', `/index.html${search}`);
 
 beforeEach(() => {
   vi.mocked(readDraft).mockReset().mockResolvedValue(null);
-  vi.mocked(loadPdf).mockReset().mockImplementation(async (name) => {
-    if (name === 'broken.pdf') throw new InvalidPdfError(name);
-    return {pages: 2};
-  });
+  vi.mocked(loadPdf)
+    .mockReset()
+    .mockImplementation(async (name) => {
+      if (name === 'broken.pdf') throw new InvalidPdfError(name);
+      return {pages: 2};
+    });
   recentsOpen.mockReset();
   vi.spyOn(recents, 'open').mockImplementation(recentsOpen);
-  vi.spyOn(recents, 'record').mockReset().mockResolvedValue({id: 'r1', name: 'x', pages: 1, size: 1, modified: 0});
-  vi.mocked(startDraftSync).mockReset().mockReturnValue(() => {});
+  vi.spyOn(recents, 'record')
+    .mockReset()
+    .mockResolvedValue({id: 'r1', name: 'x', pages: 1, size: 1, modified: 0});
+  vi.mocked(startDraftSync)
+    .mockReset()
+    .mockReturnValue(() => {});
   vi.mocked(flushDraft).mockClear();
   useApp.setState({view: 'home', documentView: 'preview', workspace: 'merge', toast: null});
   at('');
@@ -55,7 +87,7 @@ describe('parseRoute', () => {
     ['?combine=old', {combineNew: false}],
     ['?recent=abc', {recent: 'abc', combineNew: false}],
     ['?recent=abc&view=edit', {recent: 'abc', view: 'edit', combineNew: false}],
-    ['?recent=', {combineNew: false}]
+    ['?recent=', {combineNew: false}],
   ])('%s', (search, expected) => {
     expect(parseRoute(search)).toEqual(expected);
   });
@@ -85,7 +117,7 @@ describe('writeRoute', () => {
     ['preview with no files', 'preview', [], undefined],
     ['preview with one file but no recent id', 'preview', [file('a')], undefined],
     ['merge', 'merge', [file('a')], 'r1'],
-    ['settings', 'settings', [file('a')], 'r1']
+    ['settings', 'settings', [file('a')], 'r1'],
   ] as const)('%s does not write', (_, view, files, recentId) => {
     const s = spy();
     writeRoute(view, {files: [...files], ...(recentId ? {recentId} : {})});
@@ -97,14 +129,25 @@ describe('writeRoute', () => {
 const queue: Array<() => void> = [];
 const asyncTransitions = () => {
   queue.length = 0;
-  vi.stubGlobal('matchMedia', vi.fn(() => ({matches: false})));
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn(() => ({matches: false})),
+  );
   Object.defineProperty(document, 'startViewTransition', {
     configurable: true,
-    value: (cb: () => void) => { queue.push(cb); return {ready: Promise.resolve(), finished: Promise.resolve(), skipTransition() {}} }
+    value: (cb: () => void) => {
+      queue.push(cb);
+      return {ready: Promise.resolve(), finished: Promise.resolve(), skipTransition() {}};
+    },
   });
 };
-const applyTransitions = () => { while (queue.length) queue.shift()?.() };
-afterEach(() => { Reflect.deleteProperty(document, 'startViewTransition'); vi.unstubAllGlobals() });
+const applyTransitions = () => {
+  while (queue.length) queue.shift()?.();
+};
+afterEach(() => {
+  Reflect.deleteProperty(document, 'startViewTransition');
+  vi.unstubAllGlobals();
+});
 
 describe('navigate with a view transition that applies later', () => {
   beforeEach(asyncTransitions);
@@ -186,9 +229,16 @@ describe('startup', () => {
   it('with no view and a draft opens the draft view with the restored toast', async () => {
     vi.mocked(readDraft).mockResolvedValue(draft('edit'));
     await startup();
-    expect(useApp.getState()).toMatchObject({view: 'edit', documentView: 'edit', workspace: 'document'});
+    expect(useApp.getState()).toMatchObject({
+      view: 'edit',
+      documentView: 'edit',
+      workspace: 'document',
+    });
     expect(documentStore.getState().tab).toBe('pages');
-    expect(useApp.getState().toast).toMatchObject({text: 'Your saved draft has been restored.', tone: 'info'});
+    expect(useApp.getState().toast).toMatchObject({
+      text: 'Your saved draft has been restored.',
+      tone: 'info',
+    });
   });
 
   it('a draft with ?view=home stays Home, keeps the document workspace and shows no toast', async () => {
@@ -224,7 +274,11 @@ describe('startup', () => {
 
   it('does not override a view the user chose while the draft was loading', async () => {
     let release: (d: ReturnType<typeof draft>) => void = () => {};
-    vi.mocked(readDraft).mockReturnValue(new Promise((r) => { release = r }));
+    vi.mocked(readDraft).mockReturnValue(
+      new Promise((r) => {
+        release = r;
+      }),
+    );
     const started = startup();
     navigate('preview');
     release(draft('edit'));
@@ -243,7 +297,10 @@ describe('startup', () => {
 
   it('?recent= opens that recent in Preview, replacing a restored draft', async () => {
     vi.mocked(readDraft).mockResolvedValue(draft('edit'));
-    recentsOpen.mockResolvedValue({entry: {id: 'r1', name: 'Report.pdf', pages: 2, size: 3, modified: 1, path: 'C:\\Report.pdf'}, bytes: new Uint8Array(3)});
+    recentsOpen.mockResolvedValue({
+      entry: {id: 'r1', name: 'Report.pdf', pages: 2, size: 3, modified: 1, path: 'C:\\Report.pdf'},
+      bytes: new Uint8Array(3),
+    });
     at('?recent=r1');
     await startup();
     expect(recentsOpen).toHaveBeenCalledWith('r1');
@@ -253,7 +310,10 @@ describe('startup', () => {
   });
 
   it('?recent=&view=edit opens it in Edit', async () => {
-    recentsOpen.mockResolvedValue({entry: {id: 'r1', name: 'Report.pdf', pages: 2, size: 3, modified: 1}, bytes: new Uint8Array(3)});
+    recentsOpen.mockResolvedValue({
+      entry: {id: 'r1', name: 'Report.pdf', pages: 2, size: 3, modified: 1},
+      bytes: new Uint8Array(3),
+    });
     at('?recent=r1&view=edit');
     await startup();
     expect(useApp.getState().view).toBe('edit');
@@ -264,7 +324,10 @@ describe('startup', () => {
     recentsOpen.mockRejectedValue(new Error('Unknown recent entry'));
     at('?recent=gone&view=edit');
     await startup();
-    expect(useApp.getState().toast).toMatchObject({text: 'Could not open that PDF. Choose a valid, unlocked PDF.', tone: 'error'});
+    expect(useApp.getState().toast).toMatchObject({
+      text: 'Could not open that PDF. Choose a valid, unlocked PDF.',
+      tone: 'error',
+    });
     expect(useApp.getState().view).toBe('edit');
   });
 
@@ -280,21 +343,43 @@ describe('startup', () => {
 
   it('a recent that is not a valid PDF keeps the invalid-PDF toast and the restored draft', async () => {
     vi.mocked(readDraft).mockResolvedValue(draft('preview'));
-    recentsOpen.mockResolvedValue({entry: {id: 'r1', name: 'broken.pdf', pages: 2, size: 3, modified: 1}, bytes: new Uint8Array(3)});
+    recentsOpen.mockResolvedValue({
+      entry: {id: 'r1', name: 'broken.pdf', pages: 2, size: 3, modified: 1},
+      bytes: new Uint8Array(3),
+    });
     at('?recent=r1');
     await startup();
-    expect(useApp.getState().toast).toMatchObject({text: 'Could not open broken.pdf. Use a valid PDF without a password.', tone: 'error'});
+    expect(useApp.getState().toast).toMatchObject({
+      text: 'Could not open broken.pdf. Use a valid PDF without a password.',
+      tone: 'error',
+    });
     expect(documentStore.getState().files.map((f) => f.id)).toEqual(['f1']);
     expect(useApp.getState().view).toBe('home');
   });
 });
 
 describe('openRecent', () => {
-  const opens = (path?: string) => recentsOpen.mockResolvedValue({entry: {id: 'r1', name: 'Report.pdf', pages: 9, size: 3, modified: 1, ...(path ? {path} : {})}, bytes: new Uint8Array(3)});
+  const opens = (path?: string) =>
+    recentsOpen.mockResolvedValue({
+      entry: {
+        id: 'r1',
+        name: 'Report.pdf',
+        pages: 9,
+        size: 3,
+        modified: 1,
+        ...(path ? {path} : {}),
+      },
+      bytes: new Uint8Array(3),
+    });
   it('records the open (pages read from the store, path kept) so the row moves to the top', async () => {
     opens('C:\\Report.pdf');
     expect(await openRecent('r1')).toBe(true);
-    expect(recents.record).toHaveBeenCalledWith({name: 'Report.pdf', bytes: new Uint8Array(3), pages: 2, path: 'C:\\Report.pdf'});
+    expect(recents.record).toHaveBeenCalledWith({
+      name: 'Report.pdf',
+      bytes: new Uint8Array(3),
+      pages: 2,
+      path: 'C:\\Report.pdf',
+    });
   });
   it('a recording failure still opens', async () => {
     opens();
@@ -309,7 +394,10 @@ describe('openRecent', () => {
     expect(await openRecent('r1')).toBe(false);
     documentStore.getState().endExport();
     expect(recentsOpen).not.toHaveBeenCalled();
-    expect(useApp.getState().toast).toMatchObject({text: 'Wait for the save to finish.', tone: 'info'});
+    expect(useApp.getState().toast).toMatchObject({
+      text: 'Wait for the save to finish.',
+      tone: 'info',
+    });
   });
   it('does not record when the open fails', async () => {
     recentsOpen.mockRejectedValue(new Error('bad'));
@@ -317,13 +405,19 @@ describe('openRecent', () => {
     expect(recents.record).not.toHaveBeenCalled();
   });
   it('does not record an invalid PDF', async () => {
-    recentsOpen.mockResolvedValue({entry: {id: 'r1', name: 'broken.pdf', pages: 2, size: 3, modified: 1}, bytes: new Uint8Array(3)});
+    recentsOpen.mockResolvedValue({
+      entry: {id: 'r1', name: 'broken.pdf', pages: 2, size: 3, modified: 1},
+      bytes: new Uint8Array(3),
+    });
     expect(await openRecent('r1')).toBe(false);
     expect(recents.record).not.toHaveBeenCalled();
   });
   it('a missing file says so and returns false', async () => {
     recentsOpen.mockRejectedValue(new FileMissingError('gone'));
     expect(await openRecent('r1')).toBe(false);
-    expect(useApp.getState().toast).toMatchObject({text: 'That PDF was not found. Locate it or remove it from recents.', tone: 'error'});
+    expect(useApp.getState().toast).toMatchObject({
+      text: 'That PDF was not found. Locate it or remove it from recents.',
+      tone: 'error',
+    });
   });
 });

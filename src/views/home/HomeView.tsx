@@ -14,7 +14,12 @@ import type {RecentEntry} from '../../storage/recents';
 import {RecentMenu, type Command} from './RecentMenu';
 import {RecentRow} from './RecentRow';
 
-interface MenuState { entry: RecentEntry; x: number; y: number; trigger: HTMLElement }
+interface MenuState {
+  entry: RecentEntry;
+  x: number;
+  y: number;
+  trigger: HTMLElement;
+}
 const notify = (text: string) => useApp.getState().notify(text, 'error');
 
 export function HomeView({onAddPassword}: {onAddPassword(entry: RecentEntry): void}) {
@@ -31,7 +36,9 @@ export function HomeView({onAddPassword}: {onAddPassword(entry: RecentEntry): vo
       setFailed(true);
     }
   }, []);
-  useEffect(() => { recents.list().then(setEntries, () => setFailed(true)) }, []);
+  useEffect(() => {
+    recents.list().then(setEntries, () => setFailed(true));
+  }, []);
 
   const selected = (entries ?? []).filter((e) => checked.has(e.id) && !e.missing).map((e) => e.id);
 
@@ -86,7 +93,13 @@ export function HomeView({onAddPassword}: {onAddPassword(entry: RecentEntry): vo
     if (!added) return; // addFiles already toasted why each file was rejected
     store.setWorkflow('review');
     store.setTab('pages');
-    useApp.getState().notify(added === 1 ? 'Add another PDF to merge with this document.' : `${added} PDFs ready to merge.`);
+    useApp
+      .getState()
+      .notify(
+        added === 1
+          ? 'Add another PDF to merge with this document.'
+          : `${added} PDFs ready to merge.`,
+      );
     navigate('merge');
   }
 
@@ -105,7 +118,7 @@ export function HomeView({onAddPassword}: {onAddPassword(entry: RecentEntry): vo
         await release(fileId, 'home-thumb');
       }
       await recents.updateThumbnail(entry.id, thumbnail); // no-op if the row was removed meanwhile
-      setEntries((list) => list && list.map((e) => (e.id === entry.id ? {...e, thumbnail} : e)));
+      setEntries((list) => list?.map((e) => (e.id === entry.id ? {...e, thumbnail} : e)) ?? null);
     } catch (e) {
       if (e instanceof FileMissingError) void reload();
     }
@@ -127,36 +140,68 @@ export function HomeView({onAddPassword}: {onAddPassword(entry: RecentEntry): vo
     if (c === 'merge') void merge([...new Set([entry.id, ...selected])]);
   }
 
-  const toggle = (id: string, on: boolean) => setChecked((c) => {
-    const next = new Set(c);
-    if (on) next.add(id); else next.delete(id);
-    return next;
-  });
+  const toggle = (id: string, on: boolean) =>
+    setChecked((c) => {
+      const next = new Set(c);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
 
   return (
     <section className="view editor-home">
       <div className="home-command-row">
-        <button type="button" className="secondary" data-action="new-combine" onClick={() => navigate('merge')}><Files aria-hidden="true" /> Merge PDFs</button>
-        <button type="button" className="secondary" data-action="merge-selected" disabled={!selected.length} onClick={() => void merge(selected)}>
-          <Files aria-hidden="true" /> Merge selected <span id="recent-selection-count">{selected.length ? `(${selected.length})` : ''}</span>
+        <button
+          type="button"
+          className="secondary"
+          data-action="new-combine"
+          onClick={() => navigate('merge')}
+        >
+          <Files aria-hidden="true" /> Merge PDFs
         </button>
-        <span><ShieldCheck aria-hidden="true" /> Stored on this device</span>
+        <button
+          type="button"
+          className="secondary"
+          data-action="merge-selected"
+          disabled={!selected.length}
+          onClick={() => void merge(selected)}
+        >
+          <Files aria-hidden="true" /> Merge selected{' '}
+          <span id="recent-selection-count">{selected.length ? `(${selected.length})` : ''}</span>
+        </button>
+        <span>
+          <ShieldCheck aria-hidden="true" /> Stored on this device
+        </span>
       </div>
-      <div className="recent-heading"><h2>Recent PDFs</h2><span>Last opened</span></div>
+      <div className="recent-heading">
+        <h2>Recent PDFs</h2>
+        <span>Last opened</span>
+      </div>
       <div className="recent-files">
-        {failed && <p className="hint">Recent documents could not be loaded. Add a PDF to continue.</p>}
+        {failed && (
+          <p className="hint">Recent documents could not be loaded. Add a PDF to continue.</p>
+        )}
         {!failed && !entries && <p className="hint">Loading recent documents…</p>}
         {entries && !entries.length && (
           <div className="empty">
             <FolderOpen aria-hidden="true" />
             <h2>No recent PDFs yet</h2>
             <p>Add a PDF to start your workspace.</p>
-            <button type="button" className="secondary" data-action="add" onClick={() => void pickAndImport()}>Add PDFs</button>
+            <button
+              type="button"
+              className="secondary"
+              data-action="add"
+              onClick={() => void pickAndImport()}
+            >
+              Add PDFs
+            </button>
           </div>
         )}
         {entries?.map((entry) => (
           <RecentRow
-            key={entry.id} entry={entry} selected={selected.includes(entry.id)}
+            key={entry.id}
+            entry={entry}
+            selected={selected.includes(entry.id)}
             onCheck={(on) => toggle(entry.id, on)}
             onOpen={() => void open(entry.id, 'preview')}
             onMenu={(x, y, trigger) => setMenu({entry, x, y, trigger})}
@@ -166,7 +211,15 @@ export function HomeView({onAddPassword}: {onAddPassword(entry: RecentEntry): vo
           />
         ))}
       </div>
-      {menu && <RecentMenu name={menu.entry.name} x={menu.x} y={menu.y} onClose={closeMenu} onCommand={(c) => command(c, menu.entry)} />}
+      {menu && (
+        <RecentMenu
+          name={menu.entry.name}
+          x={menu.x}
+          y={menu.y}
+          onClose={closeMenu}
+          onCommand={(c) => command(c, menu.entry)}
+        />
+      )}
     </section>
   );
 }

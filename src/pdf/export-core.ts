@@ -36,10 +36,17 @@ export function protectPdf(bytes: Uint8Array, password: string): Promise<Uint8Ar
   return lock(bytes, password, {algo: 'aes256'});
 }
 
-export async function splitZip(spec: ExportSpec, groups: number[][], baseName: string, onProgress?: Progress): Promise<Uint8Array> {
+export async function splitZip(
+  spec: ExportSpec,
+  groups: number[][],
+  baseName: string,
+  onProgress?: Progress,
+): Promise<Uint8Array> {
   const entries: Record<string, Uint8Array> = {};
   for (const [i, group] of groups.entries()) {
-    const pages = group.map((n) => spec.pages[n]).filter((p): p is ExportSpec['pages'][number] => !!p);
+    const pages = group
+      .map((n) => spec.pages[n])
+      .filter((p): p is ExportSpec['pages'][number] => !!p);
     entries[splitPartName(baseName, i + 1)] = await buildPdf({...spec, pages});
     onProgress?.(i + 1, groups.length);
   }

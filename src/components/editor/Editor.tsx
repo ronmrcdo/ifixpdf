@@ -32,11 +32,27 @@ function Toolbar({readOnly}: {readOnly?: boolean}) {
 }
 
 function Sources({children}: {children: ReactNode}) {
-  return <section className="sources" aria-label="Source PDFs">{children}</section>;
+  return (
+    <section className="sources" aria-label="Source PDFs">
+      {children}
+    </section>
+  );
 }
 
-function Stage({caption, readOnly, children}: {caption: string; readOnly?: boolean; children?: ReactNode}) {
-  return <PageStage store={useEditorStore()} caption={caption} readOnly={readOnly}>{children}</PageStage>;
+function Stage({
+  caption,
+  readOnly,
+  children,
+}: {
+  caption: string;
+  readOnly?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <PageStage store={useEditorStore()} caption={caption} readOnly={readOnly}>
+      {children}
+    </PageStage>
+  );
 }
 
 function Pages({onSplit}: {onSplit?: () => void}) {

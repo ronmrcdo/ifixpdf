@@ -8,15 +8,34 @@ import {useApp} from '../../state/app';
 import {documentStore} from '../../state/workspaces';
 import {EditView} from './EditView';
 
-vi.mock('../../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {}), acquire: vi.fn()}));
+vi.mock('../../pdf/registry', () => ({
+  retain: vi.fn(),
+  release: vi.fn(async () => {}),
+  acquire: vi.fn(),
+}));
 vi.mock('../../pdf/thumbnails', () => ({thumbnail: vi.fn(async () => 'blob:x')}));
-vi.mock('../../shell/useFileImport', async (orig) => ({...(await orig<object>()), pickAndImport: vi.fn()}));
+vi.mock('../../shell/useFileImport', async (orig) => ({
+  ...(await orig<object>()),
+  pickAndImport: vi.fn(),
+}));
 
-const pages: PageInstance[] = [0, 1, 2].map((i) => ({uid: `u${i}`, fileId: 'f', local: i, rotation: 0}));
-const open = () => documentStore.setState({files: [{id: 'f', name: 'A.pdf', pages: 3, size: 1}], pages, tab: 'pages'});
+const pages: PageInstance[] = [0, 1, 2].map((i) => ({
+  uid: `u${i}`,
+  fileId: 'f',
+  local: i,
+  rotation: 0,
+}));
+const open = () =>
+  documentStore.setState({
+    files: [{id: 'f', name: 'A.pdf', pages: 3, size: 1}],
+    pages,
+    tab: 'pages',
+  });
 
 beforeEach(() => vi.clearAllMocks());
-afterEach(async () => { await documentStore.getState().reset() });
+afterEach(async () => {
+  await documentStore.getState().reset();
+});
 
 describe('EditView', () => {
   it('shows the empty state and Open PDF opens the picker', async () => {
@@ -64,7 +83,11 @@ describe('Edit PDF from Preview', () => {
     render(<AppShell />);
     expect(screen.queryByRole('button', {name: 'Undo'})).not.toBeInTheDocument();
     const before = documentStore.getState().pages;
-    await userEvent.click(within(document.querySelector('.header-actions') as HTMLElement).getByRole('button', {name: 'Edit PDF'}));
+    await userEvent.click(
+      within(document.querySelector('.header-actions') as HTMLElement).getByRole('button', {
+        name: 'Edit PDF',
+      }),
+    );
     expect(useApp.getState().view).toBe('edit');
     expect(documentStore.getState().pages).toBe(before);
     expect(screen.getByRole('button', {name: 'Undo'})).toBeEnabled();

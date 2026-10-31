@@ -3,9 +3,26 @@ import {handleShortcut, type Action} from './shortcuts';
 import type {View} from '../state/app';
 
 type Ctx = Parameters<typeof handleShortcut>[1];
-const ctx = (over: Partial<Ctx> = {}): Ctx => ({view: 'edit', tab: 'pages', inGrid: false, inStage: false, editable: false, dialogOpen: false, ...over});
-const key = (k: string, mods: {ctrl?: boolean; meta?: boolean; shift?: boolean; alt?: boolean} = {}) =>
-  new KeyboardEvent('keydown', {key: k, ctrlKey: !!mods.ctrl, metaKey: !!mods.meta, shiftKey: !!mods.shift, altKey: !!mods.alt});
+const ctx = (over: Partial<Ctx> = {}): Ctx => ({
+  view: 'edit',
+  tab: 'pages',
+  inGrid: false,
+  inStage: false,
+  editable: false,
+  dialogOpen: false,
+  ...over,
+});
+const key = (
+  k: string,
+  mods: {ctrl?: boolean; meta?: boolean; shift?: boolean; alt?: boolean} = {},
+) =>
+  new KeyboardEvent('keydown', {
+    key: k,
+    ctrlKey: !!mods.ctrl,
+    metaKey: !!mods.meta,
+    shiftKey: !!mods.shift,
+    altKey: !!mods.alt,
+  });
 const ctrl = {ctrl: true};
 
 const rows: Array<[string, KeyboardEvent, Partial<Ctx>, Action | null]> = [
@@ -40,13 +57,28 @@ const rows: Array<[string, KeyboardEvent, Partial<Ctx>, Action | null]> = [
   ['Ctrl+A in the grid but editable', key('a', ctrl), {inGrid: true, editable: true}, null],
   ['ArrowLeft in the stage', key('ArrowLeft'), {inStage: true, tab: 'document'}, 'prev'],
   ['ArrowRight in the stage', key('ArrowRight'), {inStage: true, tab: 'document'}, 'next'],
-  ['ArrowRight in the stage on the Pages tab', key('ArrowRight'), {inStage: true, tab: 'pages'}, null],
+  [
+    'ArrowRight in the stage on the Pages tab',
+    key('ArrowRight'),
+    {inStage: true, tab: 'pages'},
+    null,
+  ],
   ['ArrowRight outside the stage', key('ArrowRight'), {}, null],
-  ['ArrowRight in the stage but editable', key('ArrowRight'), {inStage: true, editable: true}, null],
-  ['Alt+ArrowRight (move a page) in the stage', key('ArrowRight', {alt: true}), {inStage: true}, null],
+  [
+    'ArrowRight in the stage but editable',
+    key('ArrowRight'),
+    {inStage: true, editable: true},
+    null,
+  ],
+  [
+    'Alt+ArrowRight (move a page) in the stage',
+    key('ArrowRight', {alt: true}),
+    {inStage: true},
+    null,
+  ],
   ['Delete with a dialog open', key('Delete'), {inGrid: true, dialogOpen: true}, null],
   ['Ctrl+S with a dialog open', key('s', ctrl), {dialogOpen: true}, null],
-  ['an unrelated key', key('q'), {inGrid: true, inStage: true}, null]
+  ['an unrelated key', key('q'), {inGrid: true, inStage: true}, null],
 ];
 
 describe('handleShortcut', () => {
@@ -55,6 +87,7 @@ describe('handleShortcut', () => {
   });
 
   it('Ctrl+O opens in every view', () => {
-    for (const view of ['home', 'merge', 'preview', 'edit', 'settings'] as View[]) expect(handleShortcut(key('o', ctrl), ctx({view}))).toBe('open');
+    for (const view of ['home', 'merge', 'preview', 'edit', 'settings'] as View[])
+      expect(handleShortcut(key('o', ctrl), ctx({view}))).toBe('open');
   });
 });

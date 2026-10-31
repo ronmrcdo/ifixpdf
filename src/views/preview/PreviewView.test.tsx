@@ -6,15 +6,30 @@ import {pickAndImport} from '../../shell/useFileImport';
 import {documentStore} from '../../state/workspaces';
 import {PreviewView} from './PreviewView';
 
-vi.mock('../../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {}), acquire: vi.fn()}));
+vi.mock('../../pdf/registry', () => ({
+  retain: vi.fn(),
+  release: vi.fn(async () => {}),
+  acquire: vi.fn(),
+}));
 vi.mock('../../pdf/thumbnails', () => ({thumbnail: vi.fn(async () => 'blob:x')}));
-vi.mock('../../shell/useFileImport', async (orig) => ({...(await orig<object>()), pickAndImport: vi.fn()}));
+vi.mock('../../shell/useFileImport', async (orig) => ({
+  ...(await orig<object>()),
+  pickAndImport: vi.fn(),
+}));
 
-const pages: PageInstance[] = [0, 1, 2].map((i) => ({uid: `u${i}`, fileId: 'f', local: i, rotation: 0}));
-const open = (tab: 'document' | 'pages' = 'document') => documentStore.setState({files: [{id: 'f', name: 'A.pdf', pages: 3, size: 1}], pages, tab});
+const pages: PageInstance[] = [0, 1, 2].map((i) => ({
+  uid: `u${i}`,
+  fileId: 'f',
+  local: i,
+  rotation: 0,
+}));
+const open = (tab: 'document' | 'pages' = 'document') =>
+  documentStore.setState({files: [{id: 'f', name: 'A.pdf', pages: 3, size: 1}], pages, tab});
 
 beforeEach(() => vi.clearAllMocks());
-afterEach(async () => { await documentStore.getState().reset() });
+afterEach(async () => {
+  await documentStore.getState().reset();
+});
 
 describe('PreviewView', () => {
   it('shows the empty state and Open PDF opens the picker', async () => {

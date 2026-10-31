@@ -17,15 +17,72 @@ export function HeaderActions() {
 
   let save: {label: string; disabled: boolean} | null = null;
   if (view === 'edit') save = {label: 'Save PDF', disabled: !docPages || docBusy};
-  if (mergeOpen) save = {label: workflow === 'review' ? 'Continue to save' : 'Save PDF', disabled: mergeBusy};
+  if (mergeOpen)
+    save = {label: workflow === 'review' ? 'Continue to save' : 'Save PDF', disabled: mergeBusy};
 
   return (
     <div className="header-actions">
-      {mergeOpen && <button type="button" className="secondary new-combine" data-action="new-combine" onClick={() => void mergeStore.getState().reset()}><Files aria-hidden="true" /> New merge</button>}
-      {view !== 'settings' && <button type="button" className="secondary" data-action="add" onClick={() => void pickAndImport()}>{single ? <><FolderOpen aria-hidden="true" /> Open PDF</> : <><Plus aria-hidden="true" /> Add files</>}</button>}
-      {view === 'preview' && docPages > 0 && <button type="button" className="secondary" data-action="preview-print" onClick={() => void printDocument(documentStore)}><Printer aria-hidden="true" /> Print PDF</button>}
-      {view === 'preview' && <button type="button" className="primary" data-action="edit-current" disabled={!docPages} onClick={() => navigate('edit')}><Pencil aria-hidden="true" /> Edit PDF</button>}
-      {save && <button type="button" className="primary" data-action="export" disabled={save.disabled} aria-label={save.label} onClick={() => void saveOrContinue(view === 'edit' ? documentStore : mergeStore)}><Download aria-hidden="true" /> <span className="save-label">{save.label}</span></button>}
+      {mergeOpen && (
+        <button
+          type="button"
+          className="secondary new-combine"
+          data-action="new-combine"
+          onClick={() => void mergeStore.getState().reset()}
+        >
+          <Files aria-hidden="true" /> New merge
+        </button>
+      )}
+      {view !== 'settings' && (
+        <button
+          type="button"
+          className="secondary"
+          data-action="add"
+          onClick={() => void pickAndImport()}
+        >
+          {single ? (
+            <>
+              <FolderOpen aria-hidden="true" /> Open PDF
+            </>
+          ) : (
+            <>
+              <Plus aria-hidden="true" /> Add files
+            </>
+          )}
+        </button>
+      )}
+      {view === 'preview' && docPages > 0 && (
+        <button
+          type="button"
+          className="secondary"
+          data-action="preview-print"
+          onClick={() => void printDocument(documentStore)}
+        >
+          <Printer aria-hidden="true" /> Print PDF
+        </button>
+      )}
+      {view === 'preview' && (
+        <button
+          type="button"
+          className="primary"
+          data-action="edit-current"
+          disabled={!docPages}
+          onClick={() => navigate('edit')}
+        >
+          <Pencil aria-hidden="true" /> Edit PDF
+        </button>
+      )}
+      {save && (
+        <button
+          type="button"
+          className="primary"
+          data-action="export"
+          disabled={save.disabled}
+          aria-label={save.label}
+          onClick={() => void saveOrContinue(view === 'edit' ? documentStore : mergeStore)}
+        >
+          <Download aria-hidden="true" /> <span className="save-label">{save.label}</span>
+        </button>
+      )}
     </div>
   );
 }

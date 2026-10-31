@@ -7,7 +7,7 @@ vi.mock('./render', () => ({renderPage: vi.fn(async () => {})}));
 let n = 0;
 beforeEach(() => {
   vi.mocked(renderPage).mockReset().mockResolvedValue(undefined);
-  vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(cb => cb(new Blob(['x'])));
+  vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => cb(new Blob(['x'])));
   URL.createObjectURL = vi.fn(() => `blob:i${n++}`);
   URL.revokeObjectURL = vi.fn();
 });
@@ -21,7 +21,7 @@ describe('registry release -> thumbnails', () => {
   });
   it('revokes a build that finishes after release and does not serve it after re-retain', async () => {
     let finish!: () => void;
-    vi.mocked(renderPage).mockImplementationOnce(() => new Promise<void>(r => (finish = r)));
+    vi.mocked(renderPage).mockImplementationOnce(() => new Promise<void>((r) => (finish = r)));
     retain('i2', 'document');
     const stale = thumbnail('i2', 0, 0, 0.18);
     await vi.waitFor(() => expect(renderPage).toHaveBeenCalledTimes(1));
@@ -37,7 +37,7 @@ describe('registry release -> thumbnails', () => {
   });
   it('does not share an in-flight build across a release', async () => {
     let finish!: () => void;
-    vi.mocked(renderPage).mockImplementationOnce(() => new Promise<void>(r => (finish = r)));
+    vi.mocked(renderPage).mockImplementationOnce(() => new Promise<void>((r) => (finish = r)));
     retain('i3', 'document');
     const stale = thumbnail('i3', 0, 0, 0.18);
     await vi.waitFor(() => expect(renderPage).toHaveBeenCalledTimes(1));

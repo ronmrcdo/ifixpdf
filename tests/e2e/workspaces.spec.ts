@@ -22,20 +22,30 @@ async function addToMerge(app: App, names: string[], status: string) {
 async function previewIsReport(app: App, page?: number) {
   await app.view('Preview PDF');
   await expect(app.subtitle, 'Preview still shows the document').toHaveText('Report.pdf');
-  if (page) await expect(app.page.getByRole('spinbutton', {name: 'Go to page'}), 'Preview keeps its page').toHaveValue(String(page));
+  if (page)
+    await expect(
+      app.page.getByRole('spinbutton', {name: 'Go to page'}),
+      'Preview keeps its page',
+    ).toHaveValue(String(page));
 }
 
 async function mergeIsEmpty(app: App) {
   await expect(app.page.getByText('Choose PDFs to merge'), 'Merge starts empty').toBeVisible();
   await expect(workflow(app).first()).toHaveClass(/current/);
-  await expect(workflow(app).and(app.page.locator('.complete')), 'no workflow step complete').toHaveCount(0);
+  await expect(
+    workflow(app).and(app.page.locator('.complete')),
+    'no workflow step complete',
+  ).toHaveCount(0);
 }
 
 test('Preview and Merge do not share files', async ({app}) => {
   await openReport(app, 2);
   await app.view('Merge PDFs');
   await mergeIsEmpty(app);
-  await expect(app.page.getByRole('button', {name: 'Return to previous document'}), 'no Return to previous document').toHaveCount(0);
+  await expect(
+    app.page.getByRole('button', {name: 'Return to previous document'}),
+    'no Return to previous document',
+  ).toHaveCount(0);
   await previewIsReport(app, 2);
 });
 
@@ -63,14 +73,23 @@ test('switching to Preview mid-import still lands every file in Merge', async ({
   await addToMerge(app, ['A.pdf', 'B.pdf', 'C.pdf'], '3 files');
   await page.evaluate(() => {
     window.__realArrayBuffer = File.prototype.arrayBuffer;
-    window.__gate = new Promise(r => { window.__release = r });
+    window.__gate = new Promise((r) => {
+      window.__release = r;
+    });
     let calls = 0;
-    File.prototype.arrayBuffer = async function () { window.__reads = ++calls; if (calls === 2) await window.__gate; return window.__realArrayBuffer.call(this) };
+    File.prototype.arrayBuffer = async function () {
+      window.__reads = ++calls;
+      if (calls === 2) await window.__gate;
+      return window.__realArrayBuffer.call(this);
+    };
   });
   await app.addFiles([await pdfFile('A.pdf', 1), await pdfFile('B.pdf', 2)]);
   await page.waitForFunction(() => window.__reads === 2);
   await app.view('Preview PDF');
-  await page.evaluate(() => { window.__release(); File.prototype.arrayBuffer = window.__realArrayBuffer });
+  await page.evaluate(() => {
+    window.__release();
+    File.prototype.arrayBuffer = window.__realArrayBuffer;
+  });
   await expect(app.status).toContainText('5 files');
   await expect(app.title, 'import finishes in Merge').toHaveText('Merge PDFs');
   await previewIsReport(app, 2);
@@ -135,9 +154,15 @@ test('moving a page keeps its card node', async ({app, page}) => {
   await app.tab('Pages').click();
   const cards = page.locator('.page-card');
   await cards.nth(2).waitFor();
-  await cards.nth(1).evaluate(el => { (el as HTMLElement & {__keep?: number}).__keep = 1 });
+  await cards.nth(1).evaluate((el) => {
+    (el as HTMLElement & {__keep?: number}).__keep = 1;
+  });
   await page.getByRole('button', {name: 'Move page 2 earlier'}).click();
-  await expect.poll(() => cards.first().evaluate(el => (el as HTMLElement & {__keep?: number}).__keep), {timeout: 3000}).toBe(1);
+  await expect
+    .poll(() => cards.first().evaluate((el) => (el as HTMLElement & {__keep?: number}).__keep), {
+      timeout: 3000,
+    })
+    .toBe(1);
 });
 
 test('Clear workspace removes the document draft', async ({app, page}) => {

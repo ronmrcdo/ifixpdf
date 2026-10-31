@@ -18,20 +18,43 @@ const submit = () => screen.getByRole('button', {name: /Split & save ZIP|Splitti
 async function open() {
   const bytes = await makePdf(5);
   const file: SourceFile = {id: 'f', name: 'Report.pdf', pages: 5, size: bytes.length};
-  const pages: PageInstance[] = Array.from({length: 5}, (_, i) => ({uid: `u${i}`, fileId: 'f', local: i, rotation: i === 1 ? 90 : 0}));
+  const pages: PageInstance[] = Array.from({length: 5}, (_, i) => ({
+    uid: `u${i}`,
+    fileId: 'f',
+    local: i,
+    rotation: i === 1 ? 90 : 0,
+  }));
   documentStore.setState({files: [file], pages});
-  vi.spyOn(documentStore.getState(), 'snapshotForExport').mockReturnValue({pages, sources: {f: bytes}, title: ''} as never);
+  vi.spyOn(documentStore.getState(), 'snapshotForExport').mockReturnValue({
+    pages,
+    sources: {f: bytes},
+    title: '',
+  } as never);
   const user = userEvent.setup();
-  render(<><button type="button">Opener</button><DialogHost /></>);
+  render(
+    <>
+      <button type="button">Opener</button>
+      <DialogHost />
+    </>,
+  );
   screen.getByRole('button', {name: 'Opener'}).focus();
-  act(() => showSplitDialog({count: 5, name: 'Report.pdf', spec: documentStore.getState().snapshotForExport()}));
+  act(() =>
+    showSplitDialog({
+      count: 5,
+      name: 'Report.pdf',
+      spec: documentStore.getState().snapshotForExport(),
+    }),
+  );
   return user;
 }
 
 beforeEach(() => {
   useDialogs.setState({active: null});
   saved = [];
-  vi.spyOn(platform, 'saveAs').mockImplementation(async (bytes, name) => { saved.push(bytes); return {name, folder: '/d'} });
+  vi.spyOn(platform, 'saveAs').mockImplementation(async (bytes, name) => {
+    saved.push(bytes);
+    return {name, folder: '/d'};
+  });
 });
 afterEach(async () => {
   vi.restoreAllMocks();
@@ -43,24 +66,34 @@ describe('SplitDialog', () => {
   it('defaults the ranges, with help text and a live summary', async () => {
     await open();
     expect(ranges()).toHaveValue('1-2, 3-5');
-    expect(screen.getByText('Each comma creates a separate PDF. Example: 1-3, 4-6. Available pages: 1–5.')).toBeVisible();
-    expect(document.querySelector('.split-results')).toHaveTextContent('2 PDFs · 5 of 5 pages included');
+    expect(
+      screen.getByText(
+        'Each comma creates a separate PDF. Example: 1-3, 4-6. Available pages: 1–5.',
+      ),
+    ).toBeVisible();
+    expect(document.querySelector('.split-results')).toHaveTextContent(
+      '2 PDFs · 5 of 5 pages included',
+    );
   });
 
   it('summarises 1-2, 3 as 2 PDFs and one range as 1 PDF', async () => {
     const user = await open();
     await user.clear(ranges());
     await user.type(ranges(), '1-2, 3');
-    expect(document.querySelector('.split-results')).toHaveTextContent('2 PDFs · 3 of 5 pages included');
+    expect(document.querySelector('.split-results')).toHaveTextContent(
+      '2 PDFs · 3 of 5 pages included',
+    );
     await user.clear(ranges());
     await user.type(ranges(), '4');
-    expect(document.querySelector('.split-results')).toHaveTextContent('1 PDF · 1 of 5 pages included');
+    expect(document.querySelector('.split-results')).toHaveTextContent(
+      '1 PDF · 1 of 5 pages included',
+    );
   });
 
   it.each([
     ['1-3, 3', 'Ranges overlap. Include each page only once.'],
     ['1-9', 'Choose pages from 1 to 5.'],
-    ['abc', 'Enter ranges such as 1-3, 4-6.']
+    ['abc', 'Enter ranges such as 1-3, 4-6.'],
   ])('rejects %s inline and blocks submit', async (text, message) => {
     const user = await open();
     await user.clear(ranges());
@@ -73,14 +106,20 @@ describe('SplitDialog', () => {
     const user = await open();
     await user.selectOptions(screen.getByLabelText('Split by'), 'every');
     expect(screen.getByLabelText(/^Ranges/)).not.toBeVisible();
-    expect(document.querySelector('.split-results')).toHaveTextContent('5 PDFs · 5 of 5 pages included');
+    expect(document.querySelector('.split-results')).toHaveTextContent(
+      '5 PDFs · 5 of 5 pages included',
+    );
   });
 
   it('saves a ZIP with the right entries and page counts, applying rotation', async () => {
     const user = await open();
     await user.click(submit());
     expect(await screen.findByRole('heading', {name: '2 PDFs ready'})).toBeVisible();
-    expect(platform.saveAs).toHaveBeenCalledWith(expect.any(Uint8Array), 'Report — split.zip', 'zip');
+    expect(platform.saveAs).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+      'Report — split.zip',
+      'zip',
+    );
     const zip = unzipSync(saved[0]!);
     expect(Object.keys(zip)).toEqual(['Report — part 1.pdf', 'Report — part 2.pdf']);
     const first = await PDFDocument.load(zip['Report — part 1.pdf']!);
@@ -106,7 +145,9 @@ describe('SplitDialog', () => {
     vi.mocked(platform.saveAs).mockRejectedValue(new Error('disk full'));
     const user = await open();
     await user.click(submit());
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not split this PDF. Try again.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not split this PDF. Try again.',
+    );
     expect(submit()).toBeEnabled();
   });
 
