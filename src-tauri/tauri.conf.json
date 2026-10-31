@@ -29,17 +29,29 @@
     "active": true,
     "licenseFile": "../EULA.txt",
     "targets": [
-      "nsis"
+      "nsis",
+      "app",
+      "dmg",
+      "appimage",
+      "deb"
     ],
     "icon": [
       "icons/icon.png",
       "icons/icon.ico"
-    ]
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser"
+      }
+    }
   },
   "plugins": {
     "updater": {
       "pubkey": "",
-      "endpoints": []
+      "endpoints": [],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
