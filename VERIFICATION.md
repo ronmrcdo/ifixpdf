@@ -116,7 +116,9 @@ Windows checklist for the owner (all pending):
 - [ ] Save as into a read-only folder shows the error toast; an existing file there is intact.
 - [ ] Cancelling the native save dialog writes nothing and shows no toast.
 - [ ] Alt+F4 after an edit saves the draft; it restores on the next launch.
-- [ ] Closing the window during an export waits for it or does not corrupt the saved file.
+- [ ] Closing the window during an export keeps the window open and shows the toast "Wait for the save to finish."
+- [ ] Save as works under the postMessage IPC fallback, or fails with a visible error toast.
+- [ ] Saving over a file another app holds open (e.g. the PDF "Open PDF after saving" just opened), and an antivirus-induced rename failure, show an error toast and leave the old file intact.
 - [ ] A file saved with Save as reopens from Home recents after a restart.
 
 Open owner decision: dropping a folder grants a recursive fs scope that persisted-scope keeps across restarts (read only: `fs:allow-write-file` was removed when Save as moved to Rust, `docs/adr/20261031120305_rust-owned-save-as.md`). tauri-plugin-fs grants it in Rust (`allow_directory(path, true)`, tauri-plugin-fs 2.7.1 `src/lib.rs:632-647`) before JavaScript sees the drop, so ignoring folder drops in JavaScript does not remove the grant. Options: accept and document it, or a Rust-side change (forbid the directory again after the drop, or a custom drop handler).
