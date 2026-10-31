@@ -227,6 +227,23 @@ describe('startup', () => {
     expect(useApp.getState()).toMatchObject({view: 'home', toast: null});
   });
 
+  it('a file opened while the draft is being read wins over the draft', async () => {
+    let resolve: (d: ReturnType<typeof draft>) => void = () => {};
+    vi.mocked(readDraft).mockReturnValue(new Promise((r) => (resolve = r)));
+    const restore = vi.spyOn(documentStore.getState(), 'restore');
+    const started = startup();
+    const opening = documentStore
+      .getState()
+      .replaceWith({name: 'mine.pdf', bytes: new Uint8Array(1)});
+    resolve(draft('edit'));
+    await started;
+    await opening;
+    expect(restore).not.toHaveBeenCalled();
+    restore.mockRestore();
+    expect(documentStore.getState().files.map((f) => f.name)).toEqual(['mine.pdf']);
+    expect(useApp.getState()).toMatchObject({view: 'home', toast: null});
+  });
+
   it('restores the draft into the document store, then starts draft sync', async () => {
     vi.mocked(readDraft).mockResolvedValue(draft('edit'));
     vi.mocked(startDraftSync).mockImplementation(() => {

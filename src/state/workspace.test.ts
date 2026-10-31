@@ -59,6 +59,26 @@ const make = async (
 };
 const uids = (store: Awaited<ReturnType<typeof make>>) => store.getState().pages.map((p) => p.uid);
 
+describe('pristine', () => {
+  it('is true on a new store and false as soon as replaceWith or addFiles is called', async () => {
+    const a = createWorkspaceStore('document');
+    expect(a.getState().pristine()).toBe(true);
+    const pending = a.getState().replaceWith(pdf('a.pdf'));
+    expect(a.getState().pristine()).toBe(false);
+    await pending;
+    const b = createWorkspaceStore('merge');
+    const adding = b.getState().addFiles([pdf('a.pdf')]);
+    expect(b.getState().pristine()).toBe(false);
+    await adding;
+  });
+
+  it('is true again after reset', async () => {
+    const s = await make();
+    await s.getState().reset();
+    expect(s.getState().pristine()).toBe(true);
+  });
+});
+
 describe('addFiles', () => {
   it('loads, stores bytes, retains and appends pages', async () => {
     const store = await make('merge');
