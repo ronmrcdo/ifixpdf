@@ -4,7 +4,7 @@ import {loadPdf, InvalidPdfError} from '../pdf/load';
 import {clearDraft, readDraft, type DraftRecord} from '../storage/draft';
 import {readPrefs, writePrefs} from '../storage/prefs';
 import {recents} from '../storage/app-recents';
-import {flushDraft, startDraftSync} from '../state/draft-sync';
+import {flushDraft, saveDraftNow, startDraftSync} from '../state/draft-sync';
 import {useApp} from '../state/app';
 import {documentStore, mergeStore} from '../state/workspaces';
 import {FileMissingError} from '../platform/types';
@@ -22,6 +22,7 @@ vi.mock('../storage/prefs', () => ({readPrefs: vi.fn(), writePrefs: vi.fn(async 
 vi.mock('../state/draft-sync', () => ({
   startDraftSync: vi.fn(() => () => {}),
   flushDraft: vi.fn(async () => {}),
+  saveDraftNow: vi.fn(async () => {}),
 }));
 
 const file = (id: string, recentId?: string): SourceFile => ({
@@ -83,6 +84,7 @@ beforeEach(() => {
     .mockReset()
     .mockReturnValue(() => {});
   vi.mocked(flushDraft).mockClear();
+  vi.mocked(saveDraftNow).mockReset().mockResolvedValue();
   useApp.setState({view: 'home', documentView: 'preview', workspace: 'merge', toast: null});
   at('');
 });
@@ -296,6 +298,34 @@ describe('startup', () => {
     restore.mockRestore();
     expect(documentStore.getState().files.map((f) => f.name)).toEqual(['mine.pdf']);
     expect(useApp.getState()).toMatchObject({view: 'home', toast: null});
+    // The open finished before sync subscribed, so startup itself must overwrite the stale draft.
+    expect(saveDraftNow).toHaveBeenCalledOnce();
+    expect(vi.mocked(saveDraftNow).mock.invocationCallOrder[0]).toBeGreaterThan(
+      vi.mocked(startDraftSync).mock.invocationCallOrder[0] ?? Infinity,
+    );
+  });
+
+  it('overriding the draft survives a failing overwrite', async () => {
+    let resolve: (d: ReturnType<typeof draft>) => void = () => {};
+    vi.mocked(readDraft).mockReturnValue(new Promise((r) => (resolve = r)));
+    vi.mocked(saveDraftNow).mockRejectedValue(new Error('idb'));
+    const started = startup();
+    const opening = documentStore
+      .getState()
+      .replaceWith({name: 'mine.pdf', bytes: new Uint8Array(1)});
+    resolve(draft('edit'));
+    await expect(started).resolves.toBeUndefined();
+    await opening;
+    expect(saveDraftNow).toHaveBeenCalledOnce();
+  });
+
+  it('does not rewrite the draft when it was restored or there was none', async () => {
+    vi.mocked(readDraft).mockResolvedValue(draft('edit'));
+    await startup();
+    await documentStore.getState().reset();
+    vi.mocked(readDraft).mockResolvedValue(null);
+    await startup();
+    expect(saveDraftNow).not.toHaveBeenCalled();
   });
 
   it('restores the draft into the document store, then starts draft sync', async () => {
@@ -521,6 +551,32 @@ describe('startup prefs', () => {
     expect(useApp.getState().openAfter).toBe(true);
     useApp.setState({openAfter: false});
     expect(writePrefs).toHaveBeenCalledWith({openAfter: false});
+  });
+
+  it('a toggle made before the prefs read finishes is kept and persisted', async () => {
+    let resolve: (p: {openAfter: boolean}) => void = () => {};
+    vi.mocked(readPrefs).mockReturnValue(new Promise((r) => (resolve = r)));
+    const started = startup();
+    useApp.setState({openAfter: false});
+    resolve({openAfter: true});
+    await started;
+    await new Promise((r) => setTimeout(r, 0)); // let the prefs read settle
+    expect(useApp.getState().openAfter).toBe(false);
+    expect(writePrefs).toHaveBeenCalledWith({openAfter: false});
+  });
+
+  it('a slow prefs read does not hold up the close handler or routing', async () => {
+    vi.mocked(readPrefs).mockReturnValue(new Promise(() => {}));
+    const saved = platform.window;
+    const onCloseRequested = vi.fn(() => () => {});
+    Object.assign(platform, {
+      window: {minimize: vi.fn(), toggleMaximize: vi.fn(), close: vi.fn(), onCloseRequested},
+    });
+    at('?view=edit');
+    await startup();
+    Object.assign(platform, {window: saved});
+    expect(onCloseRequested).toHaveBeenCalledOnce();
+    expect(useApp.getState().view).toBe('edit');
   });
 
   it('ignores a failing write', async () => {
