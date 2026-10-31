@@ -72,13 +72,12 @@ Working in the browser; not yet production-ready.
 
 ## How to release
 
-1. Write the entry in `CHANGELOG.md`, newest first, for users rather than developers:
-   - Heading `## Unreleased` (the release renames it to `## vX.Y.Z — Month YYYY`), then a one-sentence summary.
-   - Optional `### Featured: <title>` with a short paragraph and a three-step **How to use it** list naming buttons as they appear in the app.
+1. Optional: write the notes yourself under `## Unreleased` at the top of `CHANGELOG.md` (no need to commit it). Without one, the release writes the notes from the `feat`/`fix` commits since the last tag, as **New** and **Fixed** items, so write those commit subjects for users. A hand-written entry is for users rather than developers:
+   - A one-sentence summary, an optional `### Featured: <title>` with a short paragraph and a three-step **How to use it** list naming buttons as they appear in the app.
    - Then 3–6 items, each labeled **New**, **Improved** or **Fixed**, with a bold short title and one or two sentences. No nested bullets.
    - Say "you"; no file names, code, hashes, library names or jargon; skip behind-the-scenes work.
-2. On `main` with a clean tree (a `CHANGELOG.md` edit is fine), run `pnpm release` in your own terminal. It shows the current version, the last release's entry, the `feat`/`fix` commits since the last tag and your `## Unreleased` entry, then asks for patch, minor or major and a final yes. It renames the entry, bumps `package.json`, `Cargo.toml` and `Cargo.lock`, commits `chore(release): vX.Y.Z` and tags it. `pnpm release X.Y.Z` skips the questions. Without an entry it lists the commits and stops.
-3. Push the command it prints: `git push --atomic origin main vX.Y.Z` (atomic, so a rejected `main` does not push the tag either). The tag must be on `main`, or the run stops.
+2. On `main` with a clean tree (a `CHANGELOG.md` edit is fine), run `pnpm release` in your own terminal. It shows the current version, the last release's entry, the `feat`/`fix` commits since the last tag and the next release's notes, then asks for patch, minor or major and a final yes. `pnpm release X.Y.Z` skips the questions.
+3. It then does the rest: writes the notes into `CHANGELOG.md` as `## vX.Y.Z — Month YYYY`, bumps `package.json`, `Cargo.toml` and `Cargo.lock`, commits `chore(release): vX.Y.Z`, creates the tag `vX.Y.Z` with the notes as its description, and pushes with `git push --atomic origin main vX.Y.Z` (atomic, so a rejected `main` does not push the tag either). The push starts the release workflow, which puts the same notes on the draft GitHub release. If the push fails, the commit and tag stay local; fix the cause and run that command yourself. The tag must be on `main`, or the run stops.
 4. In the run, approve the `release` environment twice: first the `secrets` job, then the build (one review covers all three build jobs).
 5. Review the draft release on GitHub, then publish it. Publish only after all three build jobs are green: a partial draft has a `latest.json` missing platforms. The jobs also edit `latest.json` without a lock, so even with all jobs green, open the draft's `latest.json` and confirm it lists `windows-x86_64`, `darwin-aarch64`, `darwin-x86_64`, `linux-x86_64` and `linux-x86_64-deb`. If one is missing, re-run that build job.
 
