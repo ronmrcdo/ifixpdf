@@ -49,7 +49,7 @@ describe('security', () => {
     expect(directives.get('object-src')).toEqual(["'none'"]);
   });
 
-  test('capabilities have no core:default and no fs scope beyond the two file commands', () => {
+  test('capabilities have no core:default, no webview writes and only the read-file fs command', () => {
     const dir = 'src-tauri/capabilities';
     const ids = readdirSync(dir)
       .filter((f) => f.endsWith('.json'))
@@ -60,11 +60,12 @@ describe('security', () => {
         return permissions.map((p) => (typeof p === 'string' ? p : p.identifier));
       });
     expect(ids).not.toContain('core:default');
-    // fs:allow-read-file / fs:allow-write-file grant the commands only; paths come from dialog picks (persisted scope).
-    expect(ids.filter((id) => id.startsWith('fs:')).sort()).toEqual([
-      'fs:allow-read-file',
-      'fs:allow-write-file',
-    ]);
+    // Saving goes through the Rust save_as command; the webview cannot pick a save path or write a file.
+    expect(ids).not.toContain('fs:allow-write-file');
+    expect(ids).not.toContain('dialog:allow-save');
+    expect(ids).toContain('allow-save-as');
+    // fs:allow-read-file grants the command only; paths come from dialog picks and saves (persisted scope).
+    expect(ids.filter((id) => id.startsWith('fs:'))).toEqual(['fs:allow-read-file']);
   });
 
   test('the built bundle carries no dev-only test hook', () => {

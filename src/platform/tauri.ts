@@ -1,10 +1,11 @@
+import {invoke} from '@tauri-apps/api/core';
 import {getCurrentWebview} from '@tauri-apps/api/webview';
 import {getCurrentWindow} from '@tauri-apps/api/window';
-import {open, save} from '@tauri-apps/plugin-dialog';
-import {readFile, writeFile} from '@tauri-apps/plugin-fs';
+import {open} from '@tauri-apps/plugin-dialog';
+import {readFile} from '@tauri-apps/plugin-fs';
 import {openPath, openUrl, revealItemInDir} from '@tauri-apps/plugin-opener';
 import {splitPath} from '../domain/naming';
-import {FileMissingError, SAVE_KINDS, type PickedFile, type Platform} from './types';
+import {FileMissingError, type PickedFile, type Platform} from './types';
 
 // plugin-fs rejects with a string: "forbidden path: …" when outside the scope, "… (os error 2|3)" when the file or folder is gone.
 const MISSING = /^forbidden path: |\(os error [23]\)$/;
@@ -45,10 +46,11 @@ export const tauriPlatform: Platform = {
     return () => void unlisten.then((stop) => stop());
   },
   async saveAs(bytes, name, kind) {
-    const {label, ext} = SAVE_KINDS[kind];
-    const path = await save({defaultPath: name, filters: [{name: label, extensions: [ext]}]});
+    // Rust shows the dialog and writes atomically (src-tauri/src/main.rs); null on cancel.
+    const path = await invoke<string | null>('save_as', bytes, {
+      headers: {name: encodeURIComponent(name), kind},
+    });
     if (!path) return null;
-    await writeFile(path, bytes);
     return {...splitPath(path), path};
   },
   openPath: (path) => openPath(path),

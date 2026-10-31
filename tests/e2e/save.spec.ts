@@ -4,7 +4,6 @@ import {PDFDocument} from 'pdf-lib';
 import {test, expect, pdfFile, type App} from './fixtures';
 
 type Written = {bytes: number[]; path: string};
-type DialogOptions = {defaultPath: string; filters: {extensions: string[]}[]};
 
 const pagesOf = async (w: Written) =>
   (await PDFDocument.load(new Uint8Array(w.bytes))).getPageCount();
@@ -37,42 +36,48 @@ async function mergeToSave(app: App, files: Awaited<ReturnType<typeof pdfFile>>[
 test.describe('native', () => {
   test.use({tauri: true});
 
-  // Shapes match @tauri-apps/plugin-dialog save() -> invoke('plugin:dialog|save', {options})
-  // and @tauri-apps/plugin-fs writeFile() -> invoke('plugin:fs|write_file', bytes, {headers: {path: encodeURIComponent(path)}}).
+  // Shape matches src/platform/tauri.ts: invoke('save_as', bytes, {headers: {name: encodeURIComponent(name), kind}}).
+  // The Rust command shows the dialog and writes; the mock records the write in __written / __writes.
   test.beforeEach(async ({page, app}) => {
     await page.addInitScript(() => {
+      window.__writes = 0;
       window.__tauri = {
-        'plugin:dialog|save': ({options}: {options: {defaultPath: string}}) =>
-          window.__savePath === undefined
-            ? `/home/ron/Docs/${options.defaultPath}`
-            : window.__savePath,
+        save_as: (bytes: Uint8Array, options: {headers: {name: string}}) => {
+          const path =
+            window.__savePath === undefined
+              ? `/home/ron/Docs/${decodeURIComponent(options.headers.name)}`
+              : window.__savePath;
+          if (path === null) return null;
+          if (window.__failWrite) throw Error('disk full');
+          window.__written = {bytes: [...bytes], path};
+          window.__writes++;
+          return path;
+        },
         'plugin:opener|open_path': () => null,
         'plugin:opener|reveal_item_in_dir': () => null,
-        'plugin:fs|write_file': (bytes: Uint8Array, options: {headers: {path: string}}) => {
-          if (window.__failWrite) throw Error('disk full');
-          window.__written = {bytes: [...bytes], path: decodeURIComponent(options.headers.path)};
-        },
       };
     });
     await app.goto('view=home');
   });
 
   const dialogs = async (app: App) =>
-    (await app.calls('plugin:dialog|save')).map(
-      (c) => (c.args as {options: DialogOptions}).options,
-    );
+    (await app.calls('save_as')).map((c) => {
+      const {name, kind} = (c.options as {headers: {name: string; kind: string}}).headers;
+      return {defaultPath: decodeURIComponent(name), kind};
+    });
   const lastDialog = async (app: App) => (await dialogs(app)).at(-1);
   const count = async (app: App, cmd: string) => (await app.calls(cmd)).length;
   const waitCalls = (app: App, cmd: string, n: number) =>
     expect.poll(() => count(app, cmd)).toBe(n);
   const written = (page: Page): Promise<Written> => page.evaluate(() => window.__written);
+  const writes = (page: Page): Promise<number> => page.evaluate(() => window.__writes);
   const report = () => pdfFile('Report.pdf', 3);
 
   test('Ctrl+S in Preview suggests the document name with (edited)', async ({app, page}) => {
     await app.openPdf(await report());
     await app.title.click();
     await page.keyboard.press('Control+s');
-    await expect.poll(() => count(app, 'plugin:fs|write_file'), {timeout: 15000}).toBe(1); // first run may wait for Vite to optimise the plugins
+    await expect.poll(() => writes(page), {timeout: 15000}).toBe(1); // first run may wait for Vite to optimise the plugins
     expect((await lastDialog(app))?.defaultPath).toBe('Report (edited).pdf');
     expect(await pagesOf(await written(page))).toBe(3);
   });
@@ -89,13 +94,13 @@ test.describe('native', () => {
     const dialog = await lastDialog(app),
       out = await written(page);
     expect(dialog?.defaultPath).toBe('Report – pages 1, 3.pdf');
-    expect(dialog?.filters.map((f) => f.extensions)).toEqual([['pdf']]);
+    expect(dialog?.kind).toBe('pdf');
     expect(out.path).toBe('/home/ron/Docs/Report – pages 1, 3.pdf');
     expect(await pagesOf(out)).toBe(2);
     await check(3).uncheck();
     await check(2).check();
     await extract.click();
-    await waitCalls(app, 'plugin:fs|write_file', 2);
+    await expect.poll(() => writes(page)).toBe(2);
     expect((await lastDialog(app))?.defaultPath).toBe('Report – pages 1–2.pdf');
   });
 
@@ -108,10 +113,10 @@ test.describe('native', () => {
     await app.setGlobal('__savePath', null);
     const submit = dialog.getByRole('button', {name: 'Split & save ZIP'});
     await submit.click();
-    await waitCalls(app, 'plugin:dialog|save', 1);
+    await waitCalls(app, 'save_as', 1);
     const options = await lastDialog(app);
     expect(options?.defaultPath).toBe('Report — split.zip');
-    expect(options?.filters.map((f) => f.extensions)).toEqual([['zip']]);
+    expect(options?.kind).toBe('zip');
     await expect(submit).toBeEnabled();
     await expect(
       dialog.getByRole('heading', {name: /ready$/}),
@@ -205,14 +210,14 @@ test.describe('native', () => {
       '2 files',
     );
     const before = await app.recentCount(),
-      writes = await count(app, 'plugin:fs|write_file');
+      written0 = await writes(page);
     await app.dismissToast();
     await app.setGlobal('__savePath', null);
     const opened = (await dialogs(app)).length;
     await m.save.click();
-    await waitCalls(app, 'plugin:dialog|save', opened + 1);
+    await waitCalls(app, 'save_as', opened + 1);
     await page.waitForTimeout(300);
-    expect(await count(app, 'plugin:fs|write_file'), 'cancel writes nothing').toBe(writes);
+    expect(await writes(page), 'cancel writes nothing').toBe(written0);
     await expect(app.toast(), 'cancel shows no toast').toHaveCount(0);
     await expect(m.currentStep).toHaveText(/Save PDF/);
     expect(await app.recentCount()).toBe(before);
@@ -227,20 +232,20 @@ test.describe('native', () => {
 
     // Switch to Preview while the dialog is open: the result still lands in Merge.
     await page.evaluate(() => {
-      const real = window.__tauri['plugin:dialog|save'];
-      window.__tauri['plugin:dialog|save'] = async (args: unknown) => {
-        window.__tauri['plugin:dialog|save'] = real;
+      const real = window.__tauri.save_as;
+      window.__tauri.save_as = async (bytes: unknown, options: unknown) => {
+        window.__tauri.save_as = real;
         await new Promise((r) => {
           window.__release = r;
         });
-        return real(args);
+        return real(bytes, options);
       };
     });
     await m.save.click();
     await page.waitForFunction(() => window.__release);
     await app.view('Preview PDF');
     await page.evaluate(() => window.__release());
-    await waitCalls(app, 'plugin:fs|write_file', writes + 2);
+    await expect.poll(() => writes(page)).toBe(written0 + 1);
     await page.waitForTimeout(300);
     await expect(app.title, 'save does not move the user').toHaveText('Preview PDF');
     await expect(app.toast('Saved'), 'no document save toast').toHaveCount(0);
@@ -261,7 +266,7 @@ test.describe('native', () => {
       [await pdfFile('Big.pdf', 150), await pdfFile('A.pdf', 1)],
       '2 files · 151 pages',
     );
-    const built = await count(app, 'plugin:fs|write_file');
+    const built = await writes(page);
     await page.evaluate(() => {
       const real = window.setTimeout;
       window.__held = [];
@@ -296,7 +301,7 @@ test.describe('native', () => {
       window.__hold = false;
       window.__held.splice(0).forEach((f: () => void) => f());
     });
-    await expect.poll(() => count(app, 'plugin:fs|write_file'), {timeout: 10000}).toBe(built + 1);
+    await expect.poll(() => writes(page), {timeout: 10000}).toBe(built + 1);
     expect(await pagesOf(await written(page)), 'merge pages written, not the document').toBe(151);
   });
 
@@ -318,9 +323,9 @@ test.describe('native', () => {
     );
     await app.setGlobal('__savePath', null);
     const openBefore = await opens();
-    const dialogsBefore = await count(app, 'plugin:dialog|save');
+    const dialogsBefore = await count(app, 'save_as');
     await m.save.click();
-    await waitCalls(app, 'plugin:dialog|save', dialogsBefore + 1); // the mock has read __savePath (null) once the dialog is called
+    await waitCalls(app, 'save_as', dialogsBefore + 1); // the mock has read __savePath (null) once the dialog is called
     expect(await opens(), 'cancelled save opens nothing').toBe(openBefore);
     await app.setGlobal('__savePath', winPath);
     await m.save.click();
@@ -366,10 +371,10 @@ test.describe('native', () => {
   test('Ctrl+S on Home with the document workspace active saves nothing', async ({app, page}) => {
     await app.openPdf(await report());
     await app.view('Home');
-    const saves = await count(app, 'plugin:dialog|save');
+    const saves = await count(app, 'save_as');
     await page.keyboard.press('Control+s');
     await page.waitForTimeout(300);
-    expect(await count(app, 'plugin:dialog|save'), 'Ctrl+S on Home opens no dialog').toBe(saves);
+    expect(await count(app, 'save_as'), 'Ctrl+S on Home opens no dialog').toBe(saves);
     await expect(app.title).toHaveText('Home');
   });
 
@@ -406,12 +411,12 @@ test.describe('native', () => {
           super.postMessage(message, transfer as Transferable[]);
         }
       };
-      const real = window.__tauri['plugin:dialog|save'];
-      window.__tauri['plugin:dialog|save'] = async (args: unknown) => {
+      const real = window.__tauri.save_as;
+      window.__tauri.save_as = async (bytes: unknown, options: unknown) => {
         await new Promise((r) => {
           window.__release = r;
         });
-        return real(args);
+        return real(bytes, options);
       };
     });
     await app.title.click();
@@ -427,7 +432,7 @@ test.describe('native', () => {
     await expect(page.locator('.page-card')).toHaveCount(3);
     await page.evaluate(() => window.__release());
     await expect(app.toast('Saved Sized.pdf.')).toBeVisible();
-    expect(await count(app, 'plugin:dialog|save'), 'one dialog').toBe(1);
+    expect(await count(app, 'save_as'), 'one dialog').toBe(1);
     const out = await PDFDocument.load(new Uint8Array((await written(page)).bytes));
     expect(out.getPages().map((p) => [p.getWidth(), p.getRotation().angle])).toEqual([
       [300, 0],

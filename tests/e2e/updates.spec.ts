@@ -52,7 +52,7 @@ const called = async (app: App, cmd: string) => (await app.calls(cmd)).length > 
 // Holds the export's Save as dialog open, so the export stays in flight until released.
 const holdSaveDialog = (page: Page) =>
   page.evaluate(() => {
-    window.__tauri['plugin:dialog|save'] = () =>
+    window.__tauri.save_as = () =>
       new Promise((resolve) => {
         window.__releaseSave = () => resolve(null);
       });
@@ -137,7 +137,7 @@ test.describe('native', () => {
 
     await holdSaveDialog(page);
     await page.locator('.header-actions [data-action=export]').click();
-    await expect.poll(() => called(app, 'plugin:dialog|save')).toBe(true);
+    await expect.poll(() => called(app, 'save_as')).toBe(true);
     await app.view('Settings');
     await install.click();
     await expect(app.toast('export finishes')).toBeVisible();

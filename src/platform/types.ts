@@ -35,6 +35,7 @@ export class FileMissingError extends Error {
 }
 
 // Save dialog filter per export kind; labels as today's save.js.
+// save_filter in src-tauri/src/main.rs mirrors label and ext.
 export const SAVE_KINDS: Record<SaveKind, {label: string; ext: string; type: string}> = {
   pdf: {label: 'PDF document', ext: 'pdf', type: 'application/pdf'},
   zip: {label: 'ZIP archive', ext: 'zip', type: 'application/zip'},
