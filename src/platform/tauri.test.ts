@@ -122,47 +122,42 @@ describe('tauri platform', () => {
   });
 
   describe('saveAs', () => {
-    test('asks for a path, writes the bytes there and returns its parts', async () => {
-      mockTauri({'plugin:dialog|save': () => 'C:\\out\\x.pdf'});
+    test('sends the bytes, name and kind to save_as and returns the path parts', async () => {
+      mockTauri({save_as: () => 'C:\\out\\x – 1.pdf'});
       const bytes = new Uint8Array([7]);
-      expect(await p.saveAs(bytes, 'x.pdf', 'pdf')).toEqual({
-        name: 'x.pdf',
+      expect(await p.saveAs(bytes, 'x – 1.pdf', 'pdf')).toEqual({
+        name: 'x – 1.pdf',
         folder: 'C:\\out',
-        path: 'C:\\out\\x.pdf',
+        path: 'C:\\out\\x – 1.pdf',
       });
-      expect(calls[0]).toMatchObject({
-        cmd: 'plugin:dialog|save',
-        args: {
-          options: {defaultPath: 'x.pdf', filters: [{name: 'PDF document', extensions: ['pdf']}]},
+      expect(calls).toEqual([
+        {
+          cmd: 'save_as',
+          args: bytes,
+          options: {headers: {name: encodeURIComponent('x – 1.pdf'), kind: 'pdf'}},
         },
-      });
-      expect(calls[1]).toMatchObject({
-        cmd: 'plugin:fs|write_file',
-        args: bytes,
-        options: {headers: {path: encodeURIComponent('C:\\out\\x.pdf')}},
-      });
+      ]);
+      expect(cmds()).not.toContain('plugin:dialog|save');
+      expect(cmds()).not.toContain('plugin:fs|write_file');
     });
 
-    test('a zip uses the ZIP filter', async () => {
-      mockTauri({'plugin:dialog|save': () => 'C:\\out\\x — split.zip'});
+    test('a zip sends the zip kind', async () => {
+      mockTauri({save_as: () => 'C:\\out\\x — split.zip'});
       await p.saveAs(new Uint8Array(), 'x — split.zip', 'zip');
-      expect(calls[0]).toMatchObject({
-        args: {options: {filters: [{name: 'ZIP archive', extensions: ['zip']}]}},
-      });
+      expect(calls[0]).toMatchObject({options: {headers: {kind: 'zip'}}});
     });
 
-    test('cancel returns null and writes nothing', async () => {
-      mockTauri({});
+    test('cancel (save_as resolves null) returns null', async () => {
+      mockTauri({save_as: () => null});
       expect(await p.saveAs(new Uint8Array(), 'x.pdf', 'pdf')).toBeNull();
-      expect(cmds()).toEqual(['plugin:dialog|save']);
+      expect(cmds()).toEqual(['save_as']);
     });
 
     test('a failed write rejects', async () => {
-      mockTauri({
-        'plugin:dialog|save': () => 'C:\\out\\x.pdf',
-        'plugin:fs|write_file': () => Promise.reject('denied'),
-      });
-      await expect(p.saveAs(new Uint8Array(), 'x.pdf', 'pdf')).rejects.toBe('denied');
+      mockTauri({save_as: () => Promise.reject('Access is denied. (os error 5)')});
+      await expect(p.saveAs(new Uint8Array(), 'x.pdf', 'pdf')).rejects.toBe(
+        'Access is denied. (os error 5)',
+      );
     });
   });
 
