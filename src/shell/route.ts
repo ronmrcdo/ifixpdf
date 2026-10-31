@@ -1,8 +1,9 @@
 import {busyExporting} from '../actions/save';
 import type {SourceFile} from '../domain/types';
-import {FileMissingError, type PickedFile} from '../platform';
+import {FileMissingError, platform, type PickedFile} from '../platform';
 import {useApp, type View} from '../state/app';
 import {flushDraft, startDraftSync} from '../state/draft-sync';
+import {busy} from '../state/work';
 import {documentStore} from '../state/workspaces';
 import {clearDraft, readDraft} from '../storage/draft';
 import {recents} from '../storage/app-recents';
@@ -119,6 +120,15 @@ export async function startup(): Promise<void> {
     }
   }
   startDraftSync(documentStore);
+  // Every close (titlebar, Alt+F4, taskbar) passes here: keep an exporting window open, else save the draft.
+  platform.window?.onCloseRequested(async () => {
+    if (busy()) {
+      useApp.getState().notify('Wait for the save to finish.');
+      return false;
+    }
+    await flushDraft(); // never rejects: a failed write has already toasted
+    return true;
+  });
   if (moved()) return;
   if (route.combineNew) return navigate('merge');
   if (route.recent) {

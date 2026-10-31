@@ -58,5 +58,12 @@ export const tauriPlatform: Platform = {
     minimize: () => getCurrentWindow().minimize(),
     toggleMaximize: () => getCurrentWindow().toggleMaximize(),
     close: () => getCurrentWindow().close(),
+    onCloseRequested(handler) {
+      // A throwing handler would leave the window open for good (the API skips destroy()), so it closes.
+      const unlisten = getCurrentWindow().onCloseRequested(async (e) => {
+        if (!(await handler().catch(() => true))) e.preventDefault();
+      });
+      return () => void unlisten.then((stop) => stop());
+    },
   },
 };

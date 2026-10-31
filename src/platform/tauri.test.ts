@@ -1,4 +1,4 @@
-import {afterEach, beforeEach, describe, expect, test} from 'vitest';
+import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest';
 import {tauriPlatform as p} from './tauri';
 import {FileMissingError} from './types';
 
@@ -163,6 +163,32 @@ describe('tauri platform', () => {
         'plugin:fs|write_file': () => Promise.reject('denied'),
       });
       await expect(p.saveAs(new Uint8Array(), 'x.pdf', 'pdf')).rejects.toBe('denied');
+    });
+  });
+
+  describe('window.onCloseRequested', () => {
+    const closeRequested = async (handler: () => Promise<boolean>) => {
+      mockTauri({'plugin:event|listen': () => 1});
+      p.window!.onCloseRequested(handler);
+      await vi.waitFor(() => expect(cmds()).toContain('plugin:event|listen'));
+      const l = calls.find((c) => c.cmd === 'plugin:event|listen')!.args as {handler: number};
+      callbacks.get(l.handler)!({event: 'tauri://close-requested', id: 1, payload: null});
+      await new Promise((r) => setTimeout(r, 0));
+    };
+
+    test('resolving false keeps the window open', async () => {
+      await closeRequested(async () => false);
+      expect(cmds()).not.toContain('plugin:window|destroy');
+    });
+
+    test('resolving true lets the window be destroyed', async () => {
+      await closeRequested(async () => true);
+      expect(cmds()).toContain('plugin:window|destroy');
+    });
+
+    test('a throwing handler still closes, so the window is never stuck open', async () => {
+      await closeRequested(() => Promise.reject(new Error('boom')));
+      expect(cmds()).toContain('plugin:window|destroy');
     });
   });
 

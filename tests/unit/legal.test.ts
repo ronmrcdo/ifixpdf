@@ -53,6 +53,7 @@ describe('legal files', () => {
       'core:window:allow-minimize',
       'core:window:allow-toggle-maximize',
       'core:window:allow-close',
+      'core:window:allow-destroy',
       'core:window:allow-start-dragging',
       'core:window:allow-internal-toggle-maximize',
       'core:event:allow-listen',
