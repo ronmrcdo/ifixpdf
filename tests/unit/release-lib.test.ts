@@ -3,9 +3,11 @@ import {
   blockingChanges,
   cargoPackageVersion,
   changelogSection,
+  checkVersions,
   featFixSubjects,
   isNewer,
   parseVersion,
+  releaseBody,
   setCargoPackageVersion,
 } from '../../scripts/release-lib.ts';
 
@@ -95,4 +97,37 @@ describe('cargo version', () => {
   });
   it('returns null without a package version', () =>
     expect(cargoPackageVersion('[dependencies]\nversion = "1.0.0"\n')).toBeNull());
+});
+
+describe('checkVersions', () => {
+  it('accepts matching versions', () =>
+    expect(checkVersions('v1.2.0', '1.2.0', '1.2.0')).toBeNull());
+  it('names the mismatched file', () => {
+    expect(checkVersions('v1.2.0', '1.1.0', '1.2.0')).toContain('package.json');
+    expect(checkVersions('v1.2.0', '1.2.0', '1.1.0')).toContain('Cargo.toml');
+  });
+  it('rejects a bad tag', () => {
+    expect(checkVersions('1.2.0', '1.2.0', '1.2.0')).toContain('1.2.0');
+    expect(checkVersions('v1.2', '1.2.0', '1.2.0')).toContain('v1.2');
+  });
+});
+
+describe('releaseBody', () => {
+  const body = releaseBody('1.2.0', 'NOTES');
+  it('opens with the notes', () => expect(body.startsWith("## What's new\n\nNOTES")).toBe(true));
+  it('lists every download', () => {
+    for (const f of ['x64-setup.exe', 'universal.dmg', 'amd64.AppImage', 'amd64.deb'])
+      expect(body).toContain(`iFixPDF_1.2.0_${f}`);
+  });
+  it('explains the unsigned warnings, .deb updates and privacy', () => {
+    for (const t of [
+      'More info',
+      'Run anyway',
+      'Open Anyway',
+      'xattr -cr /Applications/iFixPDF.app',
+    ])
+      expect(body).toContain(t);
+    expect(body).toContain('downloading the new `.deb`');
+    expect(body).toContain('https://github.com/ronmrcdo/ifixpdf/blob/main/EULA.txt');
+  });
 });
