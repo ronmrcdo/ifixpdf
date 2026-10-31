@@ -52,6 +52,28 @@ export function stampUnreleased(md: string, version: string, date: string): stri
   return md.replace(UNRELEASED, `## v${version} — ${date}`);
 }
 
+const SUBJECT = /^(feat|fix)(\(.+\))?!?:\s*(.+)$/;
+
+/** Release notes from feat/fix commit subjects, New before Fixed. */
+export function autoNotes(subjects: string[]): string {
+  const items = (kind: string, label: string) =>
+    subjects.flatMap((s) => {
+      const m = SUBJECT.exec(s);
+      const text = m?.[1] === kind ? m[3] : undefined;
+      return text ? [`- **${label}** — ${text.charAt(0).toUpperCase()}${text.slice(1)}`] : [];
+    });
+  const lines = [...items('feat', 'New'), ...items('fix', 'Fixed')];
+  return lines.join('\n') || 'Small improvements and fixes.';
+}
+
+/** Adds a version section above the newest one, or at the end when there is none. */
+export function addSection(md: string, version: string, date: string, notes: string): string {
+  const section = `## v${version} — ${date}\n\n${notes}\n`;
+  const at = md.search(/^## /m);
+  if (at < 0) return `${md.trimEnd()}\n\n${section}`;
+  return `${md.slice(0, at)}${section}\n${md.slice(at)}`;
+}
+
 export function blockingChanges(porcelain: string): string[] {
   return porcelain
     .split('\n')

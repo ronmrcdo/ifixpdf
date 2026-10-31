@@ -1,5 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
+  addSection,
+  autoNotes,
   blockingChanges,
   bumpVersion,
   cargoPackageVersion,
@@ -102,6 +104,41 @@ describe('unreleased changelog section', () => {
   it('stamps a CRLF file', () =>
     expect(stampUnreleased(draft.replace(/\n/g, '\r\n'), '1.3.0', 'Nov')).toContain(
       '## v1.3.0 — Nov\r\n',
+    ));
+});
+
+describe('autoNotes', () => {
+  it('turns feat and fix subjects into New and Fixed items, New first', () =>
+    expect(
+      autoNotes([
+        'fix(save): keep rotation on export',
+        'feat: add page numbers',
+        'feat(merge)!: drop old list',
+      ]),
+    ).toBe(
+      '- **New** — Add page numbers\n- **New** — Drop old list\n- **Fixed** — Keep rotation on export',
+    ));
+  it('falls back to a fixed line when there are no feat or fix commits', () =>
+    expect(autoNotes([])).toBe('Small improvements and fixes.'));
+});
+
+describe('addSection', () => {
+  it('adds the newest section above the previous one', () => {
+    const out = addSection(
+      "What's new.\n\n## v1.0.0 — Oct 2026\n\nOld.\n",
+      '1.1.0',
+      'Nov 2026',
+      'New.',
+    );
+    expect(out).toBe(
+      "What's new.\n\n## v1.1.0 — Nov 2026\n\nNew.\n\n## v1.0.0 — Oct 2026\n\nOld.\n",
+    );
+    expect(changelogSection(out, '1.1.0')).toBe('New.');
+    expect(changelogSection(out, '1.0.0')).toBe('Old.');
+  });
+  it('appends when there is no section yet', () =>
+    expect(addSection("What's new.\n", '0.1.1', 'Nov 2026', 'New.')).toBe(
+      "What's new.\n\n## v0.1.1 — Nov 2026\n\nNew.\n",
     ));
 });
 

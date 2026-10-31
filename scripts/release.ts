@@ -1,7 +1,9 @@
 import {execFileSync} from 'node:child_process';
-import {confirm, intro, isCancel, note, outro, select} from '@clack/prompts';
+import {confirm, intro, isCancel, note, select} from '@clack/prompts';
 import {readFileSync, writeFileSync} from 'node:fs';
 import {
+  addSection,
+  autoNotes,
   type Bump,
   blockingChanges,
   bumpVersion,
@@ -41,14 +43,11 @@ async function pickVersion(current: string, md: string): Promise<string | null> 
   note(`Current version: ${current}\nLast tag: ${tag ?? 'none'}`, 'Now');
   note(changelogSection(md, current) ?? 'No entry in CHANGELOG.md.', `Last release (v${current})`);
   note(commits.join('\n') || 'None.', `feat/fix commits since ${tag ?? 'the start'}`);
-  const next = unreleasedSection(md);
-  if (!next) {
-    outro(
-      'Add a "## Unreleased" section to CHANGELOG.md (see README "How to release"), then rerun.',
-    );
-    return null;
-  }
-  note(next, 'Next release (## Unreleased)');
+  const draft = unreleasedSection(md);
+  note(
+    draft ?? autoNotes(commits),
+    draft ? 'Next release (## Unreleased)' : 'Next release (written from the commits above)',
+  );
   const bumps: Bump[] = ['patch', 'minor', 'major'];
   const version = await select({
     message: 'Which version?',
@@ -60,7 +59,7 @@ async function pickVersion(current: string, md: string): Promise<string | null> 
   });
   if (isCancel(version)) return null;
   const ok = await confirm({
-    message: `Release v${version}? This renames "## Unreleased", bumps the versions, commits and tags.`,
+    message: `Release v${version}? This writes the notes to CHANGELOG.md and the tag, bumps the versions, commits, tags and pushes to origin.`,
     initialValue: false,
   });
   return ok === true ? version : null;
@@ -90,18 +89,14 @@ async function run(): Promise<void> {
     // tag is absent, as required
   }
 
+  // Notes: the version's own entry, else the ## Unreleased draft, else written from feat/fix commits.
+  let notes = changelogSection(md, version);
   let changelog = md;
-  if (!changelogSection(md, version)) {
-    if (unreleasedSection(md)) {
-      const date = new Date().toLocaleString('en-US', {month: 'long', year: 'numeric'});
-      changelog = stampUnreleased(md, version, date);
-    } else {
-      console.log(
-        `Add a "## Unreleased" or "## v${version} — Month YYYY" section to CHANGELOG.md. Changes since the last release:`,
-      );
-      for (const s of commitsSince(lastTag())) console.log(`  ${s}`);
-      return fail('CHANGELOG.md has no entry for this version.');
-    }
+  if (!notes) {
+    const date = new Date().toLocaleString('en-US', {month: 'long', year: 'numeric'});
+    const draft = unreleasedSection(md);
+    notes = draft ?? autoNotes(commitsSince(lastTag()));
+    changelog = draft ? stampUnreleased(md, version, date) : addSection(md, version, date, notes);
   }
 
   const cargo = 'src-tauri/Cargo.toml';
@@ -121,7 +116,7 @@ async function run(): Promise<void> {
     git('add', ...bumped, 'CHANGELOG.md');
     git('commit', '-m', `chore(release): v${version}`);
     committed = true;
-    git('tag', `v${version}`);
+    git('tag', '-a', `v${version}`, '-m', `iFixPDF v${version}\n\n${notes}`);
   } catch (e) {
     // Undo a partial release so the tree is as it was, including the user's CHANGELOG.md draft.
     // The tag is the last step, so a failure here means it was never created.
@@ -133,7 +128,16 @@ async function run(): Promise<void> {
       `Release failed, version bump undone: ${e instanceof Error ? e.message.split('\n')[0] : String(e)}`,
     );
   }
-  console.log(`Ready. Push with: git push --atomic origin main v${version}`);
+  const push = ['push', '--atomic', 'origin', 'main', `v${version}`];
+  try {
+    // Atomic, so a rejected main does not push the tag either. Inherit stdio to show the pre-push hook.
+    execFileSync('git', push, {stdio: 'inherit'});
+  } catch {
+    return fail(
+      `Committed and tagged v${version}, but the push failed. Fix it, then run: git ${push.join(' ')}`,
+    );
+  }
+  console.log(`Pushed v${version}. The release workflow is building the draft release.`);
 }
 
 await run();
