@@ -7,6 +7,8 @@ import {flushDraft, startDraftSync} from '../state/draft-sync';
 import {useApp} from '../state/app';
 import {documentStore, mergeStore} from '../state/workspaces';
 import {FileMissingError} from '../platform/types';
+import {platform} from '../platform';
+import {track} from '../state/work';
 import {navigate, openRecent, parseRoute, startup, writeRoute} from './route';
 
 vi.mock('../pdf/load', async (orig) => ({
@@ -205,6 +207,44 @@ describe('navigate', () => {
     expect(flushDraft).not.toHaveBeenCalled();
     navigate('merge');
     expect(flushDraft).toHaveBeenCalledOnce();
+  });
+});
+
+describe('startup window close', () => {
+  const win = (onCloseRequested = vi.fn(() => () => {})) => {
+    const saved = platform.window;
+    Object.assign(platform, {
+      window: {minimize: vi.fn(), toggleMaximize: vi.fn(), close: vi.fn(), onCloseRequested},
+    });
+    return {onCloseRequested, restore: () => Object.assign(platform, {window: saved})};
+  };
+  const handler = (w: ReturnType<typeof win>) =>
+    (w.onCloseRequested.mock.calls[0] as unknown as [() => Promise<boolean>])[0];
+
+  it('registers one handler that flushes the draft and lets the window close', async () => {
+    const w = win();
+    await startup();
+    w.restore();
+    expect(w.onCloseRequested).toHaveBeenCalledOnce();
+    await expect(handler(w)()).resolves.toBe(true);
+    expect(flushDraft).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the window open with a toast while an export runs', async () => {
+    const w = win();
+    await startup();
+    w.restore();
+    let done = () => {};
+    const exporting = track(new Promise<void>((r) => (done = r)));
+    await expect(handler(w)()).resolves.toBe(false);
+    done();
+    await exporting;
+    expect(useApp.getState().toast).toMatchObject({text: 'Wait for the save to finish.'});
+    expect(flushDraft).not.toHaveBeenCalled();
+  });
+
+  it('registers nothing in the browser', async () => {
+    await expect(startup()).resolves.toBeUndefined();
   });
 });
 

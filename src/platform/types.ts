@@ -25,6 +25,8 @@ export interface Platform {
     minimize(): Promise<void>;
     toggleMaximize(): Promise<void>;
     close(): Promise<void>;
+    /** The handler resolves false to keep the window open. */
+    onCloseRequested(handler: () => Promise<boolean>): () => void;
   } | null;
 }
 

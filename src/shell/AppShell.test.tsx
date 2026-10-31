@@ -9,7 +9,6 @@ import {platform} from '../platform';
 import {useApp, type View} from '../state/app';
 import {documentStore, mergeStore} from '../state/workspaces';
 import {printDocument, saveOrContinue} from '../actions/save';
-import {flushDraft} from '../state/draft-sync';
 import {AppShell} from './AppShell';
 
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
@@ -342,30 +341,6 @@ describe('titlebar', () => {
       1, 1, 1,
     ]);
     expect(useApp.getState().toast).toBeNull();
-  });
-
-  it('Close waits for the pending draft write before closing the window', async () => {
-    let settle = () => {};
-    vi.mocked(flushDraft).mockImplementationOnce(
-      () =>
-        new Promise<void>((r) => {
-          settle = r;
-        }),
-    );
-    const win = {
-      minimize: vi.fn(async () => {}),
-      toggleMaximize: vi.fn(async () => {}),
-      close: vi.fn(async () => {}),
-    };
-    const saved = platform.window;
-    Object.assign(platform, {window: win});
-    render(<AppShell />);
-    await userEvent.click(screen.getByRole('button', {name: 'Close window'}));
-    expect(flushDraft).toHaveBeenCalledTimes(1);
-    expect(win.close).not.toHaveBeenCalled();
-    await act(async () => settle());
-    Object.assign(platform, {window: saved});
-    expect(win.close).toHaveBeenCalledTimes(1);
   });
 
   it('is a drag region whose window buttons explain themselves in the browser', async () => {
