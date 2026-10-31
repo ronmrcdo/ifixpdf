@@ -73,7 +73,7 @@ ${notes}
 
 ## If your computer warns you
 
-iFixPDF is not signed with a paid certificate yet, so Windows and macOS don't recognise it and may warn you the first time you open it.
+iFixPDF is not signed with a paid certificate yet, so Windows and macOS don't recognize it and may warn you the first time you open it.
 
 **Windows:** if you see "Windows protected your PC", click **More info**, then **Run anyway**.
 
