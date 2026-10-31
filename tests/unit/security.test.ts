@@ -46,6 +46,7 @@ describe('security', () => {
     );
     expect(directives.get('script-src')).toEqual(["'self'"]);
     expect(csp).not.toContain('unsafe-eval');
+    expect(directives.get('object-src')).toEqual(["'none'"]);
   });
 
   test('capabilities have no core:default and no fs scope beyond the two file commands', () => {

@@ -6,6 +6,7 @@ const destroy = vi.fn(async () => {});
 vi.mock('pdfjs-dist', () => ({
   GlobalWorkerOptions: {},
   getDocument: vi.fn(() => ({promise: Promise.resolve({destroy, numPages: 1})})),
+  PDFWorker: vi.fn(),
 }));
 vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({default: 'worker.js'}));
 
@@ -45,6 +46,24 @@ describe('registry', () => {
     expect(a).toBe(b);
     expect(getDocument).toHaveBeenCalledTimes(1);
     await release('f3', 'document');
+  });
+  it('acquires every document through one PDFWorker with eval off', async () => {
+    vi.resetModules(); // the worker is module state; start from none
+    const {getDocument, PDFWorker} = await import('pdfjs-dist');
+    const {putBytes} = await import('./bytes');
+    const {acquire, release, retain} = await import('./registry');
+    for (const id of ['w1', 'w2', 'w3']) {
+      putBytes(id, await makePdf(1));
+      retain(id, 'document');
+      await acquire(id);
+    }
+    expect(PDFWorker).toHaveBeenCalledTimes(1);
+    const worker = vi.mocked(PDFWorker).mock.instances[0];
+    expect(getDocument).toHaveBeenCalledTimes(3);
+    for (const [params] of vi.mocked(getDocument).mock.calls) {
+      expect(params).toEqual(expect.objectContaining({worker, isEvalSupported: false}));
+    }
+    for (const id of ['w1', 'w2', 'w3']) await release(id, 'document');
   });
   it('points pdf.js at the bundled CMaps and standard fonts as absolute URLs', async () => {
     const {getDocument} = await import('pdfjs-dist');
