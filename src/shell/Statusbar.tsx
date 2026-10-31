@@ -4,6 +4,8 @@ import {useApp} from '../state/app';
 import {documentStore, mergeStore} from '../state/workspaces';
 
 export function Statusbar() {
+  const workspace = useApp((s) => s.workspace);
+  const draft = useApp((s) => s.draft);
   const store = useApp((s) => (s.workspace === 'merge' ? mergeStore : documentStore));
   const files = useStore(store, (s) => s.files.length);
   const pages = useStore(store, (s) => s.pages.length);
@@ -21,9 +23,11 @@ export function Statusbar() {
       <span id="status" role="status">
         {text}
       </span>
-      <span className="right" id="draft-status">
-        Draft saved on this device
-      </span>
+      {workspace === 'document' && files > 0 && (
+        <span className="right" id="draft-status">
+          {draft === 'failed' ? 'Draft not saved' : 'Draft saved on this device'}
+        </span>
+      )}
       <span className="app-version">iFixPDF v{version}</span>
     </footer>
   );

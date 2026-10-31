@@ -44,7 +44,13 @@ const actions = () =>
   );
 
 beforeEach(() => {
-  useApp.setState({view: 'home', documentView: 'preview', workspace: 'merge', toast: null});
+  useApp.setState({
+    view: 'home',
+    documentView: 'preview',
+    workspace: 'merge',
+    toast: null,
+    draft: 'saved',
+  });
 });
 afterEach(async () => {
   documentStore.setState({exporting: false});
@@ -210,11 +216,33 @@ describe('header', () => {
 describe('statusbar', () => {
   const status = () => document.getElementById('status');
 
-  it('is a polite status region with the draft note', () => {
+  it('is a polite status region', () => {
     render(<AppShell />);
     expect(status()).toHaveAttribute('role', 'status');
     expect(status()).toHaveTextContent('Ready to add PDFs');
-    expect(screen.getByRole('contentinfo')).toHaveTextContent('Draft saved on this device');
+  });
+
+  it('has no draft note in Merge', () => {
+    fill(mergeStore, [file('m', 1)]);
+    fill(documentStore, [file('a', 2)]);
+    useApp.setState({workspace: 'merge', draft: 'failed'});
+    render(<AppShell />);
+    expect(document.getElementById('draft-status')).toBeNull();
+  });
+
+  it('has no draft note in the document workspace without files', () => {
+    useApp.setState({view: 'edit', workspace: 'document'});
+    render(<AppShell />);
+    expect(document.getElementById('draft-status')).toBeNull();
+  });
+
+  it('tells whether the document draft saved', () => {
+    fill(documentStore, [file('a', 2)]);
+    useApp.setState({view: 'edit', workspace: 'document'});
+    render(<AppShell />);
+    expect(document.getElementById('draft-status')).toHaveTextContent('Draft saved on this device');
+    act(() => useApp.setState({draft: 'failed'}));
+    expect(document.getElementById('draft-status')).toHaveTextContent('Draft not saved');
   });
 
   it('counts the active workspace; Home and Settings keep the last one', () => {

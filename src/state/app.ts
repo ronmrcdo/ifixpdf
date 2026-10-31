@@ -7,6 +7,8 @@ export interface AppState {
   view: View;
   toast: {text: string; tone: Tone; id: number} | null;
   openAfter: boolean;
+  /** Whether the last document-draft write succeeded. */
+  draft: 'saved' | 'failed';
   /** The last of Preview/Edit the user was in; the document draft reopens there. */
   documentView: 'preview' | 'edit';
   /** The workspace Home and Settings act on: the last of Merge or Preview/Edit visited. */
@@ -21,6 +23,7 @@ export const useApp = create<AppState>()((set) => ({
   view: 'home',
   toast: null,
   openAfter: true,
+  draft: 'saved',
   documentView: 'preview',
   workspace: 'merge',
   setView: (view) => {
