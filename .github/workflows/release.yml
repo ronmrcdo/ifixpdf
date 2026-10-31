@@ -1,0 +1,171 @@
+name: Release
+
+# Tag push: preflight, draft GitHub Release, signed installers uploaded to it.
+# workflow_dispatch: dry run that builds unsigned installers as workflow artifacts only.
+on:
+  push:
+    tags: ['v*.*.*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+
+env:
+  HUSKY: '0'
+
+jobs:
+  preflight:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check signing secrets
+        if: github.event_name == 'push'
+        env:
+          KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          PUBKEY: ${{ vars.TAURI_UPDATER_PUBKEY }}
+        run: |
+          missing=''
+          [ -n "$KEY" ] || missing="$missing secret TAURI_SIGNING_PRIVATE_KEY,"
+          [ -n "$KEY_PASSWORD" ] || missing="$missing secret TAURI_SIGNING_PRIVATE_KEY_PASSWORD,"
+          [ -n "$PUBKEY" ] || missing="$missing variable TAURI_UPDATER_PUBKEY,"
+          if [ -n "$missing" ]; then
+            echo "::error::Release signing is not configured. Missing:${missing%,}. Add them under Settings > Secrets and variables > Actions."
+            exit 1
+          fi
+      - uses: actions/checkout@v7.0.1
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Release notes (fails on version mismatch or missing CHANGELOG entry)
+        if: github.event_name == 'push'
+        run: node scripts/release-notes.ts "$GITHUB_REF_NAME" > body.md
+      - run: pnpm install --frozen-lockfile
+      # dtolnay/rust-toolchain has no release tags; pinned to a commit.
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+      - uses: taiki-e/install-action@v2.88.1
+        with:
+          tool: cargo-about@0.9.3
+      - name: Rust license gate
+        working-directory: src-tauri
+        run: cargo about generate --fail -c about.toml about.hbs -o ../licenses/generated/rust-THIRD-PARTY.txt
+      - name: npm license gate
+        run: pnpm notices
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: notices
+          path: licenses/generated/
+          if-no-files-found: error
+      - if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: release-body
+          path: body.md
+          if-no-files-found: error
+
+  draft:
+    if: github.event_name == 'push'
+    needs: preflight
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    outputs:
+      release-id: ${{ steps.release.outputs.id }}
+    steps:
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: release-body
+      - id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! state=$(gh release view "$TAG" --json isDraft --jq .isDraft 2>err.txt); then
+            grep -q 'release not found' err.txt || { cat err.txt >&2; exit 1; }
+            state=none
+          fi
+          case "$state" in
+            true) gh release edit "$TAG" --notes-file body.md ;;
+            none) gh release create "$TAG" --draft --title "iFixPDF $TAG" --notes-file body.md --verify-tag ;;
+            *) echo "::error::Release $TAG is already published"; exit 1 ;;
+          esac
+          echo "id=$(gh release view "$TAG" --json databaseId --jq .databaseId)" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: [preflight, draft]
+    # draft is skipped on dry runs; build still runs then, but never after a failed draft.
+    if: always() && needs.preflight.result == 'success' && needs.draft.result != 'failure'
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            args: --bundles nsis
+          - platform: macos-latest
+            args: --target universal-apple-darwin --bundles app,dmg
+            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
+          - platform: ubuntu-22.04
+            args: --bundles appimage,deb
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      # About bundles licenses/**, so the generated notices must be in place before the build.
+      - uses: actions/download-artifact@v8.0.2
+        with:
+          name: notices
+          path: licenses/generated
+      - uses: pnpm/action-setup@v6.1.0
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+        with:
+          toolchain: stable
+          targets: ${{ matrix.rust-targets }}
+      - uses: swatinem/rust-cache@v2.9.3
+        with:
+          workspaces: src-tauri
+      - name: Linux build dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - run: pnpm install --frozen-lockfile
+      - name: Build and upload to the draft release
+        if: github.event_name == 'push'
+        uses: tauri-apps/tauri-action@v1.0.0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ needs.draft.outputs.release-id }}
+          uploadUpdaterJson: true
+          args: >-
+            ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true},"plugins":{"updater":{"pubkey":"${{ vars.TAURI_UPDATER_PUBKEY }}","endpoints":["https://github.com/ronmrcdo/ifixpdf/releases/latest/download/latest.json"]}}}'
+      - name: Build (dry run, no release)
+        if: github.event_name != 'push'
+        uses: tauri-apps/tauri-action@v1.0.0
+        with:
+          args: ${{ matrix.args }}
+      - name: Upload installers (dry run)
+        if: github.event_name != 'push'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: installers-${{ matrix.platform }}
+          path: |
+            src-tauri/target/**/bundle/nsis/*.exe
+            src-tauri/target/**/bundle/dmg/*.dmg
+            src-tauri/target/**/bundle/appimage/*.AppImage
+            src-tauri/target/**/bundle/deb/*.deb
+          if-no-files-found: error
