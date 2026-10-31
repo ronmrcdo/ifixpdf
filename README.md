@@ -79,7 +79,7 @@ Working in the browser; not yet production-ready.
    - Say "you"; no file names, code, hashes, library names or jargon; skip behind-the-scenes work.
 2. On `main` with a clean tree, run `pnpm release X.Y.Z`. It bumps `package.json`, `Cargo.toml` and `Cargo.lock`, commits `chore(release): vX.Y.Z` and tags it. Without an entry it lists the `feat`/`fix` commits since the last tag and stops.
 3. Push the command it prints: `git push origin main vX.Y.Z`.
-4. Review the draft release on GitHub, then publish it.
+4. Review the draft release on GitHub, then publish it. Publish only after all three build jobs are green: a partial draft has a `latest.json` missing platforms.
 
 ## Documentation
 
