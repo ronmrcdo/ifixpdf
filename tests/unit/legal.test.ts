@@ -99,9 +99,24 @@ describe('legal files', () => {
       expect(tauri, n).toContain(n);
   });
 
-  test('the AppImage library notice names the core libraries and carries the LGPL text', () => {
+  test('the AppImage library notice lists its projects, license texts and copyright notices', () => {
     const notice = read('licenses/linux-appimage-system-libraries.txt');
-    for (const n of ['WebKitGTK', 'GTK', 'GLib', 'GNU LESSER GENERAL PUBLIC LICENSE'])
+    for (const n of ['WebKitGTK', 'GLib', 'GNU LESSER GENERAL PUBLIC LICENSE'])
       expect(notice, n).toContain(n);
+    expect(notice).toMatch(/^GTK 3\n {2}Files:/m); // its own entry, not the WebKitGTK substring
+    for (const re of [
+      /GNU LIBRARY GENERAL PUBLIC LICENSE\s+Version 2, June 1991/,
+      /GNU LESSER GENERAL PUBLIC LICENSE\s+Version 2\.1, February 1999/,
+      /GNU LESSER GENERAL PUBLIC LICENSE\s+Version 3, 29 June 2007/,
+      /GNU GENERAL PUBLIC LICENSE\s+Version 2, June 1991/,
+      /GNU GENERAL PUBLIC LICENSE\s+Version 3, 29 June 2007/,
+      /GCC RUNTIME LIBRARY EXCEPTION\s+Version 3\.1/,
+      /Apache License\s+Version 2\.0, January 2004/,
+      /^PART 3\./m,
+      /^libpng {2}\(Debian package libpng16-16t64\)$/m,
+      /\(Debian package libjbig0\)/,
+      /\(Debian package libltdl7\)/,
+    ])
+      expect(notice, String(re)).toMatch(re);
   });
 });
