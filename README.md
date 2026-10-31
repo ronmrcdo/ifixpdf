@@ -29,7 +29,7 @@ Open `/index.html?view=home`.
 - **Preview** — read-only page browsing, zoom, fit and printing via the PDF viewer.
 - **Edit** — reorder (drag or keyboard), rotate, duplicate, delete, extract, undo/redo, save an edited copy. Split exports page ranges or every page as a ZIP.
 - **Merge** — Add PDFs → Arrange & review → Save PDF → Done, with source and cross-source page ordering. Originals are never modified.
-- **Add password** — downloads an AES-256 protected copy.
+- **Add password** — saves an AES-256 protected copy.
 - **Settings → Updates** — check, release notes, download progress and restart-to-install.
 
 The app ships no sample documents; open your own PDFs.
