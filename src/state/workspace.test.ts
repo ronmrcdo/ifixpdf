@@ -475,7 +475,7 @@ describe('replaceWith and reset', () => {
     expect(s.pages).toHaveLength(1);
     expect(s.currentPage).toBe(0);
     expect(s.selection.uids.size).toBe(0);
-    expect(s.exportSettings.name).toBe('c.pdf');
+    expect(s.exportSettings.name).toBe('c (edited).pdf');
     expect(s.zoom).toBe('fit');
     store.getState().undo();
     expect(store.getState().files.map((f) => f.name)).toEqual(['c.pdf']);

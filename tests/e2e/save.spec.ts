@@ -68,12 +68,12 @@ test.describe('native', () => {
   const written = (page: Page): Promise<Written> => page.evaluate(() => window.__written);
   const report = () => pdfFile('Report.pdf', 3);
 
-  test('Ctrl+S in Preview saves the whole document under its name', async ({app, page}) => {
+  test('Ctrl+S in Preview suggests the document name with (edited)', async ({app, page}) => {
     await app.openPdf(await report());
     await app.title.click();
     await page.keyboard.press('Control+s');
     await expect.poll(() => count(app, 'plugin:fs|write_file'), {timeout: 15000}).toBe(1); // first run may wait for Vite to optimise the plugins
-    expect((await lastDialog(app))?.defaultPath).toBe('Report.pdf');
+    expect((await lastDialog(app))?.defaultPath).toBe('Report (edited).pdf');
     expect(await pagesOf(await written(page))).toBe(3);
   });
 

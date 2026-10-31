@@ -7,12 +7,18 @@ const base = (name: string): string =>
     .replace(/\.pdf$/i, '')
     .trim() || 'Merged document';
 
-export const outputName = (name: string): string => `${base(name)}.pdf`;
-export const protectedName = (name: string): string => `${base(name)} — protected.pdf`;
-export const splitZipName = (name: string): string => `${base(name)} — split.zip`;
-export const splitPartName = (name: string, i: number): string => `${base(name)} — part ${i}.pdf`;
+// Windows-reserved and control characters; names reach the save dialog and ZIP entries.
+// biome-ignore lint/suspicious/noControlCharactersInRegex: control characters are the point
+const fileBase = (name: string): string => base(name).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-');
+
+export const outputName = (name: string): string => `${fileBase(name)}.pdf`;
+export const editedName = (name: string): string => `${fileBase(name)} (edited).pdf`;
+export const protectedName = (name: string): string => `${fileBase(name)} — protected.pdf`;
+export const splitZipName = (name: string): string => `${fileBase(name)} — split.zip`;
+export const splitPartName = (name: string, i: number): string =>
+  `${fileBase(name)} — part ${i}.pdf`;
 export const extractName = (name: string, indices: number[]): string =>
-  `${base(name)} – pages ${formatRanges(indices)}.pdf`;
+  `${fileBase(name)} – pages ${formatRanges(indices)}.pdf`;
 
 // Folder keeps the root separator for `C:\` and `/`; a bare name has folder ''.
 export function splitPath(path: string): {folder: string; name: string} {

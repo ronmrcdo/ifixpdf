@@ -1,6 +1,6 @@
 import {createStore} from 'zustand/vanilla';
 import {createHistory} from '../domain/history';
-import {exportTitle} from '../domain/naming';
+import {editedName, exportTitle} from '../domain/naming';
 import {
   deletePages,
   duplicatePages,
@@ -242,7 +242,7 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
           files: [file],
           pages: pagesForFile(file),
           workflow: 'review',
-          exportSettings: {...fresh.exportSettings, name: picked.name},
+          exportSettings: {...fresh.exportSettings, name: editedName(picked.name)},
         });
       },
 
