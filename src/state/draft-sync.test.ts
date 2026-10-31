@@ -25,7 +25,7 @@ beforeEach(() => {
   vi.mocked(writeDraft).mockReset().mockResolvedValue();
   vi.mocked(clearDraft).mockClear();
   vi.mocked(loadPdf).mockClear();
-  useApp.setState({view: 'home', documentView: 'preview', toast: null});
+  useApp.setState({view: 'home', documentView: 'preview', toast: null, draft: 'saved'});
   useApp.getState().setView('edit');
 });
 afterEach(() => {
@@ -125,6 +125,17 @@ describe('draft sync', () => {
       text: 'Draft could not be saved. Export your PDF to keep your work.',
       tone: 'error',
     });
+  });
+
+  it('tracks whether the last write saved', async () => {
+    const store = await setup();
+    vi.mocked(writeDraft).mockRejectedValueOnce(new Error('quota'));
+    store.getState().setExportSettings({name: 'x.pdf'});
+    await vi.advanceTimersByTimeAsync(300);
+    expect(useApp.getState().draft).toBe('failed');
+    store.getState().setExportSettings({name: 'y.pdf'});
+    await vi.advanceTimersByTimeAsync(300);
+    expect(useApp.getState().draft).toBe('saved');
   });
 
   it('flushDraft writes immediately and cancels the pending debounce', async () => {

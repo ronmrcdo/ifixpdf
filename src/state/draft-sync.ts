@@ -28,7 +28,15 @@ function enqueue(): Promise<void> {
   const record = toRecord(s);
   // writeDraft only stores bytes it doesn't already have, so a name edit never rewrites them.
   const bytes = new Map(s.files.map((f) => [f.id, getBytes(f.id)]));
-  const write = chain.then(() => (record.files.length ? writeDraft(record, bytes) : clearDraft()));
+  const write = chain
+    .then(() => (record.files.length ? writeDraft(record, bytes) : clearDraft()))
+    .then(
+      () => useApp.setState({draft: 'saved'}),
+      (e: unknown) => {
+        useApp.setState({draft: 'failed'});
+        throw e;
+      },
+    );
   chain = write.catch(() => {});
   return write;
 }
