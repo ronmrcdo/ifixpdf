@@ -1,19 +1,23 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "vcs": {"enabled": true, "clientKind": "git", "useIgnoreFile": true},
-  "files": {"includes": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "*.config.ts"]},
-  "formatter": {"enabled": false},
-  "assist": {"enabled": false},
+  "vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+  "files": { "includes": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "*.config.ts"] },
+  "formatter": { "enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100 },
+  "javascript": { "formatter": { "quoteStyle": "single", "bracketSpacing": false } },
+  "assist": { "enabled": false },
   "linter": {
     "enabled": true,
-    "domains": {"react": "recommended"},
+    "domains": { "react": "recommended" },
     "rules": {
       "preset": "recommended",
-      "style": {"noNonNullAssertion": "off"},
-      "suspicious": {"useIterableCallbackReturn": "off"},
+      "style": { "noNonNullAssertion": "off" },
+      "suspicious": { "useIterableCallbackReturn": "off" },
       "correctness": {
         "noVoidTypeReturn": "off",
-        "useExhaustiveDependencies": {"level": "error", "options": {"reportUnnecessaryDependencies": false}}
+        "useExhaustiveDependencies": {
+          "level": "error",
+          "options": { "reportUnnecessaryDependencies": false }
+        }
       },
       "a11y": {
         "noNoninteractiveTabindex": "off",
@@ -28,8 +32,8 @@
       "includes": ["**/*.test.{ts,tsx}", "tests/**"],
       "linter": {
         "rules": {
-          "correctness": {"noUnsafeOptionalChaining": "off", "useJsxKeyInIterable": "off"},
-          "suspicious": {"noAssignInExpressions": "off"}
+          "correctness": { "noUnsafeOptionalChaining": "off", "useJsxKeyInIterable": "off" },
+          "suspicious": { "noAssignInExpressions": "off", "noExplicitAny": "off" }
         }
       }
     }
