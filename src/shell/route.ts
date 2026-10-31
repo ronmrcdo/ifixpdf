@@ -2,7 +2,7 @@ import {busyExporting} from '../actions/save';
 import type {SourceFile} from '../domain/types';
 import {FileMissingError, platform, type PickedFile} from '../platform';
 import {useApp, type View} from '../state/app';
-import {flushDraft, startDraftSync} from '../state/draft-sync';
+import {flushDraft, saveDraftNow, startDraftSync} from '../state/draft-sync';
 import {busy} from '../state/work';
 import {documentStore} from '../state/workspaces';
 import {clearDraft, readDraft} from '../storage/draft';
@@ -103,10 +103,26 @@ export async function startup(): Promise<void> {
   const route = parseRoute(window.location.search); // before the first render rewrites the URL
   let shown = useApp.getState().view;
   const moved = () => useApp.getState().view !== shown; // the user navigated while startup was waiting; theirs wins
-  const prefs = readPrefs().catch(() => null); // read alongside the draft so neither waits on the other
+  const openAfter = useApp.getState().openAfter;
+  const persist = (value: boolean) => void writePrefs({openAfter: value}).catch(() => {}); // a preference never toasts
+  // Read alongside the draft, applied on its own so a slow read never delays closing or routing.
+  void readPrefs()
+    .catch(() => null)
+    .then((stored) => {
+      const now = useApp.getState().openAfter;
+      // A toggle made before the read finished wins over the stored value.
+      if (now !== openAfter) persist(now);
+      else if (stored) useApp.setState({openAfter: stored.openAfter});
+      // Subscribed after applying, so the stored value is not written back.
+      useApp.subscribe((s, prev) => {
+        if (s.openAfter !== prev.openAfter) persist(s.openAfter);
+      });
+    });
   let draft = await readDraft().catch(() => null);
-  // A file the user opened while the draft was loading wins; draft sync overwrites the stored draft later.
-  if (draft && !documentStore.getState().pristine()) draft = null;
+  // A file the user opened while the draft was loading wins. Its change may predate the sync
+  // subscription, so the stale draft is overwritten explicitly once sync starts.
+  const overridden = !!draft && !documentStore.getState().pristine();
+  if (overridden) draft = null;
   if (draft) {
     try {
       await documentStore.getState().restore(draft.record, draft.bytes);
@@ -122,12 +138,8 @@ export async function startup(): Promise<void> {
     }
   }
   startDraftSync(documentStore);
-  const stored = await prefs;
-  if (stored) useApp.setState({openAfter: stored.openAfter});
-  // Subscribed after applying, so the stored value is not written back. A preference never toasts.
-  useApp.subscribe((s, prev) => {
-    if (s.openAfter !== prev.openAfter) void writePrefs({openAfter: s.openAfter}).catch(() => {});
-  });
+  // A failed write keeps the old draft; the subscription retries on the next change.
+  if (overridden) void saveDraftNow().catch(() => {});
   // Every close (titlebar, Alt+F4, taskbar) passes here: keep an exporting window open, else save the draft.
   platform.window?.onCloseRequested(async () => {
     if (busy()) {
