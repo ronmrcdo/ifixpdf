@@ -131,7 +131,11 @@ export function SourcesPane() {
   const ids = useMemo(() => files.map((f) => f.id), [files]);
   const positions = useMemo(() => {
     const byFile = new Map<string, number[]>();
-    pages.forEach((p, i) => byFile.set(p.fileId, [...(byFile.get(p.fileId) ?? []), i]));
+    pages.forEach((p, i) => {
+      const list = byFile.get(p.fileId);
+      if (list) list.push(i);
+      else byFile.set(p.fileId, [i]);
+    });
     return byFile;
   }, [pages]);
 
