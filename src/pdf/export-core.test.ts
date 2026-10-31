@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import {PDFDocument, degrees} from 'pdf-lib';
+import {PDFDocument, PDFName, degrees} from 'pdf-lib';
 import {unzipSync, strFromU8} from 'fflate';
 import {buildPdf, protectPdf, splitZip, type ExportSpec} from './export-core';
 
@@ -76,6 +76,48 @@ describe('export-core', () => {
       Object.values(files).map(async (b) => (await PDFDocument.load(b)).getPageCount()),
     );
     expect(counts).toEqual([2, 1]);
+  });
+
+  it('shares resources between pages instead of copying them per page', async () => {
+    const doc = await PDFDocument.create();
+    const big = Uint8Array.from({length: 200_000}, (_, i) => (i * 7919) % 251);
+    const ref = doc.context.register(doc.context.stream(big));
+    for (let i = 0; i < 20; i++) doc.addPage([100, 100]).node.setXObject(PDFName.of('X'), ref);
+    const src = await doc.save();
+    const pages = Array.from({length: 20}, (_, local) => ({
+      fileId: 'a',
+      local,
+      rotation: 0 as const,
+    }));
+    const out = await buildPdf({title: 't', sources: {a: src}, pages});
+    expect(out.byteLength).toBeLessThan(src.byteLength * 1.5);
+  });
+
+  it('gives a page used twice its own rotation', async () => {
+    const out = await PDFDocument.load(
+      await buildPdf({
+        title: 't',
+        sources: {a: await source([100])},
+        pages: [
+          {fileId: 'a', local: 0, rotation: 0},
+          {fileId: 'a', local: 0, rotation: 90},
+        ],
+      }),
+    );
+    expect(out.getPageCount()).toBe(2);
+    expect(out.getPages().map((p) => p.getRotation().angle)).toEqual([0, 90]);
+  });
+
+  it('split parses each source once', async () => {
+    const src = await source([100, 101, 102, 103, 104]);
+    const pages = [0, 1, 2, 3, 4].map((local) => ({fileId: 'a', local, rotation: 0 as const}));
+    const load = vi.spyOn(PDFDocument, 'load');
+    try {
+      await splitZip({title: 't', sources: {a: src}, pages}, [[0], [1], [2], [3], [4]], 'D.pdf');
+      expect(load).toHaveBeenCalledTimes(1);
+    } finally {
+      load.mockRestore();
+    }
   });
 
   it('rejects a page whose source is missing', async () => {
