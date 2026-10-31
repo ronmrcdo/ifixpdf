@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {
+  editedName,
   exportTitle,
   extractName,
   outputName,
@@ -62,4 +63,18 @@ describe('exportTitle', () => {
   it('uses the output name without .pdf', () => expect(exportTitle(files, settings)).toBe('Out'));
   it('joins source names when enabled', () =>
     expect(exportTitle(files, {...settings, useFileNamesAsTitle: true})).toBe('One · Two'));
+});
+
+describe('safe file names', () => {
+  it('replaces path and reserved characters with a dash', () => {
+    expect(splitPartName('../x', 1)).toBe('..-x — part 1.pdf');
+    expect(outputName('Q1/Q2')).toBe('Q1-Q2.pdf');
+    expect(outputName('a\u0001b')).toBe('a-b.pdf');
+  });
+});
+
+describe('editedName', () => {
+  it('adds (edited) and drops .pdf', () =>
+    expect(editedName('report.PDF')).toBe('report (edited).pdf'));
+  it('falls back when empty', () => expect(editedName('  ')).toBe('Merged document (edited).pdf'));
 });
