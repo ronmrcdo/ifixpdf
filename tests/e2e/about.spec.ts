@@ -9,6 +9,7 @@ const license = fs.readFileSync('LICENSE', 'utf8').replace(/\r\n/g, '\n');
 const licenses = fs
   .readdirSync('licenses', {recursive: true, withFileTypes: true})
   .filter((e) => e.isFile());
+const {version} = JSON.parse(fs.readFileSync('package.json', 'utf8')) as {version: string};
 const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 // The About block, privacy text, brand mark and third-party list have no accessible handle in the old DOM.
@@ -44,7 +45,7 @@ test('About shows version, developer, privacy and licenses; GitHub opens in the 
   const a = about(page);
   await expect(a.root.getByRole('heading', {name: 'About', exact: true})).toBeVisible();
   await expect(a.brandMark, 'brand mark').not.toHaveCount(0);
-  await expect(a.root.getByText('0.1.0').first()).toBeVisible();
+  await expect(a.root.getByText(version).first()).toBeVisible();
   await expect(a.root.getByText('Ron Mercado').first()).toBeVisible();
   expect(norm(await a.privacy.innerText())).toBe(norm(eula.split('\n\n')[0] ?? ''));
   await expect(a.updates, '#updates inside About').toHaveCount(1);

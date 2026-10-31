@@ -1,7 +1,10 @@
 // Settings → Updates against a mocked Tauri bridge (updates are manual only).
 // Proves the UI states and install safeguards only; it is not evidence of a real Windows upgrade.
+import fs from 'node:fs';
 import type {Page} from '@playwright/test';
 import {test, expect, pdfFile, type App} from './fixtures';
+
+const {version} = JSON.parse(fs.readFileSync('package.json', 'utf8')) as {version: string};
 
 // Installed after the bridge: answers the updater commands.
 function mockUpdater() {
@@ -61,7 +64,7 @@ const holdSaveDialog = (page: Page) =>
 test('the browser build shows the version and no update controls', async ({app, page}) => {
   await app.goto('view=home');
   await app.view('Settings');
-  await expect(updates(page).getByText('0.1.0')).toBeVisible();
+  await expect(updates(page).getByText(version)).toBeVisible();
   await expect(updates(page).getByText('installed desktop app')).toBeVisible();
   await expect(updates(page).getByRole('button')).toHaveCount(0);
 });
