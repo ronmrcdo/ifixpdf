@@ -50,7 +50,7 @@ const view: Record<UpdateStatus, (s: UpdateState) => [string, Button?]> = {
     INSTALL,
   ],
   'save-error': () => [
-    "iFixPDF couldn't save your workspace, so the update was not installed. Save your PDF, then try again.",
+    "iFixPDF couldn't save your Preview and Edit draft, so the update was not installed. Save your PDF, then try again.",
     INSTALL,
   ],
   installing: () => ['Installing update…'],
