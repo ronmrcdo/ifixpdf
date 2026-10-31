@@ -176,6 +176,41 @@ describe('export.ts with a Worker', () => {
   });
 });
 
+describe('export.ts countPages failures', () => {
+  class FakeWorker {
+    static last: FakeWorker;
+    onmessage: ((e: MessageEvent) => void) | null = null;
+    onerror: (() => void) | null = null;
+    posted: Array<{id: number}> = [];
+    terminate = vi.fn();
+    constructor() {
+      FakeWorker.last = this;
+    }
+    postMessage(msg: {id: number}) {
+      this.posted.push(msg);
+    }
+  }
+
+  it('rejects when the worker replies with an error', async () => {
+    vi.stubGlobal('Worker', FakeWorker);
+    const {countPages} = await import('./export');
+    const p = countPages(new Uint8Array([1]));
+    FakeWorker.last.onmessage?.({
+      data: {id: FakeWorker.last.posted[0]!.id, error: 'x'},
+    } as MessageEvent);
+    await expect(p).rejects.toThrow('x');
+  });
+
+  it('rejects a pending count when the worker fails', async () => {
+    vi.stubGlobal('Worker', FakeWorker);
+    const {countPages, pendingCount} = await import('./export');
+    const p = countPages(new Uint8Array([1]));
+    FakeWorker.last.onerror?.();
+    await expect(p).rejects.toThrow('The export worker failed.');
+    expect(pendingCount()).toBe(0);
+  });
+});
+
 describe('export.ts countPages', () => {
   it('counts pages in the worker and leaves the caller bytes intact', async () => {
     const posted: Array<{id: number; op: string}> = [];
