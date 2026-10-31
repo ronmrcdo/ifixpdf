@@ -13,19 +13,38 @@ function preview(page: Page) {
   };
   const gesture = async (deltaY: number, n = 1, gap = 0) => {
     await over();
-    for (let i = 0; i < n; i++) { await page.mouse.wheel(0, deltaY); if (gap) await page.waitForTimeout(gap) }
+    for (let i = 0; i < n; i++) {
+      await page.mouse.wheel(0, deltaY);
+      if (gap) await page.waitForTimeout(gap);
+    }
     await page.waitForTimeout(400);
   };
   return {
     over,
     gesture,
     current: () => jump.inputValue(),
-    goto: async (n: number) => { await jump.fill(String(n)); await jump.dispatchEvent('change'); await page.waitForTimeout(300) },
-    stage: () => stage.evaluate(s => ({top: s.scrollTop, bottom: s.scrollTop + s.clientHeight >= s.scrollHeight - 2, tall: s.scrollHeight > s.clientHeight + 50})),
-    scrollToBottom: () => stage.evaluate(s => { s.scrollTop = s.scrollHeight }),
+    goto: async (n: number) => {
+      await jump.fill(String(n));
+      await jump.dispatchEvent('change');
+      await page.waitForTimeout(300);
+    },
+    stage: () =>
+      stage.evaluate((s) => ({
+        top: s.scrollTop,
+        bottom: s.scrollTop + s.clientHeight >= s.scrollHeight - 2,
+        tall: s.scrollHeight > s.clientHeight + 50,
+      })),
+    scrollToBottom: () =>
+      stage.evaluate((s) => {
+        s.scrollTop = s.scrollHeight;
+      }),
     zoomValue: page.locator('.zoom-value'),
     thumbnails: page.locator('.read-page-thumbnail'),
-    ctrl: async (deltaY: number, n = 1) => { await page.keyboard.down('Control'); await gesture(deltaY, n, 15); await page.keyboard.up('Control') }
+    ctrl: async (deltaY: number, n = 1) => {
+      await page.keyboard.down('Control');
+      await gesture(deltaY, n, 15);
+      await page.keyboard.up('Control');
+    },
   };
 }
 
@@ -51,7 +70,10 @@ test('a wheel burst flips exactly one page, even across the re-render', async ({
   expect(await p.current(), 'a burst flips exactly one page').toBe('2');
   await p.goto(1);
   await p.over();
-  for (let i = 0; i < 20; i++) { await page.mouse.wheel(0, 30); await page.waitForTimeout(40) }
+  for (let i = 0; i < 20; i++) {
+    await page.mouse.wheel(0, 30);
+    await page.waitForTimeout(40);
+  }
   await page.waitForTimeout(400);
   expect(await p.current(), 'a long burst across the re-render adds no second flip').toBe('2');
 });
@@ -66,10 +88,16 @@ test('wheel stays put at the ends of the document', async ({page}) => {
   expect(await p.current(), 'first page stays').toBe('1');
 });
 
-test('Ctrl+wheel zooms one step per notch instead of flipping or zooming the window', async ({page}) => {
+test('Ctrl+wheel zooms one step per notch instead of flipping or zooming the window', async ({
+  page,
+}) => {
   const p = preview(page);
   const zoom = async () => Number((await p.zoomValue.textContent())?.replace('%', '')) || 0;
-  await page.evaluate(() => window.addEventListener('wheel', e => { window.__prevented = e.defaultPrevented }));
+  await page.evaluate(() =>
+    window.addEventListener('wheel', (e) => {
+      window.__prevented = e.defaultPrevented;
+    }),
+  );
   await expect(p.zoomValue).toHaveText('Fit');
   await p.ctrl(-100);
   const zoomedIn = await zoom();
@@ -86,10 +114,15 @@ test('Ctrl+wheel zooms one step per notch instead of flipping or zooming the win
   expect(await p.current(), 'ctrl+wheel does not flip').toBe('1');
 });
 
-test('zoomed in, the wheel scrolls the page first, then flips to the matching edge', async ({page}) => {
+test('zoomed in, the wheel scrolls the page first, then flips to the matching edge', async ({
+  page,
+}) => {
   const p = preview(page);
   const zoomIn = page.getByRole('button', {name: 'Zoom in'});
-  for (let i = 0; i < 12 && !(await p.stage()).tall; i++) { await zoomIn.click(); await page.waitForTimeout(300) }
+  for (let i = 0; i < 12 && !(await p.stage()).tall; i++) {
+    await zoomIn.click();
+    await page.waitForTimeout(300);
+  }
   expect((await p.stage()).tall, 'page taller than the stage').toBe(true);
   await p.gesture(100);
   expect(await p.current(), 'zoomed wheel scrolls the page first').toBe('1');
@@ -103,7 +136,10 @@ test('zoomed in, the wheel scrolls the page first, then flips to the matching ed
   expect((await p.stage()).bottom, 'backward flip lands at the bottom').toBe(true);
 });
 
-test('the Pages tab scrolls its thumbnails and the Document tab keeps its page', async ({app, page}) => {
+test('the Pages tab scrolls its thumbnails and the Document tab keeps its page', async ({
+  app,
+  page,
+}) => {
   const p = preview(page);
   await p.goto(2);
   await app.tab('Pages').click();
@@ -153,10 +189,15 @@ test('the page jump rejects a page outside the document', async ({app, page}) =>
   await expect(page.getByRole('button', {name: 'Previous page'})).toBeDisabled();
 });
 
-test('a wheel-up at the first page does not make the next page land at its bottom', async ({page}) => {
+test('a wheel-up at the first page does not make the next page land at its bottom', async ({
+  page,
+}) => {
   const p = preview(page);
   const zoomIn = page.getByRole('button', {name: 'Zoom in'});
-  for (let i = 0; i < 12 && !(await p.stage()).tall; i++) { await zoomIn.click(); await page.waitForTimeout(300) }
+  for (let i = 0; i < 12 && !(await p.stage()).tall; i++) {
+    await zoomIn.click();
+    await page.waitForTimeout(300);
+  }
   expect((await p.stage()).top, 'page 1 at its top').toBe(0);
   await p.gesture(-100);
   expect(await p.current(), 'first page stays').toBe('1');
@@ -170,12 +211,19 @@ test('a backward flip onto a taller page lands at its bottom', async ({app, page
   const doc = await PDFDocument.create();
   doc.addPage([612, 792]);
   doc.addPage([792, 612]);
-  await app.openPdf({name: 'Mixed.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await doc.save())});
+  await app.openPdf({
+    name: 'Mixed.pdf',
+    mimeType: 'application/pdf',
+    buffer: Buffer.from(await doc.save()),
+  });
   const p = preview(page);
   await expect(page.locator('.page-jump > span')).toHaveText('of 2');
   await expect.poll(async () => (await p.stage()).bottom).toBe(true);
   const zoomIn = page.getByRole('button', {name: 'Zoom in'});
-  for (let i = 0; i < 12 && !(await p.stage()).tall; i++) { await zoomIn.click(); await page.waitForTimeout(300) }
+  for (let i = 0; i < 12 && !(await p.stage()).tall; i++) {
+    await zoomIn.click();
+    await page.waitForTimeout(300);
+  }
   await p.goto(2);
   expect(await p.current()).toBe('2');
   expect((await p.stage()).top, 'page 2 at its top').toBe(0);

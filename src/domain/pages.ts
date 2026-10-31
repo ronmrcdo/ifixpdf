@@ -3,8 +3,16 @@ import type {FileId, PageInstance, PageUid, SourceFile} from './types';
 type NewUid = () => PageUid;
 type Uids = ReadonlySet<PageUid>;
 
-export function pagesForFile(file: SourceFile, newUid: NewUid = () => crypto.randomUUID()): PageInstance[] {
-  return Array.from({length: file.pages}, (_, local) => ({uid: newUid(), fileId: file.id, local, rotation: 0}));
+export function pagesForFile(
+  file: SourceFile,
+  newUid: NewUid = () => crypto.randomUUID(),
+): PageInstance[] {
+  return Array.from({length: file.pages}, (_, local) => ({
+    uid: newUid(),
+    fileId: file.id,
+    local,
+    rotation: 0,
+  }));
 }
 
 /** targetIndex is the index the first moved page ends up at in the result, clamped to [0, remaining length]. */
@@ -24,12 +32,20 @@ export function deletePages(pages: PageInstance[], uids: Uids): PageInstance[] {
   return pages.filter((p) => !uids.has(p.uid));
 }
 
-export function duplicatePages(pages: PageInstance[], uids: Uids, newUid: NewUid = () => crypto.randomUUID()): PageInstance[] {
+export function duplicatePages(
+  pages: PageInstance[],
+  uids: Uids,
+  newUid: NewUid = () => crypto.randomUUID(),
+): PageInstance[] {
   return pages.flatMap((p) => (uids.has(p.uid) ? [p, {...p, uid: newUid()}] : [p]));
 }
 
 export function rotatePages(pages: PageInstance[], uids: Uids, delta: 90 | -90): PageInstance[] {
-  return pages.map((p) => (uids.has(p.uid) ? {...p, rotation: ((p.rotation + delta + 360) % 360) as PageInstance['rotation']} : p));
+  return pages.map((p) =>
+    uids.has(p.uid)
+      ? {...p, rotation: ((p.rotation + delta + 360) % 360) as PageInstance['rotation']}
+      : p,
+  );
 }
 
 export function removeFile(pages: PageInstance[], fileId: FileId): PageInstance[] {
@@ -41,7 +57,7 @@ export function moveFile(
   files: SourceFile[],
   pages: PageInstance[],
   fileId: FileId,
-  direction: -1 | 1
+  direction: -1 | 1,
 ): {files: SourceFile[]; pages: PageInstance[]} {
   const i = files.findIndex((f) => f.id === fileId);
   const neighbour = files[i + direction];
@@ -64,7 +80,12 @@ export function moveFile(
 }
 
 /** Moves the file to row `to` (clamped) one neighbour at a time, so a drag matches the same number of up/down moves. */
-export function moveFileTo(files: SourceFile[], pages: PageInstance[], fileId: FileId, to: number): {files: SourceFile[]; pages: PageInstance[]} {
+export function moveFileTo(
+  files: SourceFile[],
+  pages: PageInstance[],
+  fileId: FileId,
+  to: number,
+): {files: SourceFile[]; pages: PageInstance[]} {
   let i = files.findIndex((f) => f.id === fileId);
   const target = Math.max(0, Math.min(to, files.length - 1));
   let out = {files, pages};

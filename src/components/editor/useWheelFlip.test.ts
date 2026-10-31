@@ -14,24 +14,36 @@ function setup(scrollable = false) {
   return {onFlip, onZoom, canScroll, fire};
 }
 
-beforeEach(() => { vi.useFakeTimers() });
-afterEach(() => { vi.useRealTimers() });
+beforeEach(() => {
+  vi.useFakeTimers();
+});
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe('createWheelFlip: flipping', () => {
   it('10 events 20 ms apart are one gesture and flip once', () => {
     const w = setup();
-    for (let i = 0; i < 10; i++) { w.fire(40); vi.advanceTimersByTime(20) }
+    for (let i = 0; i < 10; i++) {
+      w.fire(40);
+      vi.advanceTimersByTime(20);
+    }
     expect(w.onFlip).toHaveBeenCalledTimes(1);
     expect(w.onFlip).toHaveBeenCalledWith(1, false);
   });
   it('a gesture that keeps going past 250 ms in total is still one flip', () => {
     const w = setup();
-    for (let i = 0; i < 20; i++) { w.fire(30); vi.advanceTimersByTime(40) }
+    for (let i = 0; i < 20; i++) {
+      w.fire(30);
+      vi.advanceTimersByTime(40);
+    }
     expect(w.onFlip).toHaveBeenCalledTimes(1);
   });
   it('events separated by 300 ms of silence are two gestures and flip twice', () => {
     const w = setup();
-    w.fire(40); vi.advanceTimersByTime(20); w.fire(40);
+    w.fire(40);
+    vi.advanceTimersByTime(20);
+    w.fire(40);
     vi.advanceTimersByTime(300);
     w.fire(40);
     expect(w.onFlip).toHaveBeenCalledTimes(2);
@@ -55,7 +67,10 @@ describe('createWheelFlip: scrolling', () => {
   it('when the page can scroll it scrolls natively and never flips', () => {
     const w = setup(true);
     const e = w.fire(100);
-    for (let i = 0; i < 5; i++) { vi.advanceTimersByTime(20); w.fire(100) }
+    for (let i = 0; i < 5; i++) {
+      vi.advanceTimersByTime(20);
+      w.fire(100);
+    }
     expect(w.onFlip).not.toHaveBeenCalled();
     expect(w.canScroll).toHaveBeenCalledWith(1);
     expect(e.defaultPrevented).toBe(false);
@@ -65,9 +80,13 @@ describe('createWheelFlip: scrolling', () => {
     const onFlip = vi.fn();
     const wheel = createWheelFlip({gap: 250, onFlip, onZoom: vi.fn(), canScroll: () => scrollable});
     const fire = () => wheel(new WheelEvent('wheel', {deltaY: 50, cancelable: true}));
-    fire(); vi.advanceTimersByTime(20);
+    fire();
+    vi.advanceTimersByTime(20);
     scrollable = false;
-    for (let i = 0; i < 5; i++) { fire(); vi.advanceTimersByTime(20) }
+    for (let i = 0; i < 5; i++) {
+      fire();
+      vi.advanceTimersByTime(20);
+    }
     expect(onFlip).not.toHaveBeenCalled();
     vi.advanceTimersByTime(300);
     fire();

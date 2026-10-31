@@ -15,7 +15,10 @@ vi.mock('../../pdf/thumbnails', () => ({renderBlob: vi.fn(async () => new Blob([
 vi.mock('../../pdf/bytes', () => ({putBytes: vi.fn()}));
 
 const user = () => userEvent.setup();
-const row = (title: string) => screen.getByText(title, {selector: '.settings-row > div'}).closest('.settings-row') as HTMLElement;
+const row = (title: string) =>
+  screen
+    .getByText(title, {selector: '.settings-row > div'})
+    .closest('.settings-row') as HTMLElement;
 
 describe('SettingsView', () => {
   beforeEach(() => {
@@ -42,12 +45,16 @@ describe('SettingsView', () => {
 
   it('Clear workspace resets both workspaces and the draft, leaves recents alone, and toasts', async () => {
     const seeded = await recents.record({name: 'Keep.pdf', bytes: await makePdf(1), pages: 1});
-    const spies = (['list', 'record', 'open', 'relocate', 'remove', 'updateThumbnail'] as const).map((m) => vi.spyOn(recents, m));
+    const spies = (
+      ['list', 'record', 'open', 'relocate', 'remove', 'updateThumbnail'] as const
+    ).map((m) => vi.spyOn(recents, m));
     const clear = vi.spyOn(draft, 'clearDraft').mockResolvedValue();
     const doc = vi.spyOn(documentStore.getState(), 'reset');
     const merge = vi.spyOn(mergeStore.getState(), 'reset');
     render(<SettingsView />);
-    await user().click(within(row('Clear workspace')).getByRole('button', {name: 'Clear workspace'}));
+    await user().click(
+      within(row('Clear workspace')).getByRole('button', {name: 'Clear workspace'}),
+    );
     await waitFor(() => expect(useApp.getState().toast?.text).toBe('Workspace cleared.'));
     expect(doc).toHaveBeenCalled();
     expect(merge).toHaveBeenCalled();
@@ -66,25 +73,41 @@ describe('SettingsView', () => {
     await waitFor(() => expect(documentStore.getState().pages).toHaveLength(0));
   });
 
-  it.each([['document', documentStore], ['merge', mergeStore]] as const)('while the %s workspace is exporting, Clear workspace changes nothing and asks to wait', async (_n, store) => {
-    const clear = vi.spyOn(draft, 'clearDraft').mockResolvedValue();
-    const doc = vi.spyOn(documentStore.getState(), 'reset');
-    const merge = vi.spyOn(mergeStore.getState(), 'reset');
-    store.setState({exporting: true});
-    render(<SettingsView />);
-    await user().click(screen.getByRole('button', {name: 'Clear workspace'}));
-    await waitFor(() => expect(useApp.getState().toast).toMatchObject({text: 'Wait for the save to finish.', tone: 'info'}));
-    expect(clear).not.toHaveBeenCalled();
-    expect(doc).not.toHaveBeenCalled();
-    expect(merge).not.toHaveBeenCalled();
-    store.setState({exporting: false});
-  });
+  it.each([
+    ['document', documentStore],
+    ['merge', mergeStore],
+  ] as const)(
+    'while the %s workspace is exporting, Clear workspace changes nothing and asks to wait',
+    async (_n, store) => {
+      const clear = vi.spyOn(draft, 'clearDraft').mockResolvedValue();
+      const doc = vi.spyOn(documentStore.getState(), 'reset');
+      const merge = vi.spyOn(mergeStore.getState(), 'reset');
+      store.setState({exporting: true});
+      render(<SettingsView />);
+      await user().click(screen.getByRole('button', {name: 'Clear workspace'}));
+      await waitFor(() =>
+        expect(useApp.getState().toast).toMatchObject({
+          text: 'Wait for the save to finish.',
+          tone: 'info',
+        }),
+      );
+      expect(clear).not.toHaveBeenCalled();
+      expect(doc).not.toHaveBeenCalled();
+      expect(merge).not.toHaveBeenCalled();
+      store.setState({exporting: false});
+    },
+  );
 
   it('shows an error toast when clearing fails', async () => {
     vi.spyOn(draft, 'clearDraft').mockRejectedValue(new Error('idb'));
     render(<SettingsView />);
     await user().click(screen.getByRole('button', {name: 'Clear workspace'}));
-    await waitFor(() => expect(useApp.getState().toast).toMatchObject({text: 'Could not clear the workspace. Try again.', tone: 'error'}));
+    await waitFor(() =>
+      expect(useApp.getState().toast).toMatchObject({
+        text: 'Could not clear the workspace. Try again.',
+        tone: 'error',
+      }),
+    );
   });
 
   it('GitHub opens through the platform opener', async () => {
@@ -98,7 +121,12 @@ describe('SettingsView', () => {
     vi.spyOn(platform, 'openUrl').mockRejectedValue(new Error('denied'));
     render(<SettingsView />);
     await user().click(await screen.findByRole('button', {name: 'GitHub'}));
-    await waitFor(() => expect(useApp.getState().toast).toMatchObject({text: 'Could not open the link.', tone: 'error'}));
+    await waitFor(() =>
+      expect(useApp.getState().toast).toMatchObject({
+        text: 'Could not open the link.',
+        tone: 'error',
+      }),
+    );
   });
 
   it('About lists version, developer, an updates slot, and every license file', async () => {

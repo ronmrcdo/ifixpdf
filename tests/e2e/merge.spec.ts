@@ -8,14 +8,21 @@ const meta = (page: Page) => rows(page).locator('.filemeta').allTextContents();
 const steps = (page: Page) => page.getByRole('navigation', {name: 'Merge PDF workflow'});
 
 /** dnd-kit swallows clicks for 50 ms after a drop; waits until a click reaches the window again. */
-const clicksReach = (page: Page) => expect.poll(() => page.evaluate(() => {
-  let reached = false;
-  const seen = () => { reached = true };
-  window.addEventListener('click', seen);
-  document.body.click();
-  window.removeEventListener('click', seen);
-  return reached;
-})).toBe(true);
+const clicksReach = (page: Page) =>
+  expect
+    .poll(() =>
+      page.evaluate(() => {
+        let reached = false;
+        const seen = () => {
+          reached = true;
+        };
+        window.addEventListener('click', seen);
+        document.body.click();
+        window.removeEventListener('click', seen);
+        return reached;
+      }),
+    )
+    .toBe(true);
 
 async function center(l: Locator) {
   const b = await l.boundingBox();
@@ -26,7 +33,11 @@ async function center(l: Locator) {
 async function addThree(app: App) {
   await app.goto('combine=new');
   await expect(app.title).toHaveText('Merge PDFs');
-  await app.addFiles([await pdfFile('A.pdf', 1), await pdfFile('B.pdf', 2), await pdfFile('C.pdf', 1)]);
+  await app.addFiles([
+    await pdfFile('A.pdf', 1),
+    await pdfFile('B.pdf', 2),
+    await pdfFile('C.pdf', 1),
+  ]);
   await expect(app.status).toContainText('3 files · 4 pages');
   await expect(rows(app.page)).toHaveCount(3);
 }
@@ -35,7 +46,8 @@ test('the Add stage: Arrange, Save and Done disabled until a PDF is added', asyn
   await app.goto('combine=new');
   await expect(page.getByRole('heading', {name: 'Choose PDFs to merge'})).toBeVisible();
   await expect(steps(page).locator('[aria-current=step]')).toHaveText(/Add PDFs/);
-  for (const name of ['Arrange & review', 'Save PDF', 'Done']) await expect(steps(page).getByRole('button', {name})).toBeDisabled();
+  for (const name of ['Arrange & review', 'Save PDF', 'Done'])
+    await expect(steps(page).getByRole('button', {name})).toBeDisabled();
   await app.addFiles(await pdfFile('A.pdf', 2));
   await expect(steps(page).locator('[aria-current=step]')).toHaveText(/Arrange & review/);
   await expect(page.getByText('1 files · 2 pages').first()).toBeVisible();
@@ -51,17 +63,28 @@ test('a pointer drag of a source row moves the file and its pages', async ({app,
   await page.mouse.move(to.x, to.y - 10, {steps: 15});
   await page.mouse.up();
   await expect.poll(() => names(page)).toEqual(['C.pdf', 'A.pdf', 'B.pdf']);
-  expect((await meta(page)).map(m => m.split(' · ')[0])).toEqual(['Pages 1', 'Pages 2', 'Pages 3–4']);
+  expect((await meta(page)).map((m) => m.split(' · ')[0])).toEqual([
+    'Pages 1',
+    'Pages 2',
+    'Pages 3–4',
+  ]);
   await clicksReach(page);
   await page.getByRole('button', {name: 'Undo'}).click();
   await expect.poll(() => names(page), 'one undo step').toEqual(['A.pdf', 'B.pdf', 'C.pdf']);
 });
 
-test('up/down buttons move a file group; selecting a source jumps to its first page', async ({app, page}) => {
+test('up/down buttons move a file group; selecting a source jumps to its first page', async ({
+  app,
+  page,
+}) => {
   await addThree(app);
   await page.getByRole('button', {name: 'Move A.pdf down'}).click();
   await expect.poll(() => names(page)).toEqual(['B.pdf', 'A.pdf', 'C.pdf']);
-  expect((await meta(page)).map(m => m.split(' · ')[0])).toEqual(['Pages 1–2', 'Pages 3', 'Pages 4']);
+  expect((await meta(page)).map((m) => m.split(' · ')[0])).toEqual([
+    'Pages 1–2',
+    'Pages 3',
+    'Pages 4',
+  ]);
   await page.getByRole('button', {name: 'Preview C.pdf'}).click();
   await expect(page.getByRole('spinbutton', {name: 'Go to page'})).toHaveValue('4');
   await expect(rows(page).nth(2)).toHaveClass(/selected/);
@@ -69,7 +92,12 @@ test('up/down buttons move a file group; selecting a source jumps to its first p
 });
 
 test('Back to document from Done returns to the editor', async ({app, page}) => {
-  await page.addInitScript(() => { window.showSaveFilePicker = async (o: {suggestedName: string}) => ({name: o.suggestedName, createWritable: async () => ({write: async () => {}, close: async () => {}})}) });
+  await page.addInitScript(() => {
+    window.showSaveFilePicker = async (o: {suggestedName: string}) => ({
+      name: o.suggestedName,
+      createWritable: async () => ({write: async () => {}, close: async () => {}}),
+    });
+  });
   await addThree(app);
   await page.getByRole('checkbox', {name: 'Open PDF after saving'}).uncheck();
   await page.getByRole('button', {name: 'Continue to save'}).first().click();

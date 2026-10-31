@@ -17,7 +17,12 @@ const confirm = () => screen.getByLabelText('Confirm password');
 const submit = () => screen.getByRole('button', {name: /Save protected copy|Protecting PDF…/});
 
 async function open(user = userEvent.setup()) {
-  render(<><button type="button">Opener</button><DialogHost /></>);
+  render(
+    <>
+      <button type="button">Opener</button>
+      <DialogHost />
+    </>,
+  );
   opener().focus();
   act(() => showPasswordDialog({name: 'Report.pdf', bytes: await_bytes}));
   return user;
@@ -28,7 +33,10 @@ beforeEach(async () => {
   useDialogs.setState({active: null});
   await_bytes = await makePdf(2);
   saved = [];
-  vi.spyOn(platform, 'saveAs').mockImplementation(async (bytes, name) => { saved.push(bytes); return {name, folder: '/d'} });
+  vi.spyOn(platform, 'saveAs').mockImplementation(async (bytes, name) => {
+    saved.push(bytes);
+    return {name, folder: '/d'};
+  });
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -37,7 +45,9 @@ describe('PasswordDialog', () => {
     const user = await open();
     await user.type(pw(), SECRET);
     await user.type(confirm(), 'different-pass');
-    expect(screen.getByRole('alert')).toHaveTextContent('Passwords do not match. Enter the same password in both fields.');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Passwords do not match. Enter the same password in both fields.',
+    );
     expect(submit()).toBeDisabled();
   });
 
@@ -64,12 +74,21 @@ describe('PasswordDialog', () => {
     await user.type(confirm(), SECRET);
     await user.click(submit());
     expect(await screen.findByRole('heading', {name: 'Protected copy is ready'})).toBeVisible();
-    expect(platform.saveAs).toHaveBeenCalledWith(expect.any(Uint8Array), 'Report — protected.pdf', 'pdf');
+    expect(platform.saveAs).toHaveBeenCalledWith(
+      expect.any(Uint8Array),
+      'Report — protected.pdf',
+      'pdf',
+    );
     await waitFor(() => expect(screen.getByRole('button', {name: 'Done'})).toHaveFocus()); // focus moves in an effect after the heading renders
     // real engine output: encrypted, unreadable without the password
     expect(new TextDecoder('latin1').decode(saved[0])).toContain('/Encrypt');
     await expect(PDFDocument.load(saved[0]!)).rejects.toThrow();
-    const everything = JSON.stringify([useApp.getState(), documentStore.getState(), mergeStore.getState(), useDialogs.getState()]);
+    const everything = JSON.stringify([
+      useApp.getState(),
+      documentStore.getState(),
+      mergeStore.getState(),
+      useDialogs.getState(),
+    ]);
     expect(everything).not.toContain(SECRET);
     await user.click(screen.getByRole('button', {name: 'Done'}));
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -96,7 +115,9 @@ describe('PasswordDialog', () => {
     await user.type(pw(), SECRET);
     await user.type(confirm(), SECRET);
     await user.click(submit());
-    expect(await screen.findByRole('alert')).toHaveTextContent('Could not protect this PDF. Try a different unlocked PDF.');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not protect this PDF. Try a different unlocked PDF.',
+    );
     expect(submit()).toBeEnabled();
   });
 

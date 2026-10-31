@@ -1,5 +1,13 @@
 import {describe, expect, it} from 'vitest';
-import {exportTitle, extractName, outputName, protectedName, splitPartName, splitPath, splitZipName} from './naming';
+import {
+  exportTitle,
+  extractName,
+  outputName,
+  protectedName,
+  splitPartName,
+  splitPath,
+  splitZipName,
+} from './naming';
 
 describe('outputName', () => {
   it('trims and appends .pdf', () => {
@@ -43,9 +51,14 @@ describe('splitPath', () => {
 describe('exportTitle', () => {
   const files = [
     {id: 'a', name: 'One.pdf', pages: 1, size: 1},
-    {id: 'b', name: 'Two.PDF', pages: 1, size: 1}
+    {id: 'b', name: 'Two.PDF', pages: 1, size: 1},
   ];
-  const settings = {name: 'Out.pdf', rangeMode: 'all' as const, customRange: '', useFileNamesAsTitle: false};
+  const settings = {
+    name: 'Out.pdf',
+    rangeMode: 'all' as const,
+    customRange: '',
+    useFileNamesAsTitle: false,
+  };
   it('uses the output name without .pdf', () => expect(exportTitle(files, settings)).toBe('Out'));
   it('joins source names when enabled', () =>
     expect(exportTitle(files, {...settings, useFileNamesAsTitle: true})).toBe('One · Two'));

@@ -8,10 +8,19 @@ import {useApp} from '../../state/app';
 import {createWorkspaceStore} from '../../state/workspace';
 import {Stage} from './Stage';
 
-vi.mock('../../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {}), acquire: vi.fn()}));
+vi.mock('../../pdf/registry', () => ({
+  retain: vi.fn(),
+  release: vi.fn(async () => {}),
+  acquire: vi.fn(),
+}));
 vi.mock('../../pdf/render', () => ({renderPage: vi.fn(async () => {})}));
 
-const pages: PageInstance[] = [0, 1, 2].map((i) => ({uid: `u${i}`, fileId: 'f', local: i, rotation: 0}));
+const pages: PageInstance[] = [0, 1, 2].map((i) => ({
+  uid: `u${i}`,
+  fileId: 'f',
+  local: i,
+  rotation: 0,
+}));
 let store: ReturnType<typeof createWorkspaceStore>;
 beforeEach(() => {
   store = createWorkspaceStore('document');
@@ -19,7 +28,12 @@ beforeEach(() => {
   useApp.setState({toast: null});
 });
 const stageEl = () => document.querySelector<HTMLElement>('#paper-stage')!;
-const wheel = (deltaY: number, ctrlKey = false) => act(() => { stageEl().dispatchEvent(new WheelEvent('wheel', {deltaY, ctrlKey, bubbles: true, cancelable: true})) });
+const wheel = (deltaY: number, ctrlKey = false) =>
+  act(() => {
+    stageEl().dispatchEvent(
+      new WheelEvent('wheel', {deltaY, ctrlKey, bubbles: true, cancelable: true}),
+    );
+  });
 
 describe('Stage page', () => {
   it('labels the canvas with the page, total and file name', () => {
@@ -110,7 +124,9 @@ describe('Stage navigation', () => {
       act(() => store.getState().goTo(1));
       const jump = screen.getByRole<HTMLInputElement>('spinbutton', {name: 'Go to page'});
       jump.value = bad;
-      act(() => { jump.dispatchEvent(new Event('change', {bubbles: true})) });
+      act(() => {
+        jump.dispatchEvent(new Event('change', {bubbles: true}));
+      });
       expect(jump.value).toBe('2');
       expect(store.getState().currentPage).toBe(1);
       expect(useApp.getState().toast?.text).toBe('Choose a page from 1 to 3.');
@@ -135,15 +151,24 @@ describe('Stage navigation', () => {
 describe('Stage landing', () => {
   it('a flip that could not render does not make a later render jump to the bottom', async () => {
     const page = {rotate: 0, getViewport: () => ({width: 612, height: 792})};
-    vi.mocked(acquire).mockResolvedValue({getPage: async () => page} as unknown as Awaited<ReturnType<typeof acquire>>); // only getPage is used
+    vi.mocked(acquire).mockResolvedValue({getPage: async () => page} as unknown as Awaited<
+      ReturnType<typeof acquire>
+    >); // only getPage is used
     render(<Stage store={store} readOnly caption="A.pdf" />);
     act(() => store.getState().goTo(1));
     wheel(-100); // flips back to page 1 while the stage has no height (jsdom), so nothing renders
     expect(store.getState().currentPage).toBe(0);
     const scrolls: number[] = [];
     Object.defineProperties(stageEl(), {
-      clientHeight: {get: () => 500}, clientWidth: {get: () => 600}, scrollHeight: {get: () => 2000},
-      scrollTop: {get: () => 0, set: (v: number) => { scrolls.push(v) }}
+      clientHeight: {get: () => 500},
+      clientWidth: {get: () => 600},
+      scrollHeight: {get: () => 2000},
+      scrollTop: {
+        get: () => 0,
+        set: (v: number) => {
+          scrolls.push(v);
+        },
+      },
     });
     act(() => store.getState().setZoom(150));
     await waitFor(() => expect(renderPage).toHaveBeenCalled());

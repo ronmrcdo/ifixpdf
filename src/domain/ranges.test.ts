@@ -48,7 +48,9 @@ describe('parseSplitGroups', () => {
     expect(() => parseSplitGroups(t, 5)).toThrow(new RangeError('Choose pages from 1 to 5.'));
   });
   it.each(['1-2, 2-3', '2, 2', '1-5, 3'])('rejects %j as overlapping', (t) => {
-    expect(() => parseSplitGroups(t, 5)).toThrow(new RangeError('Ranges overlap. Include each page only once.'));
+    expect(() => parseSplitGroups(t, 5)).toThrow(
+      new RangeError('Ranges overlap. Include each page only once.'),
+    );
   });
 });
 
@@ -63,7 +65,10 @@ describe('defaultSplitText', () => {
     expect(defaultSplitText(0)).toBe('1');
   });
   it('round-trips through parseSplitGroups', () => {
-    expect(parseSplitGroups(defaultSplitText(5), 5)).toEqual([[0, 1], [2, 3, 4]]);
+    expect(parseSplitGroups(defaultSplitText(5), 5)).toEqual([
+      [0, 1],
+      [2, 3, 4],
+    ]);
   });
 });
 

@@ -64,7 +64,10 @@ test('opening an older recent moves it to the top of Home', async ({app, page}) 
   await expect(page.locator('.recent-name strong')).toHaveText(['Alpha.pdf', 'Beta.pdf']);
 });
 
-test('the context menu opens on right-click and takes arrow, Home, End and Escape', async ({app, page}) => {
+test('the context menu opens on right-click and takes arrow, Home, End and Escape', async ({
+  app,
+  page,
+}) => {
   await seeded(app);
   await page.locator('.recent-file').first().click({button: 'right'});
   const items = page.getByRole('menuitem');
@@ -107,7 +110,9 @@ test('the first view saves a thumbnail for a row', async ({app, page}) => {
 test('an empty Home offers Add PDFs', async ({app, page}) => {
   await app.goto('view=home');
   await expect(page.getByText('No recent PDFs yet')).toBeVisible();
-  const chooser = await chooserFrom(page, () => page.getByRole('button', {name: 'Add PDFs'}).click());
+  const chooser = await chooserFrom(page, () =>
+    page.getByRole('button', {name: 'Add PDFs'}).click(),
+  );
   await chooser.setFiles(await pdfFile('One.pdf', 1));
   await expect(app.title).toHaveText('Preview PDF');
 });
@@ -115,24 +120,55 @@ test('an empty Home offers Add PDFs', async ({app, page}) => {
 test.describe('native missing file', () => {
   test.use({tauri: true});
 
-  test('Locate picks a file through the dialog and the row stops showing File not found', async ({app, page}) => {
-    await page.addInitScript((bytes) => {
-      window.__gone = true;
-      window.__tauri = {
-        'plugin:fs|read_file': () => { if (window.__gone) throw 'No such file (os error 2)'; return bytes }, // plugin-fs rejects with a string
-        'plugin:dialog|open': () => { window.__gone = false; return 'C:\\Docs\\Found.pdf' }
-      };
-    }, [...await makePdf(2)]);
+  test('Locate picks a file through the dialog and the row stops showing File not found', async ({
+    app,
+    page,
+  }) => {
+    await page.addInitScript(
+      (bytes) => {
+        window.__gone = true;
+        window.__tauri = {
+          'plugin:fs|read_file': () => {
+            if (window.__gone) throw 'No such file (os error 2)';
+            return bytes;
+          }, // plugin-fs rejects with a string
+          'plugin:dialog|open': () => {
+            window.__gone = false;
+            return 'C:\\Docs\\Found.pdf';
+          },
+        };
+      },
+      [...(await makePdf(2))],
+    );
     await app.goto('view=home');
-    await page.evaluate(() => new Promise<void>((done) => {
-      const q = indexedDB.open('ifixpdf-local-documents', 2);
-      q.onupgradeneeded = () => { q.result.createObjectStore('recent-meta', {keyPath: 'id'}).createIndex('key', 'key', {unique: true}); q.result.createObjectStore('recent-bytes') };
-      q.onsuccess = () => {
-        const tx = q.result.transaction('recent-meta', 'readwrite');
-        tx.objectStore('recent-meta').put({id: 'gone', key: 'c:\\docs\\gone.pdf', name: 'Gone.pdf', pages: 2, size: 900, modified: Date.now(), path: 'C:\\Docs\\Gone.pdf'});
-        tx.oncomplete = () => { q.result.close(); done() };
-      };
-    }));
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          const q = indexedDB.open('ifixpdf-local-documents', 2);
+          q.onupgradeneeded = () => {
+            q.result
+              .createObjectStore('recent-meta', {keyPath: 'id'})
+              .createIndex('key', 'key', {unique: true});
+            q.result.createObjectStore('recent-bytes');
+          };
+          q.onsuccess = () => {
+            const tx = q.result.transaction('recent-meta', 'readwrite');
+            tx.objectStore('recent-meta').put({
+              id: 'gone',
+              key: 'c:\\docs\\gone.pdf',
+              name: 'Gone.pdf',
+              pages: 2,
+              size: 900,
+              modified: Date.now(),
+              path: 'C:\\Docs\\Gone.pdf',
+            });
+            tx.oncomplete = () => {
+              q.result.close();
+              done();
+            };
+          };
+        }),
+    );
     await app.goto('view=home');
     await page.getByRole('button', {name: /^Gone\.pdf/}).click();
     await expect(page.getByText('File not found')).toBeVisible();

@@ -5,7 +5,12 @@ import type {WorkspaceState} from '../../state/workspace';
 import {mergeStore, useMerge} from '../../state/workspaces';
 
 type Step = WorkspaceState['workflow'];
-const STEPS: Array<[Step, string]> = [['add', 'Add PDFs'], ['review', 'Arrange & review'], ['save', 'Save PDF'], ['done', 'Done']];
+const STEPS: Array<[Step, string]> = [
+  ['add', 'Add PDFs'],
+  ['review', 'Arrange & review'],
+  ['save', 'Save PDF'],
+  ['done', 'Done'],
+];
 
 const ACTIONS: Record<Step, () => void> = {
   add: () => void pickAndImport(),
@@ -15,7 +20,7 @@ const ACTIONS: Record<Step, () => void> = {
     s.setShowOutput(false);
   },
   save: () => continueToSave(mergeStore),
-  done: () => {}
+  done: () => {},
 };
 
 /** The Merge task strip: Add PDFs → Arrange & review → Save PDF → Done. Done is never clickable; Add is always. */
@@ -33,14 +38,24 @@ export function WorkflowBar() {
           else if (n < current) state = 'complete';
           return (
             <li key={id} className={state}>
-              <button type="button" aria-current={n === current ? 'step' : undefined} disabled={id === 'done' || (!total && id !== 'add')} onClick={ACTIONS[id]}>
-                <span className="step-marker">{n < current ? <CircleCheck aria-hidden="true" /> : n + 1}</span><span>{label}</span>
+              <button
+                type="button"
+                aria-current={n === current ? 'step' : undefined}
+                disabled={id === 'done' || (!total && id !== 'add')}
+                onClick={ACTIONS[id]}
+              >
+                <span className="step-marker">
+                  {n < current ? <CircleCheck aria-hidden="true" /> : n + 1}
+                </span>
+                <span>{label}</span>
               </button>
             </li>
           );
         })}
       </ol>
-      <span className="workflow-summary">{total ? `${files} files · ${total} pages` : 'Start a new document'}</span>
+      <span className="workflow-summary">
+        {total ? `${files} files · ${total} pages` : 'Start a new document'}
+      </span>
     </nav>
   );
 }

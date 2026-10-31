@@ -19,8 +19,8 @@ async function spec(): Promise<ExportSpec> {
     pages: [
       {fileId: 'B', local: 0, rotation: 0},
       {fileId: 'A', local: 1, rotation: 90},
-      {fileId: 'A', local: 0, rotation: 270}
-    ]
+      {fileId: 'A', local: 0, rotation: 270},
+    ],
   };
 }
 
@@ -44,7 +44,13 @@ describe('export-core', () => {
 
   it('wraps rotation past 360', async () => {
     const src = await source([100], 90);
-    const out = await PDFDocument.load(await buildPdf({title: 't', sources: {a: src}, pages: [{fileId: 'a', local: 0, rotation: 270}]}));
+    const out = await PDFDocument.load(
+      await buildPdf({
+        title: 't',
+        sources: {a: src},
+        pages: [{fileId: 'a', local: 0, rotation: 270}],
+      }),
+    );
     expect(out.getPage(0).getRotation().angle).toBe(0);
   });
 
@@ -54,7 +60,8 @@ describe('export-core', () => {
     expect(text).toContain('/Encrypt');
     expect(text).toContain('/AESV3');
     const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
-    const open = (password?: string) => pdfjs.getDocument({data: out.slice(), password, isEvalSupported: false}).promise;
+    const open = (password?: string) =>
+      pdfjs.getDocument({data: out.slice(), password, isEvalSupported: false}).promise;
     const doc = await open('password1');
     expect(doc.numPages).toBe(2);
     await doc.destroy();
@@ -65,11 +72,15 @@ describe('export-core', () => {
   it('splits into a zip of named parts', async () => {
     const files = unzipSync(await splitZip(await spec(), [[0, 1], [2]], 'Doc.pdf'));
     expect(Object.keys(files)).toEqual(['Doc — part 1.pdf', 'Doc — part 2.pdf']);
-    const counts = await Promise.all(Object.values(files).map(async (b) => (await PDFDocument.load(b)).getPageCount()));
+    const counts = await Promise.all(
+      Object.values(files).map(async (b) => (await PDFDocument.load(b)).getPageCount()),
+    );
     expect(counts).toEqual([2, 1]);
   });
 
   it('rejects a page whose source is missing', async () => {
-    await expect(buildPdf({title: 't', sources: {}, pages: [{fileId: 'X', local: 0, rotation: 0}]})).rejects.toThrow();
+    await expect(
+      buildPdf({title: 't', sources: {}, pages: [{fileId: 'X', local: 0, rotation: 0}]}),
+    ).rejects.toThrow();
   });
 });

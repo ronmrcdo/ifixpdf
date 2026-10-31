@@ -8,8 +8,12 @@ function Host() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)}>Opener</button>
-      <Dialog title="Hello" open={open} onClose={() => setOpen(false)}><input aria-label="inside" /></Dialog>
+      <button type="button" onClick={() => setOpen(true)}>
+        Opener
+      </button>
+      <Dialog title="Hello" open={open} onClose={() => setOpen(false)}>
+        <input aria-label="inside" />
+      </Dialog>
     </>
   );
 }

@@ -2,7 +2,12 @@
 import {test, expect} from './fixtures';
 
 test.describe('routing', () => {
-  for (const [query, title] of [['view=home', 'Home'], ['view=preview', 'Preview PDF'], ['view=edit', 'Edit PDF'], ['combine=new', 'Merge PDFs']] as const) {
+  for (const [query, title] of [
+    ['view=home', 'Home'],
+    ['view=preview', 'Preview PDF'],
+    ['view=edit', 'Edit PDF'],
+    ['combine=new', 'Merge PDFs'],
+  ] as const) {
     test(`?${query} opens ${title}`, async ({app}) => {
       await app.goto(query);
       await expect(app.title).toHaveText(title);
@@ -16,9 +21,14 @@ test.describe('routing', () => {
     expect(page.url()).toMatch(/index\.html\?view=home$/);
   });
 
-  test('sidebar navigation switches views without reloading; Settings keeps the URL', async ({app, page}) => {
+  test('sidebar navigation switches views without reloading; Settings keeps the URL', async ({
+    app,
+    page,
+  }) => {
     await app.goto('view=home');
-    await page.evaluate(() => { window.__marker = 1 });
+    await page.evaluate(() => {
+      window.__marker = 1;
+    });
     await app.view('Settings');
     await expect(app.title).toHaveText('Settings');
     await app.view('Merge PDFs');
@@ -55,9 +65,14 @@ test.describe('routing', () => {
     await expect(app.status).toContainText('1 files · 2 pages · Ready');
   });
 
-  test('an unknown ?recent= shows an error toast, not an unhandled rejection', async ({app, page}) => {
+  test('an unknown ?recent= shows an error toast, not an unhandled rejection', async ({
+    app,
+    page,
+  }) => {
     await app.goto('recent=missing');
-    await expect(page.getByRole('alert')).toHaveText('Could not open that PDF. Choose a valid, unlocked PDF.');
+    await expect(page.getByRole('alert')).toHaveText(
+      'Could not open that PDF. Choose a valid, unlocked PDF.',
+    );
     await expect(app.title).toHaveText('Home');
   });
 });

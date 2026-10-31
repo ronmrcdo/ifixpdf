@@ -24,9 +24,10 @@ export const useApp = create<AppState>()((set) => ({
   documentView: 'preview',
   workspace: 'merge',
   setView: (view) => {
-    if (view === 'preview' || view === 'edit') return set({view, documentView: view, workspace: 'document'});
+    if (view === 'preview' || view === 'edit')
+      return set({view, documentView: view, workspace: 'document'});
     if (view === 'merge') return set({view, workspace: 'merge'});
     set({view});
   },
-  notify: (text, tone = 'info') => set({toast: {text, tone, id: ++toastId}})
+  notify: (text, tone = 'info') => set({toast: {text, tone, id: ++toastId}}),
 }));

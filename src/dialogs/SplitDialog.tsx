@@ -10,7 +10,17 @@ import {documentStore} from '../state/workspaces';
 const FAILED = 'Could not split this PDF. Try again.';
 const plural = (n: number) => `${n} PDF${n === 1 ? '' : 's'}`;
 
-export function SplitDialog({count, name, spec, onClose}: {count: number; name: string; spec: ExportSpec; onClose(): void}) {
+export function SplitDialog({
+  count,
+  name,
+  spec,
+  onClose,
+}: {
+  count: number;
+  name: string;
+  spec: ExportSpec;
+  onClose(): void;
+}) {
   const [mode, setMode] = useState<'ranges' | 'every'>('ranges');
   const [text, setText] = useState(() => defaultSplitText(count));
   const [busy, setBusy] = useState(false);
@@ -51,7 +61,9 @@ export function SplitDialog({count, name, spec, onClose}: {count: number; name: 
       <Dialog title={`${plural(parts.n)} ready`} open onClose={onClose}>
         <div className="action-success">
           <p>Saved as {parts.file}. The original document is unchanged.</p>
-          <button ref={done} type="button" className="primary" onClick={onClose}>Done</button>
+          <button ref={done} type="button" className="primary" onClick={onClose}>
+            Done
+          </button>
         </div>
       </Dialog>
     );
@@ -60,24 +72,42 @@ export function SplitDialog({count, name, spec, onClose}: {count: number; name: 
     <Dialog title="Split PDF" open onClose={onClose}>
       <form onSubmit={submit}>
         <p>Create separate PDFs from the current page order. Your document stays unchanged.</p>
-        <label className="field"><span>Split by</span>
-          <select value={mode} onChange={(e) => setMode(e.target.value === 'every' ? 'every' : 'ranges')}>
+        <label className="field">
+          <span>Split by</span>
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value === 'every' ? 'every' : 'ranges')}
+          >
             <option value="ranges">Page ranges</option>
             <option value="every">Every page</option>
           </select>
         </label>
-        <label className="field" hidden={mode === 'every'}><span>Ranges</span>
-          <input value={text} onChange={(e) => setText(e.target.value)} aria-describedby="split-help" />
-          <small id="split-help">Each comma creates a separate PDF. Example: 1-3, 4-6. Available pages: 1–{count}.</small>
+        <label className="field" hidden={mode === 'every'}>
+          <span>Ranges</span>
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            aria-describedby="split-help"
+          />
+          <small id="split-help">
+            Each comma creates a separate PDF. Example: 1-3, 4-6. Available pages: 1–{count}.
+          </small>
         </label>
         <div className="split-results" aria-live="polite">
-          {groups && `${plural(groups.length)} · ${groups.reduce((n, g) => n + g.length, 0)} of ${count} pages included`}
+          {groups &&
+            `${plural(groups.length)} · ${groups.reduce((n, g) => n + g.length, 0)} of ${count} pages included`}
         </div>
         <small>Save all parts together in one ZIP file.</small>
-        <p className="action-error" role="alert">{plan.message ?? error}</p>
+        <p className="action-error" role="alert">
+          {plan.message ?? error}
+        </p>
         <footer>
-          <button type="button" className="secondary" onClick={onClose}>Cancel</button>
-          <button type="submit" className="primary" disabled={!groups || busy}>{busy ? 'Splitting PDF…' : 'Split & save ZIP'}</button>
+          <button type="button" className="secondary" onClick={onClose}>
+            Cancel
+          </button>
+          <button type="submit" className="primary" disabled={!groups || busy}>
+            {busy ? 'Splitting PDF…' : 'Split & save ZIP'}
+          </button>
         </footer>
       </form>
     </Dialog>

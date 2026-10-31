@@ -6,7 +6,13 @@ describe('isUnconfiguredError', () => {
     expect(isUnconfiguredError('Updater does not have any endpoints set.')).toBe(true);
     expect(isUnconfiguredError(new Error('Updater does not have any endpoints set.'))).toBe(true);
   });
-  it.each([['Could not fetch a valid release JSON from the remote'], [null], [undefined], [{}], ['']])('rejects %s', (e) => {
+  it.each([
+    ['Could not fetch a valid release JSON from the remote'],
+    [null],
+    [undefined],
+    [{}],
+    [''],
+  ])('rejects %s', (e) => {
     expect(isUnconfiguredError(e)).toBe(false);
   });
 });

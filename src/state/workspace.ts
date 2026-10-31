@@ -1,9 +1,25 @@
 import {createStore} from 'zustand/vanilla';
 import {createHistory} from '../domain/history';
 import {exportTitle} from '../domain/naming';
-import {deletePages, duplicatePages, movePages, moveFile as moveFileGroup, moveFileTo as moveFileGroupTo, pagesForFile, removeFile as removeFilePages, rotatePages} from '../domain/pages';
+import {
+  deletePages,
+  duplicatePages,
+  movePages,
+  moveFile as moveFileGroup,
+  moveFileTo as moveFileGroupTo,
+  pagesForFile,
+  removeFile as removeFilePages,
+  rotatePages,
+} from '../domain/pages';
 import {clearSelection, clickSelect, pruneSelection, selectAll} from '../domain/selection';
-import type {ExportSettings, FileId, PageInstance, PageUid, Selection, SourceFile} from '../domain/types';
+import type {
+  ExportSettings,
+  FileId,
+  PageInstance,
+  PageUid,
+  Selection,
+  SourceFile,
+} from '../domain/types';
 import {getBytes, putBytes} from '../pdf/bytes';
 import type {ExportSpec} from '../pdf/export';
 import {loadPdf} from '../pdf/load';
@@ -13,7 +29,14 @@ import type {DraftRecord} from '../storage/draft';
 import {useApp} from './app';
 
 export type WorkspaceKind = 'document' | 'merge';
-export interface SavedResult { name: string; folder: string; path?: string; pages: number; size: number; bytes: Uint8Array }
+export interface SavedResult {
+  name: string;
+  folder: string;
+  path?: string;
+  pages: number;
+  size: number;
+  bytes: Uint8Array;
+}
 type Uids = ReadonlySet<PageUid>;
 
 interface Data {
@@ -70,20 +93,40 @@ export interface WorkspaceState extends Data {
 }
 
 const blank = (kind: WorkspaceKind): Data => ({
-  files: [], pages: [], currentPage: 0, selection: clearSelection(), tab: 'document',
+  files: [],
+  pages: [],
+  currentPage: 0,
+  selection: clearSelection(),
+  tab: 'document',
   workflow: kind === 'merge' ? 'add' : 'review',
-  exportSettings: {name: 'Merged document.pdf', rangeMode: 'all', customRange: '', useFileNamesAsTitle: true},
-  zoom: 'fit', showOutput: false, completed: null, exporting: false, progress: null
+  exportSettings: {
+    name: 'Merged document.pdf',
+    rangeMode: 'all',
+    customRange: '',
+    useFileNamesAsTitle: true,
+  },
+  zoom: 'fit',
+  showOutput: false,
+  completed: null,
+  exporting: false,
+  progress: null,
 });
 
-const sameItems = <T>(a: readonly T[], b: readonly T[]): boolean => a.length === b.length && a.every((x, i) => x === b[i]);
+const sameItems = <T>(a: readonly T[], b: readonly T[]): boolean =>
+  a.length === b.length && a.every((x, i) => x === b[i]);
 const clamp = (i: number, length: number): number => Math.max(0, Math.min(i, length - 1));
-const couldNotOpen = (name: string) => useApp.getState().notify(`Could not open ${name}. Use a valid PDF without a password.`, 'error');
+const couldNotOpen = (name: string) =>
+  useApp.getState().notify(`Could not open ${name}. Use a valid PDF without a password.`, 'error');
 
 async function load(picked: PickedFile): Promise<SourceFile | null> {
   try {
     const {pages} = await loadPdf(picked.name, picked.bytes);
-    const file: SourceFile = {id: crypto.randomUUID(), name: picked.name, pages, size: picked.bytes.byteLength};
+    const file: SourceFile = {
+      id: crypto.randomUUID(),
+      name: picked.name,
+      pages,
+      size: picked.bytes.byteLength,
+    };
     if (picked.path) file.path = picked.path;
     return file;
   } catch {
@@ -98,7 +141,12 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
   const owned = new Set<FileId>(); // every file this workspace retained; removed files stay owned so undo can bring them back
 
   return createStore<WorkspaceState>()((set, get) => {
-    const snapshot = ({files, pages, currentPage, selection}: Data): Snapshot => ({files, pages, currentPage, selection});
+    const snapshot = ({files, pages, currentPage, selection}: Data): Snapshot => ({
+      files,
+      pages,
+      currentPage,
+      selection,
+    });
 
     const own = (loaded: Array<[SourceFile, Uint8Array]>) => {
       for (const [f, bytes] of loaded) {
@@ -133,7 +181,7 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         selection: pruneSelection(next.selection ?? s.selection, pages),
         currentPage: followed === -1 ? clamp(s.currentPage, pages.length) : followed,
         workflow: 'review',
-        completed: null
+        completed: null,
       });
     };
 
@@ -158,7 +206,10 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         const files = loaded.map(([f]) => f);
         if (!files.length || get().exporting || generation !== started) return;
         own(loaded);
-        edit((s) => ({files: [...s.files, ...files], pages: [...s.pages, ...files.flatMap((f) => pagesForFile(f))]}));
+        edit((s) => ({
+          files: [...s.files, ...files],
+          pages: [...s.pages, ...files.flatMap((f) => pagesForFile(f))],
+        }));
         useApp.getState().notify(`${files.length} PDF${files.length === 1 ? '' : 's'} added`);
       },
 
@@ -170,7 +221,13 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         if (recentId) file.recentId = recentId;
         own([[file, picked.bytes]]);
         const fresh = blank(kind);
-        await restart({...fresh, files: [file], pages: pagesForFile(file), workflow: 'review', exportSettings: {...fresh.exportSettings, name: picked.name}});
+        await restart({
+          ...fresh,
+          files: [file],
+          pages: pagesForFile(file),
+          workflow: 'review',
+          exportSettings: {...fresh.exportSettings, name: picked.name},
+        });
       },
 
       restore(record, bytes) {
@@ -181,44 +238,66 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         own(loaded);
         const {pages} = record;
         return restart({
-          ...blank(kind), files: loaded.map(([f]) => f), pages, currentPage: clamp(record.currentPage, pages.length),
-          selection: pruneSelection({uids: new Set(record.selection), anchor: record.anchor}, pages), exportSettings: record.exportSettings
+          ...blank(kind),
+          files: loaded.map(([f]) => f),
+          pages,
+          currentPage: clamp(record.currentPage, pages.length),
+          selection: pruneSelection(
+            {uids: new Set(record.selection), anchor: record.anchor},
+            pages,
+          ),
+          exportSettings: record.exportSettings,
         });
       },
 
-      move: (targetIndex, uids = get().selection.uids) => edit((s) => ({pages: movePages(s.pages, uids, targetIndex)})),
+      move: (targetIndex, uids = get().selection.uids) =>
+        edit((s) => ({pages: movePages(s.pages, uids, targetIndex)})),
       remove: (uids = get().selection.uids) => edit((s) => ({pages: deletePages(s.pages, uids)})),
-      duplicate: (uids = get().selection.uids) => edit((s) => ({pages: duplicatePages(s.pages, uids)})),
-      rotate: (delta, uids = get().selection.uids) => edit((s) => ({pages: rotatePages(s.pages, uids, delta)})),
-      moveFile: (fileId, direction) => edit((s) => moveFileGroup(s.files, s.pages, fileId, direction)),
+      duplicate: (uids = get().selection.uids) =>
+        edit((s) => ({pages: duplicatePages(s.pages, uids)})),
+      rotate: (delta, uids = get().selection.uids) =>
+        edit((s) => ({pages: rotatePages(s.pages, uids, delta)})),
+      moveFile: (fileId, direction) =>
+        edit((s) => moveFileGroup(s.files, s.pages, fileId, direction)),
       moveFileTo: (fileId, to) => edit((s) => moveFileGroupTo(s.files, s.pages, fileId, to)),
-      removeFile: (fileId) => edit((s) => ({files: s.files.filter((f) => f.id !== fileId), pages: removeFilePages(s.pages, fileId)})),
+      removeFile: (fileId) =>
+        edit((s) => ({
+          files: s.files.filter((f) => f.id !== fileId),
+          pages: removeFilePages(s.pages, fileId),
+        })),
 
       undo: () => step(history.undo),
       redo: () => step(history.redo),
       canUndo: () => !get().exporting && history.canUndo(),
       canRedo: () => !get().exporting && history.canRedo(),
 
-      select: (uid, mods) => set((s) => ({selection: clickSelect(s.selection, s.pages, uid, mods)})),
+      select: (uid, mods) =>
+        set((s) => ({selection: clickSelect(s.selection, s.pages, uid, mods)})),
       selectAll: () => set((s) => ({selection: selectAll(s.pages)})),
       clearSelection: () => set({selection: clearSelection()}),
       goTo: (index) => set((s) => ({currentPage: clamp(index, s.pages.length)})),
-      setRecentId: (fileId, recentId) => set((s) => (
-        s.files.some((f) => f.id === fileId) ? {files: s.files.map((f) => (f.id === fileId ? {...f, recentId} : f))} : s
-      )),
+      setRecentId: (fileId, recentId) =>
+        set((s) =>
+          s.files.some((f) => f.id === fileId)
+            ? {files: s.files.map((f) => (f.id === fileId ? {...f, recentId} : f))}
+            : s,
+        ),
       setTab: (tab) => set({tab}),
       setWorkflow: (workflow) => set({workflow}),
       setZoom: (zoom) => set({zoom}),
       setShowOutput: (showOutput) => set({showOutput}),
-      setExportSettings: (partial) => set((s) => ({exportSettings: {...s.exportSettings, ...partial}})),
+      setExportSettings: (partial) =>
+        set((s) => ({exportSettings: {...s.exportSettings, ...partial}})),
 
       // Range modes (current/custom) are applied by the caller.
       snapshotForExport() {
         const s = get();
         const spec: ExportSpec = {
-          pages: s.pages.map(({fileId, local, rotation}) => Object.freeze({fileId, local, rotation})),
+          pages: s.pages.map(({fileId, local, rotation}) =>
+            Object.freeze({fileId, local, rotation}),
+          ),
           sources: Object.fromEntries(s.files.map((f) => [f.id, getBytes(f.id)])),
-          title: exportTitle(s.files, s.exportSettings)
+          title: exportTitle(s.files, s.exportSettings),
         };
         Object.freeze(spec.pages);
         Object.freeze(spec.sources); // the byte arrays themselves can't be frozen; export.ts copies them for the worker
@@ -231,9 +310,14 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
       },
       endExport(result) {
         if (!result) return set({exporting: false, progress: null});
-        set({exporting: false, progress: null, completed: result, workflow: kind === 'merge' ? 'done' : get().workflow});
+        set({
+          exporting: false,
+          progress: null,
+          completed: result,
+          workflow: kind === 'merge' ? 'done' : get().workflow,
+        });
       },
-      reset: () => (get().exporting ? Promise.resolve() : restart(blank(kind)))
+      reset: () => (get().exporting ? Promise.resolve() : restart(blank(kind))),
     };
   });
 }

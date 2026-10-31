@@ -21,7 +21,8 @@ export interface PageCardProps {
   drop: 'before' | 'after' | null;
 }
 
-const indexOf = (store: WorkspaceStore, uid: PageUid) => store.getState().pages.findIndex((p) => p.uid === uid);
+const indexOf = (store: WorkspaceStore, uid: PageUid) =>
+  store.getState().pages.findIndex((p) => p.uid === uid);
 
 function open(store: WorkspaceStore, uid: PageUid) {
   const s = store.getState();
@@ -40,7 +41,18 @@ function moveBy(store: WorkspaceStore, uid: PageUid, dir: -1 | 1, focus: HTMLEle
   focus.focus({preventScroll: true});
 }
 
-function Card({store, uid, fileId, local, rotation, fileName, index, last, selected, drop}: PageCardProps) {
+function Card({
+  store,
+  uid,
+  fileId,
+  local,
+  rotation,
+  fileName,
+  index,
+  last,
+  selected,
+  drop,
+}: PageCardProps) {
   const {setNodeRef, node, listeners, isDragging, transform} = useSortable({id: uid});
   useFlip(node, index, isDragging);
   const n = index + 1;
@@ -61,27 +73,76 @@ function Card({store, uid, fileId, local, rotation, fileName, index, last, selec
     s.goTo(indexOf(store, uid));
   };
 
-  const className = ['page-card', selected && 'is-selected', isDragging && 'dragging', drop && `drop-${drop}`].filter(Boolean).join(' ');
+  const className = [
+    'page-card',
+    selected && 'is-selected',
+    isDragging && 'dragging',
+    drop && `drop-${drop}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
   // Only the dragged card follows the pointer; the others stay put and show insertion marks instead of shuffling.
-  const style = isDragging && transform ? {transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 5} : undefined;
+  const style =
+    isDragging && transform
+      ? {transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`, zIndex: 5}
+      : undefined;
   return (
-    <div ref={setNodeRef} className={className} style={style} data-uid={uid} role="group" aria-label={`Page ${n}, ${fileName}`} {...listeners}>
+    <div
+      ref={setNodeRef}
+      className={className}
+      style={style}
+      data-uid={uid}
+      role="group"
+      aria-label={`Page ${n}, ${fileName}`}
+      {...listeners}
+    >
       <label className="page-check">
         <input
-          type="checkbox" aria-label={`Select page ${n}`} checked={selected}
-          onChange={(e) => select({ctrl: true, shift: e.nativeEvent instanceof MouseEvent && e.nativeEvent.shiftKey})}
+          type="checkbox"
+          aria-label={`Select page ${n}`}
+          checked={selected}
+          onChange={(e) =>
+            select({
+              ctrl: true,
+              shift: e.nativeEvent instanceof MouseEvent && e.nativeEvent.shiftKey,
+            })
+          }
         />
       </label>
       <ThumbnailButton
-        fileId={fileId} local={local} rotation={rotation} className="page-thumbnail" aria-label={`Preview page ${n}`} aria-pressed={selected}
-        onClick={(e) => select({ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey})} onDoubleClick={() => open(store, uid)} onKeyDown={onKeyDown}
+        fileId={fileId}
+        local={local}
+        rotation={rotation}
+        className="page-thumbnail"
+        aria-label={`Preview page ${n}`}
+        aria-pressed={selected}
+        onClick={(e) => select({ctrl: e.ctrlKey || e.metaKey, shift: e.shiftKey})}
+        onDoubleClick={() => open(store, uid)}
+        onKeyDown={onKeyDown}
       >
-        <span className="thumbnail-label"><strong>{n}</strong><span title={fileName}>{fileName}</span></span>
+        <span className="thumbnail-label">
+          <strong>{n}</strong>
+          <span title={fileName}>{fileName}</span>
+        </span>
       </ThumbnailButton>
       <div className="page-move-controls">
-        <button type="button" aria-label={`Move page ${n} earlier`} disabled={index === 0} onClick={(e) => moveBy(store, uid, -1, e.currentTarget)}><ChevronLeft aria-hidden="true" /></button>
+        <button
+          type="button"
+          aria-label={`Move page ${n} earlier`}
+          disabled={index === 0}
+          onClick={(e) => moveBy(store, uid, -1, e.currentTarget)}
+        >
+          <ChevronLeft aria-hidden="true" />
+        </button>
         <span>Page {n}</span>
-        <button type="button" aria-label={`Move page ${n} later`} disabled={last} onClick={(e) => moveBy(store, uid, 1, e.currentTarget)}><ChevronRight aria-hidden="true" /></button>
+        <button
+          type="button"
+          aria-label={`Move page ${n} later`}
+          disabled={last}
+          onClick={(e) => moveBy(store, uid, 1, e.currentTarget)}
+        >
+          <ChevronRight aria-hidden="true" />
+        </button>
       </div>
     </div>
   );
@@ -89,7 +150,12 @@ function Card({store, uid, fileId, local, rotation, fileName, index, last, selec
 
 // fileId, local, fileName and store never change for a uid, so they are left out.
 const same = (a: PageCardProps, b: PageCardProps) =>
-  a.uid === b.uid && a.rotation === b.rotation && a.selected === b.selected && a.index === b.index && a.last === b.last && a.drop === b.drop;
+  a.uid === b.uid &&
+  a.rotation === b.rotation &&
+  a.selected === b.selected &&
+  a.index === b.index &&
+  a.last === b.last &&
+  a.drop === b.drop;
 
 /** One editable page card, keyed by uid; re-renders only when its own state changes, so moves don't remount or reload it. */
 export const PageCard = memo(Card, same);

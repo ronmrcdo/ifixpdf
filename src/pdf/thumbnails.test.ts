@@ -6,7 +6,7 @@ vi.mock('./render', () => ({renderPage: vi.fn(async () => {})}));
 let n = 0;
 beforeEach(() => {
   vi.mocked(renderPage).mockReset().mockResolvedValue(undefined);
-  vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation(cb => cb(new Blob(['x'])));
+  vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => cb(new Blob(['x'])));
   URL.createObjectURL = vi.fn(() => `blob:${n++}`);
   URL.revokeObjectURL = vi.fn();
 });
@@ -45,7 +45,7 @@ describe('thumbnails', () => {
   it('renderBlob returns the encoded canvas and rejects when encoding fails', async () => {
     expect(await renderBlob('s6', 0, 0, 0.18)).toBeInstanceOf(Blob);
     expect(renderPage).toHaveBeenCalledWith(expect.any(HTMLCanvasElement), 's6', 0, 0, 0.18);
-    vi.mocked(HTMLCanvasElement.prototype.toBlob).mockImplementationOnce(cb => cb(null));
+    vi.mocked(HTMLCanvasElement.prototype.toBlob).mockImplementationOnce((cb) => cb(null));
     await expect(renderBlob('s6', 0, 0, 0.18)).rejects.toThrow('Thumbnail encoding failed');
   });
 });

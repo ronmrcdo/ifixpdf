@@ -2,16 +2,23 @@ import type {ExportSettings, FileId, PageInstance, PageUid, SourceFile} from '..
 import {ensureStores, openDb, req, withDb} from './idb';
 
 export interface DraftRecord {
-  files: SourceFile[]; pages: PageInstance[]; currentPage: number; view: 'preview' | 'edit';
-  selection: PageUid[]; anchor: PageUid | null; exportSettings: ExportSettings; savedAt: number;
+  files: SourceFile[];
+  pages: PageInstance[];
+  currentPage: number;
+  view: 'preview' | 'edit';
+  selection: PageUid[];
+  anchor: PageUid | null;
+  exportSettings: ExportSettings;
+  savedAt: number;
 }
 
 const STORES = ['draft', 'draft-files'];
 // v2: a legacy-app profile has this name at v1 with only `draft`, holding legacy-shaped records; drop them (no migration).
-const open = () => openDb('ifixpdf-workspace-draft', 2, (db, t) => {
-  ensureStores(db, {draft: {}, 'draft-files': {}});
-  t.objectStore('draft').clear();
-});
+const open = () =>
+  openDb('ifixpdf-workspace-draft', 2, (db, t) => {
+    ensureStores(db, {draft: {}, 'draft-files': {}});
+    t.objectStore('draft').clear();
+  });
 
 export function readDraft(): Promise<{record: DraftRecord; bytes: Map<FileId, Uint8Array>} | null> {
   return withDb(open, STORES, 'readwrite', async (t) => {

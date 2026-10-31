@@ -13,23 +13,38 @@ function count(store: string) {
     const r = indexedDB.open('ifixpdf-local-documents', 2);
     r.onsuccess = () => {
       const q = r.result.transaction(store).objectStore(store).count();
-      q.onsuccess = () => { r.result.close(); resolve(q.result); };
+      q.onsuccess = () => {
+        r.result.close();
+        resolve(q.result);
+      };
       q.onerror = () => reject(q.error);
     };
   });
 }
 
-beforeEach(() => { globalThis.indexedDB = new IDBFactory(); });
+beforeEach(() => {
+  globalThis.indexedDB = new IDBFactory();
+});
 
 describe('native recents', () => {
   it('dedupes by normalised path, updates modified and lists first', async () => {
     const now = vi.spyOn(Date, 'now'); // fake timers would stall fake-indexeddb
     const repo = createRecents(fake(true));
     now.mockReturnValue(1000);
-    const a = await repo.record({name: 'A.pdf', bytes: bytes(1), pages: 1, path: 'C:\\Docs\\A.pdf'});
+    const a = await repo.record({
+      name: 'A.pdf',
+      bytes: bytes(1),
+      pages: 1,
+      path: 'C:\\Docs\\A.pdf',
+    });
     await repo.record({name: 'B.pdf', bytes: bytes(2), pages: 1, path: 'C:\\Docs\\B.pdf'});
     now.mockReturnValue(2000);
-    const again = await repo.record({name: 'a.pdf', bytes: bytes(1), pages: 3, path: 'c:/docs//a.pdf'});
+    const again = await repo.record({
+      name: 'a.pdf',
+      bytes: bytes(1),
+      pages: 3,
+      path: 'c:/docs//a.pdf',
+    });
     now.mockRestore();
     expect(again.id).toBe(a.id);
     const list = await repo.list();
@@ -66,10 +81,12 @@ describe('native recents', () => {
   });
   it('open reads the path; a missing file marks the entry and rejects; success clears it', async () => {
     let missing = true;
-    const repo = createRecents(fake(true, async () => {
-      if (missing) throw new FileMissingError('gone');
-      return bytes(9);
-    }));
+    const repo = createRecents(
+      fake(true, async () => {
+        if (missing) throw new FileMissingError('gone');
+        return bytes(9);
+      }),
+    );
     const e = await repo.record({name: 'A', bytes: bytes(1), pages: 1, path: 'C:\\A.pdf'});
     await expect(repo.open(e.id)).rejects.toBeInstanceOf(FileMissingError);
     expect((await repo.list())[0]?.missing).toBe(true);
@@ -79,14 +96,22 @@ describe('native recents', () => {
     expect((await repo.list())[0]?.missing).toBeUndefined();
   });
   it('open rethrows non-missing errors without marking and rejects unknown ids', async () => {
-    const repo = createRecents(fake(true, async () => { throw new Error('boom'); }));
+    const repo = createRecents(
+      fake(true, async () => {
+        throw new Error('boom');
+      }),
+    );
     const e = await repo.record({name: 'A', bytes: bytes(1), pages: 1, path: 'C:\\A.pdf'});
     await expect(repo.open(e.id)).rejects.toThrow('boom');
     expect((await repo.list())[0]?.missing).toBeUndefined();
     await expect(repo.open('nope')).rejects.toThrow(/unknown/i);
   });
   it('relocate clears missing, updates path, and drops a duplicate of the new path', async () => {
-    const repo = createRecents(fake(true, async () => { throw new FileMissingError('gone'); }));
+    const repo = createRecents(
+      fake(true, async () => {
+        throw new FileMissingError('gone');
+      }),
+    );
     const e = await repo.record({name: 'A', bytes: bytes(1), pages: 1, path: 'C:\\A.pdf'});
     await repo.record({name: 'Z', bytes: bytes(1), pages: 1, path: 'D:\\Z.pdf'});
     await expect(repo.open(e.id)).rejects.toThrow();
@@ -95,7 +120,9 @@ describe('native recents', () => {
     expect(r.missing).toBeUndefined();
     const list = await repo.list();
     expect(list).toHaveLength(1);
-    await expect(repo.relocate('nope', {path: 'x', bytes: bytes(1), name: 'x'})).rejects.toThrow(/unknown/i);
+    await expect(repo.relocate('nope', {path: 'x', bytes: bytes(1), name: 'x'})).rejects.toThrow(
+      /unknown/i,
+    );
   });
   it('remove deletes the meta', async () => {
     const repo = createRecents(fake(true));
@@ -132,7 +159,9 @@ describe('browser recents', () => {
 
 describe('legacy profile', () => {
   it('upgrades a legacy v1 database (store `recent`): list and record work, legacy store is dropped', async () => {
-    const legacy = await openDb('ifixpdf-local-documents', 1, (d) => { d.createObjectStore('recent', {keyPath: 'id'}); });
+    const legacy = await openDb('ifixpdf-local-documents', 1, (d) => {
+      d.createObjectStore('recent', {keyPath: 'id'});
+    });
     legacy.close();
     const repo = createRecents(fake(true));
     expect(await repo.list()).toEqual([]);
@@ -147,7 +176,16 @@ describe('legacy profile', () => {
       d.createObjectStore('recent-meta', {keyPath: 'id'}).createIndex('key', 'key', {unique: true});
       d.createObjectStore('recent-bytes');
     });
-    await tx(v1, 'recent-meta', 'readwrite', (t) => { t.objectStore('recent-meta').put({id: 'x', key: 'c:\\x.pdf', name: 'X.pdf', pages: 1, size: 1, modified: 1}); });
+    await tx(v1, 'recent-meta', 'readwrite', (t) => {
+      t.objectStore('recent-meta').put({
+        id: 'x',
+        key: 'c:\\x.pdf',
+        name: 'X.pdf',
+        pages: 1,
+        size: 1,
+        modified: 1,
+      });
+    });
     v1.close();
     expect((await createRecents(fake(true)).list()).map((e) => e.id)).toEqual(['x']);
   });
@@ -155,24 +193,38 @@ describe('legacy profile', () => {
 
 describe('idb tx', () => {
   it('rejects when a request violates a unique index', async () => {
-    const db = await openDb('t', 1, (d) => d.createObjectStore('s', {keyPath: 'id'}).createIndex('k', 'k', {unique: true}));
-    await expect(tx(db, 's', 'readwrite', (t) => {
-      t.objectStore('s').put({id: 1, k: 'x'});
-      t.objectStore('s').put({id: 2, k: 'x'});
-    })).rejects.toMatchObject({name: 'ConstraintError'});
+    const db = await openDb('t', 1, (d) =>
+      d.createObjectStore('s', {keyPath: 'id'}).createIndex('k', 'k', {unique: true}),
+    );
+    await expect(
+      tx(db, 's', 'readwrite', (t) => {
+        t.objectStore('s').put({id: 1, k: 'x'});
+        t.objectStore('s').put({id: 2, k: 'x'});
+      }),
+    ).rejects.toMatchObject({name: 'ConstraintError'});
     db.close();
   });
   it('rejects with a real error on an explicit abort', async () => {
-    const db = await openDb('t3', 1, (d) => { d.createObjectStore('s'); });
-    await expect(tx(db, 's', 'readwrite', (t) => { t.abort(); })).rejects.toBeInstanceOf(Error);
+    const db = await openDb('t3', 1, (d) => {
+      d.createObjectStore('s');
+    });
+    await expect(
+      tx(db, 's', 'readwrite', (t) => {
+        t.abort();
+      }),
+    ).rejects.toBeInstanceOf(Error);
     db.close();
   });
   it('aborts and rejects when fn throws', async () => {
-    const db = await openDb('t2', 1, (d) => { d.createObjectStore('s'); });
-    await expect(tx(db, 's', 'readwrite', async (t) => {
-      t.objectStore('s').put(1, 'a');
-      throw new Error('bad');
-    })).rejects.toThrow('bad');
+    const db = await openDb('t2', 1, (d) => {
+      d.createObjectStore('s');
+    });
+    await expect(
+      tx(db, 's', 'readwrite', async (t) => {
+        t.objectStore('s').put(1, 'a');
+        throw new Error('bad');
+      }),
+    ).rejects.toThrow('bad');
     expect(await tx(db, 's', 'readonly', (t) => req(t.objectStore('s').count()))).toBe(0);
     db.close();
   });

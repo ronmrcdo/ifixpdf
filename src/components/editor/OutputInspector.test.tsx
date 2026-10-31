@@ -7,19 +7,39 @@ import {useApp} from '../../state/app';
 import {createWorkspaceStore, type WorkspaceStore} from '../../state/workspace';
 import {OutputInspector} from './OutputInspector';
 
-vi.mock('../../actions/save', async (orig) => ({...(await orig<object>()), saveOrContinue: vi.fn()}));
+vi.mock('../../actions/save', async (orig) => ({
+  ...(await orig<object>()),
+  saveOrContinue: vi.fn(),
+}));
 
-const pages: PageInstance[] = [0, 1, 2].map((i) => ({uid: `u${i}`, fileId: 'f', local: i, rotation: 0}));
+const pages: PageInstance[] = [0, 1, 2].map((i) => ({
+  uid: `u${i}`,
+  fileId: 'f',
+  local: i,
+  rotation: 0,
+}));
 let store: WorkspaceStore;
 const setup = (kind: 'document' | 'merge' = 'document') => {
   store = createWorkspaceStore(kind);
-  store.setState({files: [{id: 'f', name: 'Report.pdf', pages: 3, size: 1}], pages, exportSettings: {name: 'Report.pdf', rangeMode: 'all', customRange: '', useFileNamesAsTitle: true}});
+  store.setState({
+    files: [{id: 'f', name: 'Report.pdf', pages: 3, size: 1}],
+    pages,
+    exportSettings: {
+      name: 'Report.pdf',
+      rangeMode: 'all',
+      customRange: '',
+      useFileNamesAsTitle: true,
+    },
+  });
   return render(<OutputInspector store={store} kind={kind} />);
 };
 const summary = () => document.getElementById('export-summary');
 const pagesSelect = () => screen.getByRole('combobox', {name: 'Pages'});
 
-beforeEach(() => { vi.clearAllMocks(); useApp.setState({openAfter: true}) });
+beforeEach(() => {
+  vi.clearAllMocks();
+  useApp.setState({openAfter: true});
+});
 afterEach(() => vi.unstubAllGlobals());
 
 describe('OutputInspector', () => {
@@ -30,7 +50,11 @@ describe('OutputInspector', () => {
     expect(screen.getByRole('textbox', {name: 'Output file name'})).toHaveValue('Report.pdf');
     expect(screen.getByText('Original quality')).toBeInTheDocument();
     expect(screen.getByText('Source page content is preserved.')).toBeInTheDocument();
-    expect([...pagesSelect().querySelectorAll('option')].map((o) => o.textContent)).toEqual(['All pages (3)', 'Current page (1)', 'Custom range…']);
+    expect([...pagesSelect().querySelectorAll('option')].map((o) => o.textContent)).toEqual([
+      'All pages (3)',
+      'Current page (1)',
+      'Custom range…',
+    ]);
     expect(screen.getByRole('checkbox', {name: 'Use file names as PDF title'})).toBeChecked();
     expect(screen.getByRole('checkbox', {name: 'Open PDF after saving'})).toBeChecked();
     expect(screen.getByText('Edited document')).toBeInTheDocument();
@@ -49,7 +73,9 @@ describe('OutputInspector', () => {
     expect(screen.getByText('Merged document')).toBeInTheDocument();
     act(() => store.getState().setWorkflow('save'));
     expect(screen.getByRole('heading', {name: 'Save merged PDF'})).toBeInTheDocument();
-    expect(screen.getByText('Check the name and pages, then save your document.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Check the name and pages, then save your document.'),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', {name: 'Save merged PDF'})).toBeInTheDocument();
   });
 
@@ -100,7 +126,10 @@ describe('OutputInspector', () => {
     expect(saveOrContinue).toHaveBeenCalledWith(store);
     act(() => void store.getState().beginExport());
     expect(screen.getByRole('button', {name: 'Save edited PDF'})).toBeDisabled();
-    act(() => { store.getState().endExport(); store.setState({pages: []}) });
+    act(() => {
+      store.getState().endExport();
+      store.setState({pages: []});
+    });
     expect(screen.getByRole('button', {name: 'Save edited PDF'})).toBeDisabled();
   });
 });

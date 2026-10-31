@@ -19,7 +19,11 @@ async function readPath(path: string): Promise<Uint8Array> {
 }
 
 const readPdfs = (paths: string[]): Promise<PickedFile[]> =>
-  Promise.all(paths.filter(p => /\.pdf$/i.test(p)).map(async path => ({name: splitPath(path).name, path, bytes: await readPath(path)})));
+  Promise.all(
+    paths
+      .filter((p) => /\.pdf$/i.test(p))
+      .map(async (path) => ({name: splitPath(path).name, path, bytes: await readPath(path)})),
+  );
 
 export const tauriPlatform: Platform = {
   native: true,
@@ -31,10 +35,14 @@ export const tauriPlatform: Platform = {
   readPath,
   onFileDrop(cb) {
     const unlisten = getCurrentWebview().onDragDropEvent(({payload}) => {
-      if (payload.type === 'drop') void readPdfs(payload.paths).then(files => cb({type: 'drop', files}), () => cb({type: 'error'}));
+      if (payload.type === 'drop')
+        void readPdfs(payload.paths).then(
+          (files) => cb({type: 'drop', files}),
+          () => cb({type: 'error'}),
+        );
       else cb({type: payload.type === 'leave' ? 'leave' : 'over'});
     });
-    return () => void unlisten.then(stop => stop());
+    return () => void unlisten.then((stop) => stop());
   },
   async saveAs(bytes, name, kind) {
     const {label, ext} = SAVE_KINDS[kind];
@@ -43,12 +51,12 @@ export const tauriPlatform: Platform = {
     await writeFile(path, bytes);
     return {...splitPath(path), path};
   },
-  openPath: path => openPath(path),
-  reveal: path => revealItemInDir(path),
-  openUrl: url => openUrl(url),
+  openPath: (path) => openPath(path),
+  reveal: (path) => revealItemInDir(path),
+  openUrl: (url) => openUrl(url),
   window: {
     minimize: () => getCurrentWindow().minimize(),
     toggleMaximize: () => getCurrentWindow().toggleMaximize(),
-    close: () => getCurrentWindow().close()
-  }
+    close: () => getCurrentWindow().close(),
+  },
 };

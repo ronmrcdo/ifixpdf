@@ -13,15 +13,25 @@ export function MergeView() {
 
   let body = <AddStage />;
   if (workflow === 'done' && completed) body = <DoneScreen result={completed} />;
-  else if (hasPages) body = (
-    <Editor.Root store={mergeStore}>
-      <Editor.Toolbar />
-      <Editor.Row>
-        <Editor.Sources><SourcesPane /></Editor.Sources>
-        <Editor.Stage caption="Merged preview"><Editor.Pages /></Editor.Stage>
-        <Editor.Output kind="merge" />
-      </Editor.Row>
-    </Editor.Root>
+  else if (hasPages)
+    body = (
+      <Editor.Root store={mergeStore}>
+        <Editor.Toolbar />
+        <Editor.Row>
+          <Editor.Sources>
+            <SourcesPane />
+          </Editor.Sources>
+          <Editor.Stage caption="Merged preview">
+            <Editor.Pages />
+          </Editor.Stage>
+          <Editor.Output kind="merge" />
+        </Editor.Row>
+      </Editor.Root>
+    );
+  return (
+    <>
+      <WorkflowBar />
+      {body}
+    </>
   );
-  return <><WorkflowBar />{body}</>;
 }

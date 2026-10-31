@@ -5,8 +5,24 @@ import {printDocument, saveCopy, saveOrContinue} from '../actions/save';
 import {runOnSelection} from '../components/pages/SelectionBar';
 import {pickAndImport} from './useFileImport';
 
-export type Action = 'open' | 'save' | 'print' | 'undo' | 'redo' | 'delete' | 'selectAll' | 'prev' | 'next';
-interface Ctx { view: View; tab: 'document' | 'pages'; inGrid: boolean; inStage: boolean; editable: boolean; dialogOpen: boolean }
+export type Action =
+  | 'open'
+  | 'save'
+  | 'print'
+  | 'undo'
+  | 'redo'
+  | 'delete'
+  | 'selectAll'
+  | 'prev'
+  | 'next';
+interface Ctx {
+  view: View;
+  tab: 'document' | 'pages';
+  inGrid: boolean;
+  inStage: boolean;
+  editable: boolean;
+  dialogOpen: boolean;
+}
 
 const WORKSPACE_VIEWS: readonly View[] = ['merge', 'edit'];
 const SAVE_VIEWS: readonly View[] = ['preview', 'merge', 'edit'];
@@ -17,7 +33,8 @@ export function handleShortcut(e: KeyboardEvent, ctx: Ctx): Action | null {
   const key = e.key.toLowerCase();
   const mod = e.ctrlKey || e.metaKey;
   if (mod && key === 'o') return 'open';
-  if (mod && (key === 's' || key === 'p')) return SAVE_VIEWS.includes(ctx.view) ? (key === 's' ? 'save' : 'print') : null;
+  if (mod && (key === 's' || key === 'p'))
+    return SAVE_VIEWS.includes(ctx.view) ? (key === 's' ? 'save' : 'print') : null;
   if (ctx.editable) return null;
   if (mod && WORKSPACE_VIEWS.includes(ctx.view)) {
     if (key === 'z') return e.shiftKey ? 'redo' : 'undo';
@@ -32,8 +49,12 @@ export function handleShortcut(e: KeyboardEvent, ctx: Ctx): Action | null {
   return null;
 }
 
-const inScope = (scope: 'grid' | 'stage') => document.activeElement?.closest(`[data-shortcut-scope="${scope}"]`) != null;
-const isEditable = () => document.activeElement?.closest('input, textarea, select, [contenteditable]:not([contenteditable="false"])') != null;
+const inScope = (scope: 'grid' | 'stage') =>
+  document.activeElement?.closest(`[data-shortcut-scope="${scope}"]`) != null;
+const isEditable = () =>
+  document.activeElement?.closest(
+    'input, textarea, select, [contenteditable]:not([contenteditable="false"])',
+  ) != null;
 
 function run(action: Action) {
   const app = useApp.getState();
@@ -57,8 +78,17 @@ export function useShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const {view} = useApp.getState();
-      const {tab} = (useApp.getState().workspace === 'document' ? documentStore : mergeStore).getState();
-      const action = handleShortcut(e, {view, tab, inGrid: inScope('grid'), inStage: inScope('stage'), editable: isEditable(), dialogOpen: document.querySelector('dialog[open]') !== null});
+      const {tab} = (
+        useApp.getState().workspace === 'document' ? documentStore : mergeStore
+      ).getState();
+      const action = handleShortcut(e, {
+        view,
+        tab,
+        inGrid: inScope('grid'),
+        inStage: inScope('stage'),
+        editable: isEditable(),
+        dialogOpen: document.querySelector('dialog[open]') !== null,
+      });
       if (!action) return;
       e.preventDefault();
       run(action);

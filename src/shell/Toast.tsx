@@ -21,10 +21,17 @@ export function Toast() {
     return () => clearTimeout(timer);
   }, [toast, last]);
   const shown = toast ?? last;
-  const show = (tone: 'info' | 'error') => shown?.tone === tone && <div key={shown.id} className={toast ? 'toast' : 'toast leaving'}>{shown.text}</div>;
+  const show = (tone: 'info' | 'error') =>
+    shown?.tone === tone && (
+      <div key={shown.id} className={toast ? 'toast' : 'toast leaving'}>
+        {shown.text}
+      </div>
+    );
   return (
     <>
-      <div role="status" aria-live="polite">{show('info')}</div>
+      <div role="status" aria-live="polite">
+        {show('info')}
+      </div>
       <div role="alert">{show('error')}</div>
     </>
   );

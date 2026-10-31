@@ -9,7 +9,11 @@ import {recents} from '../storage/app-recents';
 import {isTransitioning, withViewTransition} from './viewTransition';
 
 type RouteView = 'home' | 'preview' | 'edit';
-export interface Route { view?: RouteView; combineNew: boolean; recent?: string }
+export interface Route {
+  view?: RouteView;
+  combineNew: boolean;
+  recent?: string;
+}
 
 const ROUTE_VIEWS: readonly string[] = ['home', 'preview', 'edit'];
 const isRouteView = (v: string | null): v is RouteView => v !== null && ROUTE_VIEWS.includes(v);
@@ -50,15 +54,25 @@ export function navigate(view: View): void {
 }
 
 export const OPEN_FAILED = 'Could not open that PDF. Choose a valid, unlocked PDF.';
-export const openErrorText = (e: unknown): string => (e instanceof FileMissingError
-  ? 'That PDF was not found. Locate it or remove it from recents.'
-  : OPEN_FAILED);
+export const openErrorText = (e: unknown): string =>
+  e instanceof FileMissingError
+    ? 'That PDF was not found. Locate it or remove it from recents.'
+    : OPEN_FAILED;
 
 /** Records a file the store just opened (page count read from it, so nothing is parsed twice) and links the recent id to it.
  *  A recording failure never blocks opening. */
-export async function recordOpen(store: typeof documentStore, file: SourceFile, picked: Pick<PickedFile, 'bytes' | 'path'>): Promise<void> {
+export async function recordOpen(
+  store: typeof documentStore,
+  file: SourceFile,
+  picked: Pick<PickedFile, 'bytes' | 'path'>,
+): Promise<void> {
   try {
-    const {id} = await recents.record({name: file.name, bytes: picked.bytes, pages: file.pages, path: picked.path});
+    const {id} = await recents.record({
+      name: file.name,
+      bytes: picked.bytes,
+      pages: file.pages,
+      path: picked.path,
+    });
     store.getState().setRecentId(file.id, id);
   } catch {
     // opening already succeeded

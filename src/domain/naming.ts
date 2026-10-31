@@ -1,7 +1,11 @@
 import {formatRanges} from './ranges';
 import type {ExportSettings, SourceFile} from './types';
 
-const base = (name: string): string => name.trim().replace(/\.pdf$/i, '').trim() || 'Merged document';
+const base = (name: string): string =>
+  name
+    .trim()
+    .replace(/\.pdf$/i, '')
+    .trim() || 'Merged document';
 
 export const outputName = (name: string): string => `${base(name)}.pdf`;
 export const protectedName = (name: string): string => `${base(name)} — protected.pdf`;

@@ -9,23 +9,38 @@ import {printDocument, saveCopy, saveOrContinue} from '../actions/save';
 import {useShortcuts} from './shortcuts';
 
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
-vi.mock('../actions/save', () => ({saveCopy: vi.fn(), saveOrContinue: vi.fn(), printDocument: vi.fn(), extractSelection: vi.fn()}));
+vi.mock('../actions/save', () => ({
+  saveCopy: vi.fn(),
+  saveOrContinue: vi.fn(),
+  printDocument: vi.fn(),
+  extractSelection: vi.fn(),
+}));
 
 const file: SourceFile = {id: 'f', name: 'f.pdf', pages: 3, size: 1};
-const pages: PageInstance[] = [0, 1, 2].map((i) => ({uid: `f-${i}`, fileId: 'f', local: i, rotation: 0}));
+const pages: PageInstance[] = [0, 1, 2].map((i) => ({
+  uid: `f-${i}`,
+  fileId: 'f',
+  local: i,
+  rotation: 0,
+}));
 
 function Host() {
   useShortcuts();
   return (
     <>
-      <div data-shortcut-scope="grid"><button type="button">grid</button></div>
-      <div data-shortcut-scope="stage"><button type="button">stage</button></div>
+      <div data-shortcut-scope="grid">
+        <button type="button">grid</button>
+      </div>
+      <div data-shortcut-scope="stage">
+        <button type="button">stage</button>
+      </div>
       <button type="button">outside</button>
       <input aria-label="field" />
     </>
   );
 }
-const focus = (name: string) => [...document.querySelectorAll("button")].find((b) => b.textContent === name)!.focus();
+const focus = (name: string) =>
+  [...document.querySelectorAll('button')].find((b) => b.textContent === name)!.focus();
 
 beforeEach(() => {
   useApp.setState({view: 'edit', workspace: 'document'});
@@ -97,7 +112,12 @@ describe('useShortcuts', () => {
   });
 
   it('Ctrl+S is swallowed (no browser save page) and Ctrl+Z follows the active workspace, not the other one', async () => {
-    const event = new KeyboardEvent('keydown', {key: 's', ctrlKey: true, cancelable: true, bubbles: true});
+    const event = new KeyboardEvent('keydown', {
+      key: 's',
+      ctrlKey: true,
+      cancelable: true,
+      bubbles: true,
+    });
     document.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(true);
     useApp.setState({view: 'merge', workspace: 'merge'});
@@ -107,7 +127,9 @@ describe('useShortcuts', () => {
   });
 
   it('Ctrl+S saves a copy in Preview and the output in Edit and Merge; Ctrl+P prints the active workspace', async () => {
-    vi.mocked(saveCopy).mockClear(); vi.mocked(saveOrContinue).mockClear(); vi.mocked(printDocument).mockClear();
+    vi.mocked(saveCopy).mockClear();
+    vi.mocked(saveOrContinue).mockClear();
+    vi.mocked(printDocument).mockClear();
     useApp.setState({view: 'preview', workspace: 'document'});
     await userEvent.keyboard('{Control>}s{/Control}');
     expect(saveCopy).toHaveBeenCalledWith(documentStore);
@@ -126,7 +148,8 @@ describe('useShortcuts', () => {
   });
 
   it('Ctrl+S and Ctrl+P do nothing while the workspace exports', async () => {
-    vi.mocked(saveOrContinue).mockClear(); vi.mocked(printDocument).mockClear();
+    vi.mocked(saveOrContinue).mockClear();
+    vi.mocked(printDocument).mockClear();
     documentStore.setState({exporting: true});
     await userEvent.keyboard('{Control>}s{/Control}{Control>}p{/Control}');
     expect(saveOrContinue).not.toHaveBeenCalled();

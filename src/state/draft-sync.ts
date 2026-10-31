@@ -10,10 +10,14 @@ let chain: Promise<void> = Promise.resolve();
 let store: StoreApi<WorkspaceState> | null = null;
 
 const toRecord = (s: WorkspaceState): DraftRecord => ({
-  files: s.files, pages: s.pages, currentPage: s.currentPage,
+  files: s.files,
+  pages: s.pages,
+  currentPage: s.currentPage,
   view: useApp.getState().documentView,
-  selection: [...s.selection.uids], anchor: s.selection.anchor,
-  exportSettings: s.exportSettings, savedAt: Date.now()
+  selection: [...s.selection.uids],
+  anchor: s.selection.anchor,
+  exportSettings: s.exportSettings,
+  savedAt: Date.now(),
 });
 
 /** Queues one write of the current workspace; the returned promise rejects if that write fails. */
@@ -31,7 +35,11 @@ function enqueue(): Promise<void> {
 
 function save(): Promise<void> {
   timer = undefined;
-  chain = enqueue().catch(() => useApp.getState().notify('Draft could not be saved. Export your PDF to keep your work.', 'error'));
+  chain = enqueue().catch(() =>
+    useApp
+      .getState()
+      .notify('Draft could not be saved. Export your PDF to keep your work.', 'error'),
+  );
   return chain;
 }
 
@@ -43,8 +51,12 @@ export function startDraftSync(target: StoreApi<WorkspaceState>): () => void {
     timer = setTimeout(save, DELAY);
   };
   const stop = target.subscribe((s, p) => {
-    const same = s.files === p.files && s.pages === p.pages && s.currentPage === p.currentPage
-      && s.selection === p.selection && s.exportSettings === p.exportSettings;
+    const same =
+      s.files === p.files &&
+      s.pages === p.pages &&
+      s.currentPage === p.currentPage &&
+      s.selection === p.selection &&
+      s.exportSettings === p.exportSettings;
     if (!same) schedule();
   });
   // The draft records the Preview/Edit view, so switching alone must write it too.
