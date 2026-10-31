@@ -1,6 +1,6 @@
 # iFixPDF
 
-Windows desktop PDF tool. Frontend is React 19 + TypeScript (strict) on Vite 6, state in Zustand 5, page reorder with dnd-kit, tests in Vitest and Playwright, inside a Tauri 2 shell. All PDF work runs in the frontend (PDF.js, pdf-lib, pdf-lib-encrypt, fflate); Rust only hosts the window and the updater, dialog, fs, opener and persisted-scope plugins.
+Windows desktop PDF tool. Frontend is React 19 + TypeScript (strict) on Vite 6, state in Zustand 5, page reorder with dnd-kit, tests in Vitest and Playwright, inside a Tauri 2 shell. All PDF work runs in the frontend (PDF.js, pdf-lib, pdf-lib-encrypt, fflate); Rust hosts the window and the updater, dialog, fs, opener and persisted-scope plugins, and owns Save as (the `save_as` command: native save dialog plus atomic write).
 
 - [IMPLEMENTATION.md](IMPLEMENTATION.md) — milestones and release criteria, including export compression and installed-PC updates.
 - [DESIGN.md](DESIGN.md) — accepted interface; read before UI changes.
@@ -36,7 +36,7 @@ Windows desktop PDF tool. Frontend is React 19 + TypeScript (strict) on Vite 6, 
 | `tests/e2e/`, `tests/unit/` | Playwright specs and fixtures; unit tests outside `src/` |
 | `public/brand/` | Brand mark, wordmark, icons |
 | `vite.config.ts` | Serves and bundles pdf.js CMaps and standard fonts under `/pdfjs/` |
-| `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS target, CSP), capabilities (no `core:default`; window incl. destroy, event listen, updater, dialog open, fs read-file, app `allow-save-as`, opener) |
+| `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS target, CSP), capabilities (no `core:default`; window minimize, toggle-maximize, close, destroy, start-dragging, internal-toggle-maximize; event listen/unlisten; resources close; updater check/download/install; dialog open; fs read-file; app `allow-save-as`; opener reveal-item-in-dir, open-path `**/*.pdf`, open-url to the GitHub repo) |
 | `docs/adr/` | Architecture decision records (`<timestamp>_<title>.md`) |
 
 Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` is the legacy internal name), `?recent=<id>` (append `&view=edit` to edit). The URL is written with `history.replaceState` only.
