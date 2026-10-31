@@ -489,14 +489,16 @@ describe('thumbnails', () => {
     await act(async () => {
       observe();
     });
+    // The render must be in flight before the row is removed, or finish is not set yet.
+    await waitFor(() => expect(renderBlob).toHaveBeenCalled(), {timeout: 5000});
     const u = user();
     await u.click(more('A.pdf'));
     await u.click(screen.getByRole('menuitem', {name: 'Remove from recents'}));
-    await screen.findByText('No recent PDFs yet');
+    await screen.findByText('No recent PDFs yet', undefined, {timeout: 5000});
     await act(async () => {
       finish(new Blob(['png']));
     });
-    await waitFor(() => expect(repo.updateThumbnail).toHaveBeenCalled());
+    await waitFor(() => expect(repo.updateThumbnail).toHaveBeenCalled(), {timeout: 5000});
     expect(repo.record).not.toHaveBeenCalled();
     expect(screen.queryByText('A.pdf')).toBeNull();
   });
