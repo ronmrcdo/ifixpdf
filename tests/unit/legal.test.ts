@@ -98,4 +98,10 @@ describe('legal files', () => {
     ])
       expect(tauri, n).toContain(n);
   });
+
+  test('the AppImage library notice names the core libraries and carries the LGPL text', () => {
+    const notice = read('licenses/linux-appimage-system-libraries.txt');
+    for (const n of ['WebKitGTK', 'GTK', 'GLib', 'GNU LESSER GENERAL PUBLIC LICENSE'])
+      expect(notice, n).toContain(n);
+  });
 });
