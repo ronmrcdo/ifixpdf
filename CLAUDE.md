@@ -65,7 +65,7 @@ Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` i
 - Keep existing storage keys unless shipping a tested migration. No legacy-data migrations exist by owner decision.
 - Native identifier `com.ifixpdf.desktop` and crate `ifixpdf` are fixed; changing them orphans user data and breaks upgrades.
 - CSP stays `script-src 'self'` with workers on `worker-src 'self' blob:`; no `unsafe-eval`, no `dangerouslySetInnerHTML`.
-- Release signing keys and endpoints stay out of source. Publishing releases or generating production credentials needs explicit user approval.
+- Signing keys stay out of source; the updater pubkey and endpoint stay out of `tauri.conf.json` and are injected only by the release workflow's `--config`. Publishing releases or generating production credentials needs explicit user approval.
 
 ## Architecture decisions (ADRs)
 

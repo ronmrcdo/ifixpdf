@@ -65,3 +65,53 @@ describe('release workflow', () => {
     for (const run of runs) expect(run).not.toContain('${{ secrets.');
   });
 });
+
+describe('workflow hardening', () => {
+  const files = ['.github/workflows/release.yml', '.github/workflows/ci.yml'];
+
+  test.each(files)('%s checks out without persisted credentials', (f) => {
+    // Each chunk runs from one list item to the next, so a step's `with:` stays in its chunk.
+    const checkouts = read(f)
+      .split(/\n(?= *- )/)
+      .filter((s) => s.includes('uses: actions/checkout@'));
+    expect(checkouts.length).toBeGreaterThan(0);
+    for (const c of checkouts) expect(c).toContain('persist-credentials: false');
+  });
+
+  test.each(files)('%s pins third-party actions to a commit', (f) => {
+    const refs = [...read(f).matchAll(/uses: (\S+)/g)].map((m) => m[1] ?? '');
+    const thirdParty = refs.filter((r) => !r.startsWith('actions/'));
+    expect(thirdParty.length).toBeGreaterThan(0);
+    for (const r of thirdParty) expect(r).toMatch(/@[0-9a-f]{40}$/);
+  });
+
+  test('CI runs the npm license gate', () => {
+    expect(read('.github/workflows/ci.yml')).toMatch(/^ +- run: pnpm notices$/m);
+  });
+});
+
+describe('release environment', () => {
+  const job = (name: string) => {
+    const m = new RegExp(`^ {2}${name}:\n((?: {4}.*\n|\n)*)`, 'm').exec(
+      read('.github/workflows/release.yml'),
+    );
+    if (!m?.[1]) throw new Error(`no job ${name}`);
+    return m[1];
+  };
+
+  test('only the tag-run jobs that read signing secrets use the release environment', () => {
+    for (const name of ['secrets', 'build']) expect(job(name)).toContain('environment: release');
+    for (const name of ['preflight', 'draft', 'dry-run'])
+      expect(job(name)).not.toContain('environment:');
+  });
+
+  test('dry runs build without a write token', () => {
+    expect(job('dry-run')).toContain("if: github.event_name != 'push'");
+    expect(job('dry-run')).not.toContain('contents: write');
+  });
+
+  test('preflight rejects a tag that is not on main', () => {
+    expect(job('preflight')).toContain('git merge-base --is-ancestor "$GITHUB_SHA"');
+    expect(job('preflight')).toContain('::error::Tag $TAG is not on main');
+  });
+});
