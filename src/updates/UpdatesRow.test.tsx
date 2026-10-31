@@ -36,7 +36,7 @@ describe('UpdatesRow copy and controls', () => {
     ],
     [
       {status: 'ready', ...info},
-      'iFixPDF 0.2.0 is ready. Your workspace is saved before restarting.',
+      'iFixPDF 0.2.0 is ready. Your Preview and Edit draft is saved before restarting; Merge PDFs starts empty.',
       'Restart and install',
     ],
     [
