@@ -144,6 +144,14 @@ describe('SettingsView', () => {
   });
 });
 
+describe('About license labels', () => {
+  it('shows plain names for generated and system-library notices', async () => {
+    render(<SettingsView />);
+    expect(await screen.findByText('Linux AppImage system libraries')).toBeInTheDocument();
+    expect(screen.queryByText('linux-appimage-system-libraries')).toBeNull();
+  });
+});
+
 describe('LicenseItem', () => {
   it('loads the body only after the details opens', async () => {
     const load = vi.fn(async () => 'Permission is hereby granted');
