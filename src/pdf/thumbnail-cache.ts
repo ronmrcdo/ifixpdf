@@ -22,7 +22,7 @@ export function cached(fileId: string, key: string, build: () => Promise<string>
       .then((url) => {
         if (epochOf(fileId) !== started) {
           URL.revokeObjectURL(url);
-          return url;
+          throw new Error('File released');
         }
         urls.set(key, url);
         if (urls.size > MAX_ENTRIES) {

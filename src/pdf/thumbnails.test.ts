@@ -1,3 +1,4 @@
+import {cached} from './thumbnail-cache';
 import {releaseFile, renderBlob, thumbnail} from './thumbnails';
 import {renderPage} from './render';
 
@@ -47,5 +48,13 @@ describe('thumbnails', () => {
     expect(renderPage).toHaveBeenCalledWith(expect.any(HTMLCanvasElement), 's6', 0, 0, 0.18);
     vi.mocked(HTMLCanvasElement.prototype.toBlob).mockImplementationOnce((cb) => cb(null));
     await expect(renderBlob('s6', 0, 0, 0.18)).rejects.toThrow('Thumbnail encoding failed');
+  });
+  it('rejects a build that finishes after its file is released', async () => {
+    let resolve!: (url: string) => void;
+    const pending = cached('s6', 's6:0', () => new Promise<string>((r) => (resolve = r)));
+    releaseFile('s6');
+    resolve('blob:x');
+    await expect(pending).rejects.toThrow('File released');
+    expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:x');
   });
 });

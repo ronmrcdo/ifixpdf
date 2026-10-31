@@ -27,7 +27,8 @@ describe('registry release -> thumbnails', () => {
     await vi.waitFor(() => expect(renderPage).toHaveBeenCalledTimes(1));
     await release('i2', 'document');
     finish();
-    const staleUrl = await stale;
+    await expect(stale).rejects.toThrow('File released');
+    const staleUrl = vi.mocked(URL.createObjectURL).mock.results[0]?.value;
     expect(URL.revokeObjectURL).toHaveBeenCalledWith(staleUrl);
     retain('i2', 'document');
     const fresh = await thumbnail('i2', 0, 0, 0.18);
@@ -43,9 +44,9 @@ describe('registry release -> thumbnails', () => {
     await vi.waitFor(() => expect(renderPage).toHaveBeenCalledTimes(1));
     await release('i3', 'document');
     retain('i3', 'document');
-    const fresh = await thumbnail('i3', 0, 0, 0.18);
+    await thumbnail('i3', 0, 0, 0.18);
     finish();
-    expect(await stale).not.toBe(fresh);
+    await expect(stale).rejects.toThrow('File released');
     expect(renderPage).toHaveBeenCalledTimes(2);
     await release('i3', 'document');
   });
