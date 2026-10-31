@@ -185,6 +185,17 @@ describe('page actions', () => {
     expect([...store.getState().selection.uids]).toEqual(all.slice(0, 2));
   });
 
+  it('refuses to delete every page', async () => {
+    const store = await make();
+    const before = store.getState().pages;
+    store.getState().selectAll();
+    store.getState().remove();
+    expect(store.getState().pages).toBe(before);
+    expect(useApp.getState().toast?.text).toBe('A PDF needs at least one page.');
+    store.getState().undo(); // only the add is on the stack, so the refused remove pushed nothing
+    expect(store.getState().pages).toHaveLength(0);
+  });
+
   it('currentPage follows its page through a move', async () => {
     const store = await make();
     const all = uids(store);

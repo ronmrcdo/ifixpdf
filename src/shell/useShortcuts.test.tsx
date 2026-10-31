@@ -84,11 +84,17 @@ describe('useShortcuts', () => {
     await userEvent.keyboard('{Control>}a{/Control}');
     expect(documentStore.getState().selection.uids.size).toBe(3);
     await userEvent.keyboard('{Delete}');
-    expect(documentStore.getState().pages).toHaveLength(0);
+    expect(documentStore.getState().pages).toHaveLength(3);
+    expect(useApp.getState().toast?.text).toBe('A PDF needs at least one page.');
+    documentStore
+      .getState()
+      .select(documentStore.getState().pages[0]!.uid, {ctrl: false, shift: false});
+    await userEvent.keyboard('{Delete}');
+    expect(documentStore.getState().pages).toHaveLength(2);
     await userEvent.keyboard('{Control>}z{/Control}');
     expect(documentStore.getState().pages).toHaveLength(3);
     await userEvent.keyboard('{Control>}y{/Control}');
-    expect(documentStore.getState().pages).toHaveLength(0);
+    expect(documentStore.getState().pages).toHaveLength(2);
   });
 
   it('arrows flip pages only from the stage', async () => {
