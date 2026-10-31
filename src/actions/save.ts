@@ -34,10 +34,12 @@ const pick = (spec: ExportSpec, indices: number[]): ExportSpec => {
   };
 };
 
+export const WAIT_FOR_SAVE = 'Wait for the save to finish.';
+
 /** True, after one "wait" toast, when an export holds `store`'s lock: the action that asked must not run. */
 export function busyExporting(store: WorkspaceStore): boolean {
   if (!store.getState().exporting) return false;
-  notify('Wait for the save to finish.');
+  notify(WAIT_FOR_SAVE);
   return true;
 }
 
