@@ -7,6 +7,7 @@ import {busy} from '../state/work';
 import {documentStore} from '../state/workspaces';
 import {clearDraft, readDraft} from '../storage/draft';
 import {recents} from '../storage/app-recents';
+import {readPrefs, writePrefs} from '../storage/prefs';
 import {isTransitioning, withViewTransition} from './viewTransition';
 
 type RouteView = 'home' | 'preview' | 'edit';
@@ -102,6 +103,7 @@ export async function startup(): Promise<void> {
   const route = parseRoute(window.location.search); // before the first render rewrites the URL
   let shown = useApp.getState().view;
   const moved = () => useApp.getState().view !== shown; // the user navigated while startup was waiting; theirs wins
+  const prefs = readPrefs().catch(() => null); // read alongside the draft so neither waits on the other
   let draft = await readDraft().catch(() => null);
   // A file the user opened while the draft was loading wins; draft sync overwrites the stored draft later.
   if (draft && !documentStore.getState().pristine()) draft = null;
@@ -120,6 +122,12 @@ export async function startup(): Promise<void> {
     }
   }
   startDraftSync(documentStore);
+  const stored = await prefs;
+  if (stored) useApp.setState({openAfter: stored.openAfter});
+  // Subscribed after applying, so the stored value is not written back. A preference never toasts.
+  useApp.subscribe((s, prev) => {
+    if (s.openAfter !== prev.openAfter) void writePrefs({openAfter: s.openAfter}).catch(() => {});
+  });
   // Every close (titlebar, Alt+F4, taskbar) passes here: keep an exporting window open, else save the draft.
   platform.window?.onCloseRequested(async () => {
     if (busy()) {

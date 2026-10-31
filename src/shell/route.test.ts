@@ -2,6 +2,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {SourceFile} from '../domain/types';
 import {loadPdf, InvalidPdfError} from '../pdf/load';
 import {clearDraft, readDraft, type DraftRecord} from '../storage/draft';
+import {readPrefs, writePrefs} from '../storage/prefs';
 import {recents} from '../storage/app-recents';
 import {flushDraft, startDraftSync} from '../state/draft-sync';
 import {useApp} from '../state/app';
@@ -17,6 +18,7 @@ vi.mock('../pdf/load', async (orig) => ({
 }));
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
 vi.mock('../storage/draft', () => ({readDraft: vi.fn(), clearDraft: vi.fn(async () => {})}));
+vi.mock('../storage/prefs', () => ({readPrefs: vi.fn(), writePrefs: vi.fn(async () => {})}));
 vi.mock('../state/draft-sync', () => ({
   startDraftSync: vi.fn(() => () => {}),
   flushDraft: vi.fn(async () => {}),
@@ -53,8 +55,19 @@ const draft = (
 const recentsOpen = vi.fn();
 const at = (search: string) => window.history.replaceState(null, '', `/index.html${search}`);
 
+const unsubs: Array<() => void> = [];
+const subscribe = useApp.subscribe;
 beforeEach(() => {
+  // startup() subscribes on the shared store; drop earlier tests' subscriptions so only this run's writes count.
+  vi.spyOn(useApp, 'subscribe').mockImplementation((l) => {
+    const off = subscribe(l);
+    unsubs.push(off);
+    return off;
+  });
   vi.mocked(readDraft).mockReset().mockResolvedValue(null);
+  vi.mocked(readPrefs).mockReset().mockResolvedValue(null);
+  vi.mocked(writePrefs).mockReset().mockResolvedValue();
+  useApp.setState({openAfter: true});
   vi.mocked(loadPdf)
     .mockReset()
     .mockImplementation(async (name) => {
@@ -74,6 +87,7 @@ beforeEach(() => {
   at('');
 });
 afterEach(async () => {
+  unsubs.splice(0).forEach((off) => off());
   await documentStore.getState().reset();
   await mergeStore.getState().reset();
 });
@@ -488,5 +502,32 @@ describe('openRecent', () => {
       text: 'That PDF was not found. Locate it or remove it from recents.',
       tone: 'error',
     });
+  });
+});
+
+describe('startup prefs', () => {
+  it('applies a stored openAfter without writing it back, then persists toggles', async () => {
+    vi.mocked(readPrefs).mockResolvedValue({openAfter: false});
+    await startup();
+    expect(useApp.getState().openAfter).toBe(false);
+    expect(writePrefs).not.toHaveBeenCalled();
+    useApp.setState({openAfter: true});
+    expect(writePrefs).toHaveBeenCalledWith({openAfter: true});
+  });
+
+  it('keeps the default when the read fails and still persists toggles', async () => {
+    vi.mocked(readPrefs).mockRejectedValue(new Error('idb'));
+    await startup();
+    expect(useApp.getState().openAfter).toBe(true);
+    useApp.setState({openAfter: false});
+    expect(writePrefs).toHaveBeenCalledWith({openAfter: false});
+  });
+
+  it('ignores a failing write', async () => {
+    vi.mocked(writePrefs).mockRejectedValue(new Error('idb'));
+    await startup();
+    useApp.setState({openAfter: false});
+    await Promise.resolve();
+    expect(useApp.getState().toast).toBeNull();
   });
 });
