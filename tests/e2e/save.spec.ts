@@ -451,9 +451,11 @@ test.describe('native', () => {
       'built in the export worker',
     ).toHaveLength(1);
     expect(
-      await page.evaluate(() => window.__posted.filter(Boolean)),
-      'the build was posted to the worker, not run in-thread',
-    ).toContain('build');
+      (await page.evaluate(() => window.__posted as (string | undefined)[])).filter(
+        (op) => op === 'build',
+      ),
+      'exactly one build was posted to the worker',
+    ).toHaveLength(1);
     await expect(app.status).toContainText('1 files · 3 pages · Ready');
   });
 });
