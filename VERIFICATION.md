@@ -1,5 +1,17 @@
 # Verification
 
+## Current results (31 October 2026, Linux, audit-fixes branch)
+
+- `pnpm test` (Vitest, jsdom): 784 tests passed.
+- `pnpm exec playwright test --workers=1`: 110/110 passed (Task 5.2). This was a browser run against the mocked Tauri bridge, not Windows.
+- No Windows run has happened; the "Pending Windows evidence" checklist below is still open.
+
+## Historical sections
+
+The sections from the top through "Save flows, Preview paging, About and manual updates" record the pre-React prototype and its retired scripts (`npm run`, `pnpm check:*`, the launch update check, Print Jobs, This Session). They describe code that no longer exists and stay as a record only. The current suites are `pnpm test` and `pnpm test:e2e`. The Windows checklist inside the last of those sections is current.
+
+## Historical: first prototype
+
 Production build passes (`npm run build`). Vite warns about the PDF engine chunk size; the engine and worker are bundled locally.
 
 Browser checks passed:
@@ -45,7 +57,7 @@ Preview has zero output forms and zero mutation controls. Its Pages view shows n
 
 Chrome workflow checks passed with no page errors: no Print Jobs or session project navigation; Home right-click and More menus; checkbox selection into Merge; password mismatch validation; protected-copy download; Edit PDF split ranges to ZIP; no document overflow at 1440, 768, and 390px. PDF.js independently rejected missing and incorrect passwords and opened the AES-256 output with the correct password (2 pages). Both ZIP entries parsed as valid 2-page PDFs. Production build passed. The finish reviewer approved the extension after preserving accessible names in both dialog success states.
 
-## Settings → Updates (29 October 2026, Linux)
+## Historical: Settings → Updates (29 October 2026, Linux; launch check since removed)
 
 `npm run check:updates` passed in Chrome against a mocked `__TAURI_INTERNALS__` bridge with no page errors: the browser build shows version 0.1.0 and no update controls; native states cover not configured, up to date, offline, check error with Retry, a quiet launch check when nothing is available, a launch toast when 0.2.0 is available, release notes rendered as text (an HTML payload did not execute), download failure with Retry, 40% progress, and the ready state. Restart and install was deferred while a real export was running, refused without installing when the IndexedDB draft write failed, and otherwise invoked install only after a 3-file draft had been saved. Disabling the export guard made the check fail. After the change, header export still downloaded a valid 9-page PDF. Production build passed with the existing chunk-size warning.
 
@@ -53,7 +65,7 @@ Chrome workflow checks passed with no page errors: no Print Jobs or session proj
 
 Older scripts in `../../work/` (`check-combine-workflow`, `check-selection-regressions`, `check-page-drag`, `check-output-history`) fail identically on the pre-change build: they expect the removed Print Jobs/"New combine" UI or skip Merge's Continue-to-save step.
 
-## Save flows, Preview paging, About and manual updates (30 October 2026, Linux browser)
+## Historical: Save flows, Preview paging, About and manual updates (30 October 2026, Linux browser; the Windows checklist below is current)
 
 Passed in Chrome against a mocked Tauri bridge, no page errors: `pnpm check:workspaces`, `check:save`, `check:preview`, `check:legal`, `check:about`, `check:updates`; `pnpm build` succeeded (chunk size warning expected); `cargo check --manifest-path src-tauri/Cargo.toml` finished.
 
