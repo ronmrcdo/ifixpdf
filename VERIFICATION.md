@@ -97,8 +97,14 @@ Windows checklist for the owner (all pending):
 - [ ] Print through the PDF viewer.
 - [ ] The export worker runs under the shipped CSP.
 - [ ] Reduced capabilities (no `core:default`) work, including window controls.
-- [ ] fs write and read scope is limited to picked or dropped paths.
+- [ ] fs read scope is limited to picked, dropped or saved paths; the webview has no file write permission (saving goes through the Rust `save_as` command).
 - [ ] Double-click on the titlebar maximizes and restores the window.
 - [ ] Upgrade from a profile that has used the legacy app: Home lists recents, opening and editing work, and the draft saves and restores (the legacy recents and draft are dropped, not migrated).
+- [ ] Save as over an existing file replaces it; no `.ifixpdf-tmp` file is left next to it.
+- [ ] Save as into a read-only folder shows the error toast; an existing file there is intact.
+- [ ] Cancelling the native save dialog writes nothing and shows no toast.
+- [ ] Alt+F4 after an edit saves the draft; it restores on the next launch.
+- [ ] Closing the window during an export waits for it or does not corrupt the saved file.
+- [ ] A file saved with Save as reopens from Home recents after a restart.
 
-Open owner decision: dropping a folder grants a recursive fs scope that persisted-scope keeps across restarts (together with `fs:allow-write-file`). tauri-plugin-fs grants it in Rust (`allow_directory(path, true)`, tauri-plugin-fs 2.7.1 `src/lib.rs:632-647`) before JavaScript sees the drop, so ignoring folder drops in JavaScript does not remove the grant. Options: accept and document it, or a Rust-side change (forbid the directory again after the drop, or a custom drop handler).
+Open owner decision: dropping a folder grants a recursive fs scope that persisted-scope keeps across restarts (read only: `fs:allow-write-file` was removed when Save as moved to Rust, `docs/adr/20261031120305_rust-owned-save-as.md`). tauri-plugin-fs grants it in Rust (`allow_directory(path, true)`, tauri-plugin-fs 2.7.1 `src/lib.rs:632-647`) before JavaScript sees the drop, so ignoring folder drops in JavaScript does not remove the grant. Options: accept and document it, or a Rust-side change (forbid the directory again after the drop, or a custom drop handler).
