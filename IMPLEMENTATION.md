@@ -13,7 +13,7 @@ Working browser features: unlocked PDF import, real PDF.js previews, file/page r
 - [ ] Build and launch the existing app on Windows with Rust, C++ Build Tools and WebView2 prerequisites.
 - [ ] Freeze app identity before public distribution. Current identifier is `com.ifixpdf.desktop`, Rust crate is `ifixpdf`, displayed product is iFixPDF. Do not change it after the first distributed build.
 - [ ] Add native open/save dialogs and scoped filesystem commands. Pass document IDs across IPC; resolve allowed paths in Rust. Perform PDF work off the UI thread and save atomically.
-- [ ] Replace prototype byte storage with a versioned local document repository and native draft storage. Preserve recents/drafts during upgrades; handle moved files with Locate / Remove from recents.
+- [ ] Replace prototype byte storage with a versioned local document repository and native draft storage. Preserve recents/drafts during upgrades; handle moved files with Locate / Remove from recents. Status (30 October 2026): Locate / Remove from recents is implemented and browser-tested (desktop recents store paths, browser recents keep bytes); Windows verification is pending, and the versioned repository and native draft storage are not built.
 - [ ] Verify DPI scaling, keyboard navigation, high contrast, screen readers, worker CSP and window controls.
 
 Completion: a Windows NSIS installation opens, previews, edits and saves actual PDFs with originals preserved, and restores its workspace after restart.

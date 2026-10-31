@@ -1,0 +1,401 @@
+.combine-workflow {
+  height: 56px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  padding: 0 24px;
+  gap: 16px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: #f9fbfd;
+}
+.combine-workflow ol {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.combine-workflow li button {
+  font-size: 12px;
+  padding: 6px 0;
+  gap: 8px;
+  color: #627084;
+}
+.step-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 21px;
+  height: 21px;
+  background: #e9edf3;
+  border-radius: 50%;
+  color: #5c6878;
+  font-size: 11px;
+}
+.step-marker svg {
+  width: 20px;
+  height: 20px;
+}
+.combine-workflow li.current button {
+  color: #2d5b98;
+  font-weight: 500;
+}
+.combine-workflow li.current .step-marker {
+  background: #3465a7;
+  color: white;
+}
+.combine-workflow li.complete .step-marker {
+  background: transparent;
+  color: #4d7560;
+}
+.combine-workflow li button:disabled {
+  opacity: 1;
+}
+.workflow-summary {
+  margin-left: auto;
+  color: #5c6878;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.combine-start {
+  display: grid;
+  grid-template-columns: minmax(0,1.3fr) minmax(240px,.7fr);
+  gap: 48px;
+  align-items: center;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 45px 55px;
+}
+.combine-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 1px dashed #becde0;
+  border-radius: 9px;
+  min-height: 370px;
+  padding: 30px 25px;
+  background: #fafcfe;
+}
+.combine-start-icon {
+  color: #3465a7;
+  display: flex;
+  margin-bottom: 22px;
+}
+.combine-start-icon svg {
+  width: 42px;
+  height: 42px;
+  stroke-width: 1.2;
+}
+.combine-drop h2,
+.combine-done h2 {
+  font-size: 21px;
+  font-weight: 500;
+  letter-spacing: -.4px;
+  margin: 0 0 12px;
+}
+.combine-drop p {
+  font-size: 12px;
+  color: #5c6878;
+  line-height: 1.7;
+  max-width: 310px;
+  margin: 0 0 24px;
+}
+.combine-drop .primary {
+  padding: 10px 17px;
+  min-height: 38px;
+}
+.drop-caption {
+  margin: 13px 0 16px;
+  font-size: 11px;
+  color: #5c6878;
+}
+.combine-instructions h3 {
+  font-size: 14px;
+  font-weight: 500;
+  margin: 0 0 28px;
+}
+.combine-instructions>div {
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  margin-bottom: 26px;
+}
+.combine-instructions>div>svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  color: #5b7497;
+}
+.combine-instructions p {
+  margin: 0;
+}
+.combine-instructions strong {
+  display: block;
+  font-weight: 500;
+  font-size: 13px;
+  margin-bottom: 7px;
+}
+.combine-instructions p>span {
+  display: block;
+  font-size: 12px;
+  color: #5c6878;
+  line-height: 1.75;
+  max-width: 235px;
+}
+.combine-done {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 30px 24px;
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  text-align: center;
+}
+.done-icon {
+  display: flex;
+  margin: 0 0 22px;
+  color: #4f7c62;
+}
+.done-icon svg {
+  width: 45px;
+  height: 45px;
+  stroke-width: 1.35;
+}
+.combine-done>p {
+  font-size: 12px;
+  color: #5c6878;
+  line-height: 1.7;
+  margin: 0 0 27px;
+}
+.completed-file {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  max-width: 440px;
+  width: 100%;
+  background: #f1f5fa;
+  border-radius: 7px;
+  padding: 19px 21px;
+  text-align: left;
+  margin-bottom: 24px;
+}
+.completed-file>svg {
+  width: 27px;
+  height: 33px;
+  color: #557299;
+  stroke-width: 1.2;
+}
+.completed-file>div {
+  min-width: 0;
+}
+.completed-file strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+  margin-bottom: 7px;
+}
+.completed-file span {
+  font-size: 12px;
+  color: #5c6878;
+}
+.done-actions {
+  display: flex;
+  gap: 9px;
+}
+.done-actions button {
+  font-size: 12px;
+  min-height: 36px;
+}
+.done-next {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+  padding-top: 23px;
+  border-top: 1px solid var(--line);
+}
+.done-next button {
+  font-size: 12px;
+}
+.save-instruction {
+  font-size: 11px;
+  color: #5c6878;
+  line-height: 1.65;
+  margin: -12px 0 20px;
+}
+.workspace:has(.save-instruction) .output {
+  background: #fbfcfe;
+}
+.workspace:has(.combine-workflow) .toolbar {
+  border-top: 0;
+}
+.workspace:has(.save-instruction) .output h2 {
+  margin-bottom: 14px;
+}
+.workspace:has(.save-instruction) .save-instruction {
+  margin: 0 0 16px;
+}
+.workspace:has(.save-instruction) .field {
+  margin-bottom: 16px;
+}
+.workspace:has(.save-instruction) .check {
+  margin-bottom: 10px;
+}
+.workspace:has(.save-instruction) .output-foot {
+  padding-top: 10px;
+}
+.workspace:has(.save-instruction) .export-summary {
+  padding-top: 12px;
+  margin-bottom: 11px;
+}
+.combine-workflow li:not(.current):not(.complete) button:disabled {
+  color: #5c6878;
+}
+
+@media (max-width:1200px) {
+  .combine-start {
+    padding: 35px;
+    gap: 30px;
+  }
+  .combine-workflow ol {
+    gap: 15px;
+  }
+  .workflow-summary {
+    display: none;
+  }
+  .combine-workflow {
+    padding: 0 20px;
+  }
+  .combine-drop {
+    min-height: 340px;
+  }
+}
+
+@media (max-width:960px) {
+  .combine-workflow ol {
+    gap: 15px;
+  }
+  .combine-start {
+    padding: 25px;
+    gap: 25px;
+    grid-template-columns: minmax(0,1fr) 235px;
+  }
+  .combine-workflow {
+    padding: 0 18px;
+  }
+}
+
+@media (max-width:760px) {
+  .combine-workflow {
+    height: 50px;
+    min-height: 50px;
+    padding: 0 14px;
+  }
+  .combine-workflow ol {
+    gap: 14px;
+  }
+  .combine-workflow li button {
+    font-size: 11px;
+    gap: 5px;
+  }
+  .step-marker {
+    width: 18px;
+    height: 18px;
+    font-size: 11px;
+  }
+  .step-marker svg {
+    width: 18px;
+    height: 18px;
+  }
+  .combine-start {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 24px;
+    gap: 26px;
+  }
+  .combine-drop {
+    min-height: 320px;
+  }
+  .combine-instructions {
+    display: none;
+  }
+  .combine-done h2 {
+    font-size: 19px;
+  }
+  .done-next {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .combine-workflow .workflow-summary {
+    display: none;
+  }
+}
+
+@media (max-width:520px) {
+  .combine-workflow {
+    padding: 0 11px;
+    height: 59px;
+    min-height: 59px;
+  }
+  .combine-workflow ol {
+    gap: 14px;
+    justify-content: space-between;
+    width: 100%;
+  }
+  .combine-workflow li button {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-size: 11px;
+    min-height: 44px;
+  }
+  .combine-workflow li:nth-child(2) button>span:last-child {
+    max-width: 88px;
+  }
+  .combine-start {
+    padding: 17px 13px;
+  }
+  .combine-drop {
+    padding: 25px 16px;
+    min-height: 330px;
+  }
+  .combine-drop h2 {
+    font-size: 18px;
+  }
+  .combine-drop p {
+    font-size: 12px;
+  }
+  .combine-done {
+    padding: 23px 16px;
+  }
+  .combine-done h2 {
+    font-size: 18px;
+  }
+  .done-actions {
+    flex-direction: column;
+    width: 100%;
+    max-width: 300px;
+  }
+  .done-next {
+    gap: 6px;
+    margin-top: 23px;
+  }
+  .done-next button {
+    font-size: 11px;
+  }
+  .completed-file {
+    padding: 16px;
+  }
+  .completed-file strong {
+    font-size: 12px;
+  }
+}

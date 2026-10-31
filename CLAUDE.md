@@ -1,33 +1,41 @@
 # iFixPDF
 
-Windows desktop PDF tool. Frontend is vanilla JavaScript + Vite (not React) inside a Tauri 2 shell. All PDF work runs in the frontend (PDF.js, pdf-lib, pdf-lib-encrypt, fflate); Rust only hosts the window and the updater, dialog, fs and opener plugins.
+Windows desktop PDF tool. Frontend is React 19 + TypeScript (strict) on Vite 6, state in Zustand 5, page reorder with dnd-kit, tests in Vitest and Playwright, inside a Tauri 2 shell. All PDF work runs in the frontend (PDF.js, pdf-lib, pdf-lib-encrypt, fflate); Rust only hosts the window and the updater, dialog, fs, opener and persisted-scope plugins.
 
 - [IMPLEMENTATION.md](IMPLEMENTATION.md) — milestones and release criteria, including export compression and installed-PC updates.
 - [DESIGN.md](DESIGN.md) — accepted interface; read before UI changes.
-- [VERIFICATION.md](VERIFICATION.md) — historical check results and their scope.
+- [VERIFICATION.md](VERIFICATION.md) — check results and their scope, including the pending Windows checklist.
 
 ## Commands
 
 - `pnpm install --frozen-lockfile`, `pnpm dev`, `pnpm build` (output `dist/`; the PDF-engine chunk size warning is expected), `pnpm preview --port 4173`.
-- `pnpm check:workspaces|save|preview|legal|about|updates` — Playwright checks on the shared `tests/harness.js` (Vite server + optional mocked Tauri bridge); set `PLAYWRIGHT` and `CHROME`. `check:updates` covers Settings → Updates; `check:about` covers About and the sidebar.
+- `pnpm typecheck`, `pnpm lint` (Biome, lint only; no formatter), `pnpm test` (Vitest, jsdom).
+- `pnpm test:e2e` — Playwright on system Chrome (`CHROME` overrides), mocked Tauri bridge from `tests/e2e/fixtures.ts`. Run `pnpm exec playwright test --workers=1`; timing-sensitive specs flake under load.
 - `pnpm tauri dev` / `pnpm tauri build` — native builds need a configured Windows machine.
 
 ## Source map
 
 | Path | Purpose |
 | --- | --- |
-| `src/main.js` | App shell, Home, Preview, Edit, Merge, selection/history, drafts, import/export, routes, shortcuts |
-| `src/document-actions.js` | Add password (AES-256 protected copy) and Split (ZIP) dialogs |
-| `src/style.css` | Desktop interface and responsive overrides |
-| `src/recents.js`, `src/draft.js` | IndexedDB storage of recent PDF bytes and the Preview/Edit `document` draft. Merge is a separate in-memory workspace that starts empty on every launch (no `merge` draft; a stale `merge` or legacy Merge `workspace` key is deleted on read) |
-| `src/save.js` | One native Save as (dialog + fs) for every export, plus `openSaved`, `showInFolder`, `openExternal` |
-| `src/about.js` | Settings → About: version, developer, privacy text (first paragraph of `EULA.txt`), MIT `LICENSE`, `licenses/*`, GitHub link |
-| `src/updates.js`, `src/work.js` | Updates state machine (manual only); in-flight export tracking that defers install |
-| `src/home.js`, `src/home.css`, `library.html`, `desk.html` | Earlier Library/Desk concepts; keep unless deliberately retired |
-| `src/brand.js`, `public/brand/` | Brand mark, wordmark, icons |
-| `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS target, CSP), capabilities (window, updater, dialog save, fs write-file, opener: reveal-item, open-path `**/*.pdf`, open-url for the GitHub repo only) |
+| `src/main.tsx`, `src/App.tsx` | Entry and root |
+| `src/shell/` | App frame (titlebar, sidebar, statusbar, header actions), routes (`route.ts`), shortcuts, file import, toasts, view transitions |
+| `src/views/` | Home, Preview, Edit, Merge, Settings (incl. About) |
+| `src/components/` | Shared UI: Dialog, editor (toolbar, stage, output inspector), page grid and cards |
+| `src/dialogs/` | Add password and Split dialogs |
+| `src/actions/save.ts` | Save as for every export |
+| `src/state/` | Zustand stores: app, per-workspace document state (document and Merge), draft sync, export tracking (`work.ts`) |
+| `src/domain/` | Pure logic: page model, history, selection, ranges, naming, formatting |
+| `src/pdf/` | Load, render, thumbnail cache, export (worker plus core), document registry |
+| `src/platform/` | Tauri/browser adapter: dialogs, fs, opener, updater |
+| `src/storage/` | IndexedDB: recents and the document draft |
+| `src/updates/` | Manual-only updates state machine and Settings row |
+| `src/styles/` | CSS by area; breakpoints from DESIGN.md |
+| `src/test/` | Vitest setup |
+| `tests/e2e/`, `tests/unit/` | Playwright specs and fixtures; unit tests outside `src/` |
+| `public/brand/` | Brand mark, wordmark, icons |
+| `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS target, CSP), capabilities (no `core:default`; window, updater, dialog, fs read/write-file, opener, event listen) |
 
-Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` is the legacy internal name), `?recent=<id>` (append `&view=edit` to edit).
+Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` is the legacy internal name), `?recent=<id>` (append `&view=edit` to edit). The URL is written with `history.replaceState` only.
 
 ## Product rules
 
@@ -35,15 +43,19 @@ Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` i
 - Home opens a PDF in read-only Preview. Page mutations belong in Edit; multi-document assembly belongs in Merge. Originals stay untouched.
 - The app ships no sample or demo documents; it starts empty.
 - Updates are manual only: no launch check; the app connects only when the user presses Check for updates.
-- Add password requires matching passwords of 8+ characters and never persists them.
+- Add password requires matching passwords of 8+ characters. Passwords live in form state only: never stored, logged or put in a store.
 
 ## Invariants
 
-- Pages are instances `{fileId, local, uid}`; duplicates get distinct uids. Export follows displayed order and applies rotations.
-- Reorder patches keyed cards and cached thumbnails in place — replacing nodes causes the flicker the user reported.
-- Undo/redo keeps 40 in-memory snapshots, separate from the IndexedDB draft.
-- Keep existing storage keys unless shipping a tested migration.
+- Pages are `{uid, fileId, local, rotation}`; rotation (0/90/180/270) is per uid, duplicates get a new uid and inherit it. Export follows displayed order and adds rotation to the page's intrinsic `/Rotate`.
+- Reorder patches keyed cards and cached thumbnails in place; remounting cards causes the flicker the user reported.
+- Undo/redo keeps 40 in-memory snapshots per workspace, separate from the draft.
+- Merge is never persisted. Only the Preview/Edit `document` draft is, and it keeps its own byte copy.
+- Recents on desktop are path-based and store no bytes; byte copies deduped by SHA-256 exist only in browser mode.
+- Each workspace has one export lock; every export runs inside `track()` (`src/state/work.ts`) so installing an update waits for it.
+- Keep existing storage keys unless shipping a tested migration. No legacy-data migrations exist by owner decision.
 - Native identifier `com.ifixpdf.desktop` and crate `ifixpdf` are fixed; changing them orphans user data and breaks upgrades.
+- CSP stays `script-src 'self'` with workers on `worker-src 'self' blob:`; no `unsafe-eval`, no `dangerouslySetInnerHTML`.
 - Release signing keys and endpoints stay out of source. Publishing releases or generating production credentials needs explicit user approval.
 
 ## Verification

@@ -1,0 +1,245 @@
+.jobs-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.jobs-table th {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.jobs-table td {
+  font-size: 12px;
+  padding: 19px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.job-name {
+  font-weight: 550;
+}
+.job-name small {
+  display: block;
+  color: var(--muted);
+  font-weight: 400;
+  font-size: 11px;
+  margin-top: 5px;
+}
+.state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.state.ready {
+  color: #436c59;
+}
+.settings-form {
+  max-width: 580px;
+}
+.settings-row {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+.settings-row p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.settings-row select {
+  width: 170px;
+}
+.danger {
+  color: #a13c3c;
+}
+.loading {
+  padding: 40px;
+  color: var(--muted);
+}
+.settings-note {
+  background: #f2f5f8;
+  padding: 16px;
+  line-height: 1.7;
+  max-width: 700px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.quality-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 0 20px;
+  color: #53667d;
+}
+.quality-note svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+}
+.quality-note strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: #34465d;
+}
+.quality-note span {
+  font-size: 11px;
+  line-height: 1.6;
+  display: block;
+  margin-top: 4px;
+}
+.range-field small.danger {
+  color: #a13c3c;
+}
+.sample-link {
+  font-size: 12px;
+  color: #3465a7;
+  min-height: 28px;
+  padding: 5px;
+}
+.job-progress-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 9px;
+}
+.job-progress-wrap progress {
+  appearance: none;
+  width: 150px;
+  height: 5px;
+  border: 0;
+  border-radius: 4px;
+  background: #e2e8f1;
+  accent-color: #3465a7;
+}
+.job-progress-wrap progress::-webkit-progress-bar {
+  background: #e2e8f1;
+  border-radius: 4px;
+}
+.job-progress-wrap progress::-webkit-progress-value {
+  background: #3465a7;
+  border-radius: 4px;
+}
+.job-progress-wrap progress::-moz-progress-bar {
+  background: #3465a7;
+  border-radius: 4px;
+}
+.job-percentage {
+  font-size: 11px;
+  min-width: 32px;
+  color: #5c6878;
+  font-variant-numeric: tabular-nums;
+}
+.job-stage-detail {
+  font-size: 11px!important;
+  color: #5c6878;
+}
+.job-actions {
+  white-space: nowrap;
+}
+.job-actions>button {
+  font-size: 11px;
+  min-height: 29px;
+  padding: 6px;
+}
+.job-actions svg {
+  width: 14px;
+  height: 14px;
+}
+.workspace:has(.save-instruction) .quality-note {
+  padding: 9px 0 15px;
+}
+.update-notes {
+  white-space: pre-wrap;
+  margin-top: 8px;
+  max-height: 160px;
+  overflow: auto;
+}
+.update-detail .progress-wrap progress {
+  width: 180px;
+}
+.about {
+  margin-top: 28px;
+}
+.about h2 {
+  margin: 0;
+}
+.about-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.about-legal details {
+  margin-top: 8px;
+}
+.about summary {
+  cursor: pointer;
+  font-weight: 400;
+}
+.about-licenses details {
+  margin: 6px 0 0;
+}
+.about pre {
+  max-height: 240px;
+  overflow: auto;
+  margin: 8px 0 0;
+  padding: 10px;
+  background: #f6f7f9;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  font: 11px/1.45 Consolas,monospace;
+  white-space: pre-wrap;
+}
+.about-legal>div {
+  width: 100%;
+}
+
+@media (max-width:1000px) {
+  .job-progress-wrap progress {
+    width: 95px;
+  }
+}
+
+@media (max-width:760px) {
+  .jobs-table th:nth-child(2),
+  .jobs-table td:nth-child(2) {
+    display: none;
+  }
+  .settings-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .job-progress-wrap progress {
+    width: 85px;
+  }
+}
+
+@media (max-width:520px) {
+  .jobs-table td,
+  .jobs-table th {
+    padding: 12px 7px;
+  }
+  .jobs-table td:last-child {
+    font-size: 10px;
+  }
+  .job-progress-wrap {
+    gap: 5px;
+  }
+  .job-progress-wrap progress {
+    width: 65px;
+  }
+  .job-percentage {
+    font-size: 11px;
+    min-width: 26px;
+  }
+  .job-actions {
+    white-space: normal;
+  }
+  .job-actions>button {
+    padding: 5px;
+  }
+}

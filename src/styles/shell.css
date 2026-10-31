@@ -1,0 +1,364 @@
+.titlebar {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  padding-left: 20px;
+  gap: 18px;
+}
+.brand svg {
+  color: var(--accent);
+  width: 23px;
+  height: 23px;
+}
+.window-actions {
+  margin-left: auto;
+  display: flex;
+  height: 100%;
+}
+.window-actions button {
+  width: 45px;
+  border-radius: 0;
+}
+.window-actions svg {
+  width: 13px;
+}
+.sidebar {
+  padding: 20px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.nav-item {
+  justify-content: flex-start;
+  gap: 12px;
+  padding: 11px 13px;
+  color: #5d6673;
+  font-weight: 500;
+}
+.nav-item.active {
+  background: #dfe5ec;
+  color: #202731;
+}
+.nav-item .badge {
+  margin-left: auto;
+  font-size: 11px;
+  background: #cdd5df;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+.side-label {
+  font-size: 11px;
+  margin: 28px 12px 9px;
+}
+.side-project {
+  justify-content: flex-start;
+  color: #5c6674;
+  font-size: 12px;
+  gap: 10px;
+}
+.side-project svg {
+  width: 15px;
+}
+.side-bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.privacy {
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 16px 12px 3px;
+  display: flex;
+  gap: 7px;
+}
+.privacy svg {
+  width: 13px;
+}
+.workspace {
+  background: white;
+  border: 1px solid #e0e4e9;
+  border-radius: 12px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.subtitle {
+  color: var(--muted);
+  font-size: 12px;
+}
+.header-actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+.statusbar .right {
+  margin-left: auto;
+}
+.dot {
+  width: 5px;
+  height: 5px;
+  background: #628375;
+  border-radius: 50%;
+}
+.view {
+  flex: 1;
+  overflow: auto;
+  padding: 28px;
+}
+.view-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+.view h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+.toast {
+  position: fixed;
+  bottom: 43px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: #27313f;
+  color: white;
+  z-index: 50;
+  box-shadow: 0 6px 24px #17223126;
+  font-size: 12px;
+  animation: toast-in 160ms var(--ease);
+}
+.toast.leaving {
+  animation: toast-out 160ms var(--ease) forwards;
+}
+@keyframes toast-out {to{opacity:0;transform:translate(-50%,4px)}}
+@keyframes toast-in {from{opacity:0;transform:translate(-50%,4px)}}
+.drop-active {
+  outline: 2px dashed var(--accent);
+  outline-offset: -5px;
+}
+.side-label,
+.statusbar,
+.privacy {
+  color: #596573;
+}
+.titlebar>span {
+  font-size: 12px;
+  color: #606a78;
+}
+.app {
+  height: 100dvh;
+  min-height: 620px;
+  display: grid;
+  grid-template-rows: 48px 1fr 28px;
+  padding-right: 8px;
+  grid-template-columns: 190px minmax(0,1fr);
+}
+.workspace-header {
+  padding: 20px 25px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex: none;
+  height: 86px;
+}
+.workspace-header .subtitle {
+  font-size: 12px;
+}
+.window-actions button:last-child:hover {
+  background: #c42b1c;
+  color: white;
+}
+.sidebar .nav-item {
+  font-size: 13px;
+}
+.statusbar {
+  grid-column: 1/-1;
+  display: flex;
+  align-items: center;
+  padding: 0 17px;
+  gap: 7px;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.header-actions .new-combine {
+  font-size: 12px;
+}
+.header-actions .primary .save-label {
+  white-space: nowrap;
+}
+.header-actions [data-action=edit-current],
+.header-actions [data-action=preview-print] {
+  font-size: 12px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  font-size: 17px;
+  width: 174px;
+  gap: 8px;
+  font-weight: 600;
+  letter-spacing: -.35px;
+}
+.brand .brand-mark {
+  display: block;
+  width: 24px;
+  height: 24px;
+  flex: none;
+  user-select: none;
+}
+.brand>span {
+  font-size: 16px;
+  line-height: 1;
+}
+
+@media (min-width:1500px) {
+  .workspace-header {
+    padding-left: 28px;
+  }
+}
+
+@media (max-width:1200px) {
+  .app {
+    grid-template-columns: 168px minmax(0,1fr);
+  }
+  .header-actions .new-combine {
+    font-size: 11px;
+  }
+}
+
+@media (max-width:1150px) {
+  .brand {
+    width: 145px;
+  }
+  .header-actions button {
+    font-size: 11px;
+  }
+}
+
+@media (max-width:1000px) {
+  .app {
+    grid-template-columns: 65px minmax(0,1fr);
+  }
+  .sidebar {
+    padding: 20px 8px;
+  }
+  .sidebar .nav-text,
+  .sidebar .badge,
+  .side-label,
+  .side-project,
+  .privacy {
+    display: none;
+  }
+  .nav-item {
+    justify-content: center;
+    padding: 11px;
+  }
+  .brand {
+    width: 45px;
+  }
+  .brand span {
+    display: none;
+  }
+}
+
+@media (max-width:960px) {
+  .titlebar {
+    padding-left: 22px;
+  }
+  .workspace-header {
+    padding: 18px;
+  }
+  .header-actions .secondary {
+    display: none;
+  }
+  .header-actions .new-combine {
+    display: none;
+  }
+}
+
+@media (max-width:760px) {
+  .app {
+    min-height: 620px;
+  }
+  .subtitle {
+    font-size: 10px;
+  }
+  .header-actions .primary {
+    font-size: 0;
+    gap: 0;
+  }
+  .header-actions .primary svg {
+    width: 17px;
+  }
+  .view {
+    padding: 20px;
+  }
+  .titlebar>span {
+    font-size: 10px;
+  }
+  .header-actions .primary .save-label {
+    display: none;
+  }
+  .workspace-header {
+    height: 80px;
+  }
+  .workspace-header .subtitle {
+    font-size: 11px;
+  }
+  .header-actions [data-action=edit-current] {
+    font-size: 12px;
+    gap: 6px;
+  }
+  .header-actions [data-action=preview-print] {
+    display: none;
+  }
+}
+
+@media (max-width:520px) {
+  .nav-item svg {
+    width: 18px;
+  }
+  .titlebar {
+    padding-left: 13px;
+    gap: 2px;
+  }
+  .window-actions {
+    display: none;
+  }
+  .workspace {
+    border-radius: 8px;
+  }
+  .statusbar .right {
+    display: none;
+  }
+  .toast {
+    width: 85%;
+    text-align: center;
+  }
+  .titlebar>span,
+  .subtitle,
+  .preview-tools>span:first-child,
+  .statusbar {
+    font-size: 11px;
+  }
+  .app {
+    padding-right: 4px;
+    grid-template-columns: 48px minmax(0,1fr);
+  }
+  .workspace-header {
+    padding: 15px 12px;
+    height: 78px;
+  }
+  .statusbar {
+    padding-left: 12px;
+  }
+  .header-actions [data-action=edit-current] {
+    padding: 7px 9px;
+    font-size: 11px;
+  }
+}

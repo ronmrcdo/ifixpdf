@@ -1,0 +1,137 @@
+body {
+  margin: 0;
+}
+button,
+input,
+select {
+  font: inherit;
+}
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  border-radius: 5px;
+  min-height: 32px;
+  padding: 7px 10px;
+  transition: background 120ms,transform 120ms var(--ease);
+}
+button:hover:where(:not(:disabled)) { /* :where keeps the specificity, so disabled buttons get no hover or pressed look */
+  background: #e8ecf1;
+}
+button:active:where(:not(:disabled)) {
+  transform: scale(.98);
+}
+button:disabled {
+  opacity: .4;
+  cursor: default;
+}
+:is(button,a,input,select,textarea,summary,[tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+svg {
+  width: 17px;
+  height: 17px;
+  stroke-width: 1.65;
+  flex: none;
+}
+input,
+select {
+  width: 100%;
+  border: 1px solid #d9dfe6;
+  border-radius: 5px;
+  background: white;
+  padding: 9px 10px;
+  color: #29303a;
+  min-width: 0;
+}
+input[type=checkbox] {
+  appearance: none;
+  width: 15px;
+  height: 15px;
+  padding: 0;
+  margin: 0;
+  flex: none;
+  border: 1px solid #b9c2cd;
+  border-radius: 3px;
+  background: white center/100% no-repeat;
+  cursor: pointer;
+  transition: background-color 120ms,border-color 120ms;
+}
+input[type=checkbox]:hover {
+  border-color: #8d98a7;
+}
+input[type=checkbox]:checked,
+input[type=checkbox]:indeterminate {
+  border-color: var(--accent);
+  background-color: var(--accent);
+}
+input[type=checkbox]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2.5 6.2 5 8.5l4.5-5'/%3E%3C/svg%3E");
+}
+input[type=checkbox]:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h6'/%3E%3C/svg%3E");
+}
+input[type=checkbox]:disabled {
+  opacity: .4;
+  cursor: default;
+}
+::selection {
+  background: #cbdcf4;
+}
+* {
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #bdc4cd transparent;
+}
+h1 {
+  font-size: 22px;
+  letter-spacing: -.6px;
+  line-height: 1.25;
+  margin: 0 0 5px;
+  font-weight: 600;
+}
+tr[data-status=Completed] progress {
+  accent-color: #4d7b63;
+}
+tr[data-status=Completed] progress::-webkit-progress-value {
+  background: #4d7b63;
+}
+tr[data-status=Canceled] progress::-webkit-progress-value {
+  background: #9ca6b4;
+}
+
+@media (max-width:760px) {
+  h1 {
+    font-size: 18px;
+  }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  *,
+  *:before,
+  *:after {
+    animation: none!important;
+    transition: none!important;
+  }
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 180ms;
+  animation-timing-function: ease-out;
+}
+
+/* The page stays clickable while it cross-fades. */
+::view-transition,
+::view-transition-group(*),
+::view-transition-image-pair(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  pointer-events: none;
+}

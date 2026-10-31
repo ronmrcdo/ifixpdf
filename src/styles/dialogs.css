@@ -1,0 +1,100 @@
+.range-field {
+  margin-top: -5px;
+}
+.range-field small {
+  font-size: 11px;
+  line-height: 1.6;
+}
+.range-field input[aria-invalid=true] {
+  border-color: #ba5047;
+}
+.split-command {
+  grid-column: 1/-1;
+  justify-self: start;
+}
+.document-dialog {
+  width: min(440px,calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow: auto;
+  border: 1px solid #c8d2df;
+  border-radius: 8px;
+  padding: 24px;
+  color: var(--ink);
+  background: #fff;
+  box-shadow: 0 12px 40px #17223133;
+  font: inherit;
+  /* Exit (100ms) runs first on close; entry (150ms) is the [open] rule below. */
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 100ms ease-out, transform 100ms ease-out, display 100ms allow-discrete, overlay 100ms allow-discrete;
+}
+.document-dialog[open] {
+  opacity: 1;
+  transform: none;
+  transition-duration: 150ms;
+  @starting-style {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+.document-dialog::backdrop {
+  background: #17223155;
+  opacity: 0;
+  transition: opacity 100ms ease-out, display 100ms allow-discrete, overlay 100ms allow-discrete;
+}
+.document-dialog[open]::backdrop {
+  opacity: 1;
+  transition-duration: 150ms;
+  @starting-style {
+    opacity: 0;
+  }
+}
+.document-dialog header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.document-dialog h2 {
+  font-size: 18px;
+  font-weight: 600;
+}
+.document-dialog header button {
+  font-size: 22px;
+  padding: 0;
+  width: 30px;
+}
+.document-dialog p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0 0 22px;
+  color: #526174;
+}
+.document-dialog .field {
+  margin: 0 0 17px;
+}
+.document-dialog small {
+  display: block;
+  color: #526174;
+  font-size: 11px;
+  line-height: 1.65;
+}
+.document-dialog footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 22px;
+}
+.document-dialog .action-error {
+  color: #a03930;
+  margin: 12px 0 0;
+  font-size: 12px;
+}
+.split-results {
+  padding: 13px 0;
+  font-size: 13px;
+  color: #345d92;
+}
+.document-dialog [hidden] {
+  display: none;
+}

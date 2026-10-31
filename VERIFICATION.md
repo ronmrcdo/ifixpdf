@@ -65,3 +65,40 @@ Pending Windows evidence (nothing below was run on Windows or against real plugi
 - GitHub link opens in the default browser.
 - Installer shows the license page from `EULA.txt`.
 - Installed-app update check, download and install.
+
+## Platform layer and persisted scope (30 October 2026, Linux, React rewrite Task 2.1)
+
+`pnpm test` (Vitest, mocked `__TAURI_INTERNALS__` bridge in jsdom), `pnpm typecheck` and `pnpm lint` passed. `cargo check --manifest-path src-tauri/Cargo.toml` finished with `tauri-plugin-persisted-scope` 2.4.2 registered after `tauri-plugin-fs`; the build script accepted the tightened capability (no `core:default`; adds `dialog:allow-open`, `fs:allow-read-file`, `core:event:allow-listen|unlisten`, `core:resources:allow-close`). Rust was checked, not built or run.
+
+Pending Windows evidence:
+- Picked and dropped PDFs read through the fs scope, and still read after an app restart (persisted scope).
+- A deleted or moved recent reports as missing (`FileMissingError`).
+- Native drag-drop events arrive with `dragDropEnabled` on; window controls still work without `core:default`.
+
+## React + TypeScript rewrite: browser results (2026-10-30, Linux Chrome via Playwright)
+
+Browser only; nothing here ran on Windows or against real Tauri plugins. The legacy app is removed; layout parity was checked against `tests/e2e/legacy-layout.json` (since removed with those checks), 84 legacy measurements (each view, stage and width) recorded before deletion. Changing one CSS value (sidebar column 190px to 200px) failed `shell panes match the legacy app at 1440px`; restored.
+
+- `pnpm install --frozen-lockfile`, `pnpm typecheck` (strict), `pnpm lint`: pass.
+- `pnpm test` (Vitest, jsdom): 49 files, 718 tests passed.
+- `pnpm exec playwright test --workers=1`: 189 passed, 0 skipped.
+  - axe (`a11y.spec.ts`): no violations in the views and in the open Add password and Split dialogs; Esc closes dialogs and returns focus; toasts announce through `role=status` / `role=alert`.
+  - perf (`perf.spec.ts`): 300 pages render at most 40 thumbnails before scrolling, no long task over 200 ms, 0 live documents after close.
+  - security (`tests/unit/security.test.ts`, run by `pnpm test`): no raw-HTML or eval sinks, strict CSP, narrow capabilities, no web storage, no dev hooks in the build; `save.spec.ts` checks Add password leaves the password in no IndexedDB store.
+- `pnpm build`: passes; `dist/` holds only the app (`index.html`, `assets/`, `brand/`); the PDF-engine chunk size warning is expected.
+- Rust was not compiled here for this task; `cargo check` passed in Task 2.1 (see above).
+
+Windows checklist for the owner (all pending):
+- [ ] Native Open (picker), drag-and-drop and Save as write and read real files; cancel writes nothing.
+- [ ] Show in folder after saving.
+- [ ] Recents survive a restart (persisted scope) and Locate re-links a moved or deleted file.
+- [ ] Wheel and inertia page flipping feels right in WebView2.
+- [ ] Pointer reorder feel and auto-scroll while dragging.
+- [ ] Print through the PDF viewer.
+- [ ] The export worker runs under the shipped CSP.
+- [ ] Reduced capabilities (no `core:default`) work, including window controls.
+- [ ] fs write and read scope is limited to picked or dropped paths.
+- [ ] Double-click on the titlebar maximizes and restores the window.
+- [ ] Upgrade from a profile that has used the legacy app: Home lists recents, opening and editing work, and the draft saves and restores (the legacy recents and draft are dropped, not migrated).
+
+Open owner decision: dropping a folder grants a recursive fs scope that persisted-scope keeps across restarts (together with `fs:allow-write-file`). tauri-plugin-fs grants it in Rust (`allow_directory(path, true)`, tauri-plugin-fs 2.7.1 `src/lib.rs:632-647`) before JavaScript sees the drop, so ignoring folder drops in JavaScript does not remove the grant. Options: accept and document it, or a Rust-side change (forbid the directory again after the drop, or a custom drop handler).

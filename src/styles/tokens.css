@@ -1,0 +1,11 @@
+:root {
+  color: #252a32;
+  background: #eef1f4;
+  font-synthesis: none;
+  font-size: 13px;
+  --accent: #3465a7;
+  --line: #e6e9ed;
+  --ease: cubic-bezier(.23,1,.32,1);
+  font-family: 'IBM Plex Sans','Segoe UI',Arial,sans-serif;
+  --muted: #5c6878;
+}

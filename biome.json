@@ -1,0 +1,37 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "vcs": {"enabled": true, "clientKind": "git", "useIgnoreFile": true},
+  "files": {"includes": ["src/**/*.{ts,tsx}", "tests/**/*.ts", "*.config.ts"]},
+  "formatter": {"enabled": false},
+  "assist": {"enabled": false},
+  "linter": {
+    "enabled": true,
+    "domains": {"react": "recommended"},
+    "rules": {
+      "preset": "recommended",
+      "style": {"noNonNullAssertion": "off"},
+      "suspicious": {"useIterableCallbackReturn": "off"},
+      "correctness": {
+        "noVoidTypeReturn": "off",
+        "useExhaustiveDependencies": {"level": "error", "options": {"reportUnnecessaryDependencies": false}}
+      },
+      "a11y": {
+        "noNoninteractiveTabindex": "off",
+        "noStaticElementInteractions": "off",
+        "useAriaPropsSupportedByRole": "off",
+        "useSemanticElements": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.test.{ts,tsx}", "tests/**"],
+      "linter": {
+        "rules": {
+          "correctness": {"noUnsafeOptionalChaining": "off", "useJsxKeyInIterable": "off"},
+          "suspicious": {"noAssignInExpressions": "off"}
+        }
+      }
+    }
+  ]
+}
