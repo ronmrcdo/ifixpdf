@@ -175,3 +175,27 @@ describe('export.ts with a Worker', () => {
     await expect(p).resolves.toBeInstanceOf(Uint8Array);
   });
 });
+
+describe('export.ts countPages', () => {
+  it('counts pages in the worker and leaves the caller bytes intact', async () => {
+    const posted: Array<{id: number; op: string}> = [];
+    const workers: FakeWorker[] = [];
+    class FakeWorker {
+      onmessage: ((e: MessageEvent) => void) | null = null;
+      constructor() {
+        workers.push(this);
+      }
+      postMessage(msg: {id: number; op: string}) {
+        posted.push(msg);
+      }
+    }
+    vi.stubGlobal('Worker', FakeWorker);
+    const {countPages} = await import('./export');
+    const bytes = new Uint8Array([1, 2, 3]);
+    const p = countPages(bytes);
+    expect(posted.map((m) => m.op)).toEqual(['count']);
+    workers[0]!.onmessage?.({data: {id: posted[0]!.id, result: 3}} as MessageEvent);
+    expect(await p).toBe(3);
+    expect(bytes.byteLength).toBe(3);
+  });
+});

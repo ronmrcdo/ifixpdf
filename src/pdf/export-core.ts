@@ -65,6 +65,10 @@ export async function buildPdf(spec: ExportSpec, onProgress?: Progress): Promise
   return buildFrom(loaded, spec.pages, spec.title, onProgress);
 }
 
+export async function countPages(bytes: Uint8Array): Promise<number> {
+  return (await PDFDocument.load(bytes)).getPageCount();
+}
+
 export function protectPdf(bytes: Uint8Array, password: string): Promise<Uint8Array> {
   configure(pdfLib);
   return lock(bytes, password, {algo: 'aes256'});

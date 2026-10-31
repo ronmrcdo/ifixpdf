@@ -4,13 +4,13 @@ import type {ExportRequest} from './export.worker';
 export type {ExportSpec} from './export-core';
 
 interface Pending {
-  resolve: (b: Uint8Array) => void;
+  resolve: (b: Uint8Array | number) => void;
   reject: (e: Error) => void;
   onProgress?: Progress;
 }
 type Reply =
   | {id: number; progress: [number, number]}
-  | {id: number; result: Uint8Array}
+  | {id: number; result: Uint8Array | number}
   | {id: number; error: string};
 type Call = DistributiveOmit<ExportRequest>;
 type DistributiveOmit<T> = T extends unknown ? Omit<T, 'id'> : never;
@@ -61,13 +61,18 @@ const snapshot = (spec: ExportSpec, copyBytes: boolean): ExportSpec => ({
     : spec.sources,
 });
 
-function inWorker(w: Worker, call: Call, onProgress?: Progress): Promise<Uint8Array> {
+function inWorker<T extends Uint8Array | number>(
+  w: Worker,
+  call: Call,
+  onProgress?: Progress,
+): Promise<T> {
   const id = nextId++;
   return new Promise((resolve, reject) => {
-    pending.set(id, {resolve, reject, onProgress});
+    // The op determines the result type; the worker reply is only known as a union.
+    pending.set(id, {resolve: resolve as Pending['resolve'], reject, onProgress});
     const req = {...call, id} as ExportRequest;
     const transfer: Transferable[] =
-      req.op === 'protect'
+      req.op === 'protect' || req.op === 'count'
         ? [req.bytes.buffer]
         : Object.values(req.spec.sources).map((b) => b.buffer);
     try {
@@ -91,6 +96,13 @@ export async function protectPdf(bytes: Uint8Array, password: string): Promise<U
   const copy = bytes.slice(); // snapshot before any await
   if (w) return inWorker(w, {op: 'protect', bytes: copy, password});
   return (await import('./export-core')).protectPdf(copy, password);
+}
+
+export async function countPages(bytes: Uint8Array): Promise<number> {
+  const w = getWorker();
+  const copy = bytes.slice(); // snapshot before any await
+  if (w) return inWorker<number>(w, {op: 'count', bytes: copy});
+  return (await import('./export-core')).countPages(copy);
 }
 
 export async function splitZip(
