@@ -25,11 +25,11 @@ async function importFiles(
   const added = mergeStore.getState().files.filter((f) => !before.has(f.id));
   if (!added.length) return;
   navigate('merge');
-  // addFiles keeps picked order and skips invalid files, so match added files to picks by name in order.
+  // addFiles keeps picked order and skips invalid files, so match added files to picks by name and path in order.
   const queue = [...picked];
   await Promise.all(
     added.map((file) => {
-      const i = queue.findIndex((p) => p.name === file.name);
+      const i = queue.findIndex((p) => p.name === file.name && p.path === file.path);
       return recordOpen(mergeStore, file, queue.splice(i, 1)[0]!);
     }),
   );

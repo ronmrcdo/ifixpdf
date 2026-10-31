@@ -114,6 +114,14 @@ describe('dropping files', () => {
     expect((await recents()).map((r) => r.name)).toEqual(['ok.pdf']);
   });
 
+  it('links each added file to its own pick when names collide', async () => {
+    await importAs('merge', [
+      {name: 'a.pdf', bytes: new Uint8Array([1]), path: 'X/a.pdf'},
+      await pdf('a.pdf', 1, 'Y/a.pdf'),
+    ]);
+    expect((await recents()).map((r) => r.path)).toEqual(['Y/a.pdf']);
+  });
+
   it('a recents failure does not block opening', async () => {
     vi.spyOn(indexedDB, 'open').mockImplementation(() => {
       throw new Error('blocked');
