@@ -20,10 +20,40 @@ const open = () =>
     t.objectStore('draft').clear();
   });
 
+const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+
+// Shape check for a record from storage; page.local must exist in its file. Deeper fields are trusted.
+export function isDraftRecord(v: unknown): v is DraftRecord {
+  if (!isObj(v) || !Array.isArray(v.files) || !Array.isArray(v.pages)) return false;
+  if (!Array.isArray(v.selection) || !isObj(v.exportSettings)) return false;
+  if (v.view !== 'preview' && v.view !== 'edit') return false;
+  if (typeof v.currentPage !== 'number') return false;
+  const pagesOf = new Map<unknown, unknown>();
+  for (const f of v.files) {
+    if (!isObj(f)) return false;
+    pagesOf.set(f.id, f.pages);
+  }
+  return v.pages.every((p) => {
+    const n = isObj(p) ? pagesOf.get(p.fileId) : undefined;
+    return (
+      isObj(p) &&
+      typeof n === 'number' &&
+      typeof p.local === 'number' &&
+      p.local >= 0 &&
+      p.local < n
+    );
+  });
+}
+
 export function readDraft(): Promise<{record: DraftRecord; bytes: Map<FileId, Uint8Array>} | null> {
   return withDb(open, STORES, 'readwrite', async (t) => {
-    const record = await req<DraftRecord | undefined>(t.objectStore('draft').get('document'));
+    const record = await req<unknown>(t.objectStore('draft').get('document'));
     if (!record) return null;
+    if (!isDraftRecord(record)) {
+      t.objectStore('draft').clear(); // damaged or from an older build
+      t.objectStore('draft-files').clear();
+      return null;
+    }
     const bytes = new Map<FileId, Uint8Array>();
     for (const f of record.files) {
       const b = await req<Uint8Array | undefined>(t.objectStore('draft-files').get(f.id));
