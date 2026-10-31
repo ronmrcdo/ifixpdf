@@ -6,7 +6,9 @@ import {test, expect, type App} from './fixtures';
 const repo = 'https://github.com/ronmrcdo/ifixpdf';
 const eula = fs.readFileSync('EULA.txt', 'utf8').replace(/\r\n/g, '\n');
 const license = fs.readFileSync('LICENSE', 'utf8').replace(/\r\n/g, '\n');
-const licenses = fs.readdirSync('licenses');
+const licenses = fs
+  .readdirSync('licenses', {recursive: true, withFileTypes: true})
+  .filter((e) => e.isFile());
 const norm = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 // The About block, privacy text, brand mark and third-party list have no accessible handle in the old DOM.

@@ -8,7 +8,7 @@ import {UpdatesRow} from '../../updates/UpdatesRow';
 
 const REPO = 'https://github.com/ronmrcdo/ifixpdf';
 const thirdParty = Object.entries(
-  import.meta.glob<string>('/licenses/*', {query: '?raw', import: 'default'}),
+  import.meta.glob<string>('/licenses/**/*', {query: '?raw', import: 'default'}),
 );
 const label = (path: string) =>
   (path.split('/').pop() ?? path).replace(/\.[^.]+$/, '').replace(/-LICENSE$/, '');
