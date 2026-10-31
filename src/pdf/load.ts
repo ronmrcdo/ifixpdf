@@ -8,10 +8,10 @@ export class InvalidPdfError extends Error {
 /** The single validation path: parse with pdf-lib (rejects encrypted files) and require 1+ pages. */
 export async function loadPdf(name: string, bytes: Uint8Array): Promise<{pages: number}> {
   if (bytes.byteLength === 0) throw new InvalidPdfError(name);
-  const {PDFDocument} = await import('pdf-lib');
+  const {countPages} = await import('./export');
   let pages: number;
   try {
-    pages = (await PDFDocument.load(bytes)).getPageCount();
+    pages = await countPages(bytes);
   } catch (error) {
     throw new InvalidPdfError(name, error);
   }
