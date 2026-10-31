@@ -10,8 +10,15 @@ const REPO = 'https://github.com/ronmrcdo/ifixpdf';
 const thirdParty = Object.entries(
   import.meta.glob<string>('/licenses/**/*', {query: '?raw', import: 'default'}),
 );
-const label = (path: string) =>
-  (path.split('/').pop() ?? path).replace(/\.[^.]+$/, '').replace(/-LICENSE$/, '');
+const PLAIN_LABELS: Record<string, string> = {
+  'npm-THIRD-PARTY': 'Open-source packages (app)',
+  'rust-THIRD-PARTY': 'Open-source packages (Rust)',
+  'linux-appimage-system-libraries': 'Linux AppImage system libraries',
+};
+const label = (path: string) => {
+  const name = (path.split('/').pop() ?? path).replace(/\.[^.]+$/, '').replace(/-LICENSE$/, '');
+  return PLAIN_LABELS[name] ?? name;
+};
 
 /** Body loads on first open and renders as text, never HTML. */
 export function LicenseItem({name, load}: {name: string; load: () => Promise<string>}) {
