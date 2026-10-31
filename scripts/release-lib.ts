@@ -13,17 +13,43 @@ export function isNewer(next: string, current: string): boolean {
   return false;
 }
 
-export function changelogSection(md: string, version: string): string | null {
+export type Bump = 'patch' | 'minor' | 'major';
+
+export function bumpVersion(version: string, bump: Bump): string {
+  const v = parseVersion(version);
+  if (!v) throw new Error(`Not a version: ${version}`);
+  const [major, minor, patch] = v;
+  if (bump === 'major') return `${major + 1}.0.0`;
+  if (bump === 'minor') return `${major}.${minor + 1}.0`;
+  return `${major}.${minor}.${patch + 1}`;
+}
+
+function section(md: string, isHeading: (line: string) => boolean): string | null {
   const lines = md.replace(/\r\n/g, '\n').split('\n');
-  const head = `## v${version}`;
-  const start = lines.findIndex(
-    (l) => l.startsWith(head) && (l.length === head.length || /^[ —]/.test(l.slice(head.length))),
-  );
+  const start = lines.findIndex(isHeading);
   if (start < 0) return null;
   const rest = lines.slice(start + 1);
   const end = rest.findIndex((l) => l.startsWith('## '));
   const body = (end < 0 ? rest : rest.slice(0, end)).join('\n').trim();
   return body || null;
+}
+
+export function changelogSection(md: string, version: string): string | null {
+  const head = `## v${version}`;
+  return section(
+    md,
+    (l) => l.startsWith(head) && (l.length === head.length || /^[ —]/.test(l.slice(head.length))),
+  );
+}
+
+const UNRELEASED = /^## Unreleased[ \t]*$/m;
+
+export function unreleasedSection(md: string): string | null {
+  return section(md, (l) => UNRELEASED.test(l));
+}
+
+export function stampUnreleased(md: string, version: string, date: string): string {
+  return md.replace(UNRELEASED, `## v${version} — ${date}`);
 }
 
 export function blockingChanges(porcelain: string): string[] {
@@ -38,8 +64,8 @@ export function featFixSubjects(log: string): string[] {
   return log.split('\n').filter((l) => /^(feat|fix)(\(.+\))?!?:/.test(l));
 }
 
-// Matches the first `version = "..."` after `[package]` and before the next table header.
-const PACKAGE_VERSION = /(\[package\][^[]*?\nversion\s*=\s*")([^"]*)(")/;
+// Matches the first `version = "..."` after `[package]` and before the next table header (a line starting with `[`).
+const PACKAGE_VERSION = /(\[package\](?:\n(?!\[)[^\n]*)*?\nversion\s*=\s*")([^"]*)(")/;
 
 export function cargoPackageVersion(toml: string): string | null {
   return PACKAGE_VERSION.exec(toml)?.[2] ?? null;
@@ -85,7 +111,7 @@ xattr -cr /Applications/iFixPDF.app
 
 ## Updating on Linux
 
-If you use the AppImage, press **Check for updates** in Settings. If you installed the \`.deb\`, update by downloading the new \`.deb\` from this page and installing it.
+Whether you use the AppImage or the \`.deb\`, press **Check for updates** in Settings. If you installed the \`.deb\`, your computer asks for your password to install the update.
 
 ## Privacy
 
