@@ -148,6 +148,8 @@ export async function runInstall(
   } catch {
     return dispatch({type: 'save-failed'});
   }
+  // An export may have started while the draft was saving; it must not be cut short.
+  if (deps.busy()) return deps.notify('Install the update after your export finishes.');
   dispatch({type: 'install'});
   try {
     await update.install();

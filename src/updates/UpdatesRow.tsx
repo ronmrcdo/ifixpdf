@@ -46,7 +46,7 @@ const view: Record<UpdateStatus, (s: UpdateState) => [string, Button?]> = {
     {action: 'download', label: 'Retry'},
   ],
   ready: (s) => [
-    `iFixPDF ${s.version} is ready. Your workspace is saved before restarting.`,
+    `iFixPDF ${s.version} is ready. Your Preview and Edit draft is saved before restarting; Merge PDFs starts empty.`,
     INSTALL,
   ],
   'save-error': () => [

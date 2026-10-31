@@ -236,6 +236,23 @@ describe('runInstall', () => {
     expect(u.install).not.toHaveBeenCalled();
     expect(h.state).toEqual(at('ready', info));
   });
+  it('an export started during the draft save blocks install and keeps ready', async () => {
+    let busy = false;
+    const d = deps({
+        busy: () => busy,
+        saveDraft: vi.fn(async () => {
+          busy = true;
+        }),
+      }),
+      u = handle(),
+      h = harness(at('ready', info));
+    await runInstall(u, d, h.dispatch);
+    expect(d.saveDraft).toHaveBeenCalledOnce();
+    expect(d.notify).toHaveBeenCalledWith('Install the update after your export finishes.');
+    expect(u.install).not.toHaveBeenCalled();
+    expect(h.seen).toEqual([]);
+    expect(h.state).toEqual(at('ready', info));
+  });
   it('a failed draft save is save-error and install never runs', async () => {
     const d = deps({
         saveDraft: async () => {
