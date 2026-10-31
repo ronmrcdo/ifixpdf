@@ -1,5 +1,6 @@
 import {PDFDocument} from 'pdf-lib';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
+import {buildPdf} from '../pdf/export';
 import {platform, type SavedFile} from '../platform';
 import {recents} from '../storage/app-recents';
 import {useApp} from '../state/app';
@@ -16,6 +17,11 @@ import {
   saveOutput,
 } from './save';
 
+// Pass-through spy: shows which sources the export is given.
+vi.mock('../pdf/export', async (orig) => {
+  const m = await orig<typeof import('../pdf/export')>();
+  return {...m, buildPdf: vi.fn(m.buildPdf)};
+});
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
 
 // One page per width, so a saved page's width tells which source page it is.
@@ -93,6 +99,18 @@ describe('outputIndices', () => {
 });
 
 describe('saveOutput', () => {
+  it('sends only the sources the chosen pages use', async () => {
+    await open(mergeStore, 'A.pdf');
+    await mergeStore.getState().addFiles([{name: 'B.pdf', bytes: await sized([400])}]);
+    const [a, b] = mergeStore.getState().files;
+    mergeStore.getState().setExportSettings({rangeMode: 'current'});
+    mergeStore.getState().goTo(3);
+    await saveOutput(mergeStore);
+    const spec = vi.mocked(buildPdf).mock.calls[0]![0];
+    expect(Object.keys(spec.sources)).toEqual([b!.id]);
+    expect(a!.id).not.toBe(b!.id);
+  });
+
   it('saves every page in displayed order with rotation, records the path and toasts in Edit', async () => {
     await open(documentStore);
     const s = documentStore.getState();
