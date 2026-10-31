@@ -268,7 +268,14 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
 
       move: (targetIndex, uids = get().selection.uids) =>
         edit((s) => ({pages: movePages(s.pages, uids, targetIndex)})),
-      remove: (uids = get().selection.uids) => edit((s) => ({pages: deletePages(s.pages, uids)})),
+      remove: (uids = get().selection.uids) => {
+        const {pages} = get();
+        if (pages.length && pages.every((p) => uids.has(p.uid))) {
+          useApp.getState().notify('A PDF needs at least one page.', 'error');
+          return;
+        }
+        edit((s) => ({pages: deletePages(s.pages, uids)}));
+      },
       duplicate: (uids = get().selection.uids) =>
         edit((s) => ({pages: duplicatePages(s.pages, uids)})),
       rotate: (delta, uids = get().selection.uids) =>
