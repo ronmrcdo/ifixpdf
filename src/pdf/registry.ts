@@ -24,7 +24,10 @@ export async function release(fileId: string, owner: Owner): Promise<void> {
   entries.delete(fileId);
   dropBytes(fileId);
   releaseFile(fileId);
-  await entry.proxy?.then(proxy => proxy.destroy(), () => {});
+  await entry.proxy?.then(
+    (proxy) => proxy.destroy(),
+    () => {},
+  );
 }
 
 function entryFor(fileId: string): Entry {
@@ -33,14 +36,25 @@ function entryFor(fileId: string): Entry {
   return entry;
 }
 
+// Absolute: on http(s) origins (Tauri on Windows) pdf.js fetches these from its worker, whose base URL differs.
+const pdfjsAsset = (dir: string): string =>
+  new URL(`${import.meta.env.BASE_URL}pdfjs/${dir}/`, document.baseURI).href;
+
 export function acquire(fileId: string): Promise<PDFDocumentProxy> {
   const entry = entryFor(fileId);
   entry.proxy ??= (async () => {
-    const [pdfjs, worker] = await Promise.all([import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')]);
+    const [pdfjs, worker] = await Promise.all([
+      import('pdfjs-dist'),
+      import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
+    ]);
     pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
     // pdf.js transfers the buffer to its worker, so hand it a copy.
-    return pdfjs.getDocument({data: getBytes(fileId).slice()}).promise;
+    return pdfjs.getDocument({
+      data: getBytes(fileId).slice(),
+      cMapUrl: pdfjsAsset('cmaps'),
+      cMapPacked: true,
+      standardFontDataUrl: pdfjsAsset('standard_fonts'),
+    }).promise;
   })();
   return entry.proxy;
 }
-

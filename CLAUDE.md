@@ -33,6 +33,7 @@ Windows desktop PDF tool. Frontend is React 19 + TypeScript (strict) on Vite 6, 
 | `src/test/` | Vitest setup |
 | `tests/e2e/`, `tests/unit/` | Playwright specs and fixtures; unit tests outside `src/` |
 | `public/brand/` | Brand mark, wordmark, icons |
+| `vite.config.ts` | Serves and bundles pdf.js CMaps and standard fonts under `/pdfjs/` |
 | `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS target, CSP), capabilities (no `core:default`; window, updater, dialog, fs read/write-file, opener, event listen) |
 
 Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` is the legacy internal name), `?recent=<id>` (append `&view=edit` to edit). The URL is written with `history.replaceState` only.

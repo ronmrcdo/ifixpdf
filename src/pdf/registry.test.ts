@@ -5,7 +5,7 @@ import {makePdf} from './fixtures';
 const destroy = vi.fn(async () => {});
 vi.mock('pdfjs-dist', () => ({
   GlobalWorkerOptions: {},
-  getDocument: vi.fn(() => ({promise: Promise.resolve({destroy, numPages: 1})}))
+  getDocument: vi.fn(() => ({promise: Promise.resolve({destroy, numPages: 1})})),
 }));
 vi.mock('pdfjs-dist/build/pdf.worker.min.mjs?url', () => ({default: 'worker.js'}));
 
@@ -45,6 +45,21 @@ describe('registry', () => {
     expect(a).toBe(b);
     expect(getDocument).toHaveBeenCalledTimes(1);
     await release('f3', 'document');
+  });
+  it('points pdf.js at the bundled CMaps and standard fonts as absolute URLs', async () => {
+    const {getDocument} = await import('pdfjs-dist');
+    vi.mocked(getDocument).mockClear();
+    putBytes('f4', await makePdf(1));
+    retain('f4', 'document');
+    await acquire('f4');
+    expect(getDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cMapUrl: new URL('/pdfjs/cmaps/', document.baseURI).href,
+        cMapPacked: true,
+        standardFontDataUrl: new URL('/pdfjs/standard_fonts/', document.baseURI).href,
+      }),
+    );
+    await release('f4', 'document');
   });
   it('dropBytes makes getBytes throw', () => {
     putBytes('x', new Uint8Array(1));
