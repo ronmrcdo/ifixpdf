@@ -24,10 +24,15 @@ export function outputIndices({
   return pages.map((_, i) => i);
 }
 
-const pick = (spec: ExportSpec, indices: number[]): ExportSpec => ({
-  ...spec,
-  pages: indices.map((i) => spec.pages[i]!),
-});
+const pick = (spec: ExportSpec, indices: number[]): ExportSpec => {
+  const pages = indices.map((i) => spec.pages[i]!);
+  const used = new Set(pages.map((p) => p.fileId));
+  return {
+    ...spec,
+    pages,
+    sources: Object.fromEntries(Object.entries(spec.sources).filter(([id]) => used.has(id))),
+  };
+};
 
 /** True, after one "wait" toast, when an export holds `store`'s lock: the action that asked must not run. */
 export function busyExporting(store: WorkspaceStore): boolean {
