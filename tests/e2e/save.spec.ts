@@ -382,6 +382,24 @@ test.describe('native', () => {
     app,
     page,
   }) => {
+    // Before opening: opening counts pages in the shared export worker, which is built once.
+    await page.addInitScript(() => {
+      const Real = window.Worker;
+      window.__workers = [];
+      window.__posted = [];
+      window.Worker = class extends Real {
+        constructor(url: string | URL, options?: WorkerOptions) {
+          super(url, options);
+          window.__workers.push(String(url));
+        }
+        postMessage(message: {op?: string}, transfer?: unknown) {
+          window.__posted.push(message.op);
+          super.postMessage(message, transfer as Transferable[]);
+        }
+      };
+    });
+    await app.goto(); // the init script applies to the next load
+
     const doc = await PDFDocument.create();
     for (const w of [100, 200, 300]) doc.addPage([w, 100]);
     await app.openPdf({
@@ -398,19 +416,6 @@ test.describe('native', () => {
     await page.getByRole('button', {name: 'Rotate selected pages'}).click();
     await page.getByRole('checkbox', {name: 'Select page 2'}).uncheck();
     await page.evaluate(() => {
-      const Real = window.Worker;
-      window.__workers = [];
-      window.__posted = [];
-      window.Worker = class extends Real {
-        constructor(url: string | URL, options?: WorkerOptions) {
-          super(url, options);
-          window.__workers.push(String(url));
-        }
-        postMessage(message: {op?: string}, transfer?: unknown) {
-          window.__posted.push(message.op);
-          super.postMessage(message, transfer as Transferable[]);
-        }
-      };
       const real = window.__tauri.save_as;
       window.__tauri.save_as = async (bytes: unknown, options: unknown) => {
         await new Promise((r) => {
@@ -448,7 +453,7 @@ test.describe('native', () => {
     expect(
       await page.evaluate(() => window.__posted.filter(Boolean)),
       'the build was posted to the worker, not run in-thread',
-    ).toEqual(['build']);
+    ).toContain('build');
     await expect(app.status).toContainText('1 files · 3 pages · Ready');
   });
 });
