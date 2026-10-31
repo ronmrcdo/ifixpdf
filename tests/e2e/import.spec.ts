@@ -22,7 +22,7 @@ test.describe('native drop', () => {
       .toBeGreaterThan(0);
     await app.dropFiles(['C:\\a.pdf', 'C:\\b.txt']);
     await expect(app.title).toHaveText('Preview PDF');
-    await expect(app.subtitle).toHaveText('a.pdf');
+    await expect(app.subtitle).toHaveText('a (edited).pdf');
     await expect(app.status).toContainText('1 files · 2 pages');
     await expect.poll(() => app.recentPaths()).toEqual(['C:\\a.pdf']);
     expect(
@@ -36,7 +36,7 @@ test.describe('native drop', () => {
       .poll(() => app.calls('plugin:event|listen').then((c) => c.length))
       .toBeGreaterThan(0);
     await app.dropFiles(['C:\\a.pdf']);
-    await expect(app.subtitle).toHaveText('a.pdf');
+    await expect(app.subtitle).toHaveText('a (edited).pdf');
     await app.dropFiles(['c:/A.pdf']);
     await expect.poll(() => app.calls('plugin:fs|read_file').then((c) => c.length)).toBe(2);
     await expect(app.status).toContainText('1 files · 2 pages');

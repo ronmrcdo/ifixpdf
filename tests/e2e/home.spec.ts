@@ -40,26 +40,26 @@ test('the row menu merges the clicked file alone with a hint', async ({app, page
 test('merging from Home leaves the open document alone', async ({app, page}) => {
   await seeded(app);
   await page.getByRole('button', {name: /^Alpha\.pdf/}).click();
-  await expect(app.subtitle).toHaveText('Alpha.pdf');
+  await expect(app.subtitle).toHaveText('Alpha (edited).pdf');
   await app.view('Home');
   await page.getByRole('checkbox', {name: 'Select Beta.pdf'}).check();
   await page.getByRole('button', {name: /^Merge selected/}).click();
   await expect(app.status).toContainText('1 files · 2 pages');
   await app.view('Preview PDF');
-  await expect(app.subtitle).toHaveText('Alpha.pdf');
+  await expect(app.subtitle).toHaveText('Alpha (edited).pdf');
 });
 
 test('the name opens Preview', async ({app, page}) => {
   await seeded(app);
   await page.getByRole('button', {name: /^Alpha\.pdf/}).click();
   await expect(app.title).toHaveText('Preview PDF');
-  await expect(app.subtitle).toHaveText('Alpha.pdf');
+  await expect(app.subtitle).toHaveText('Alpha (edited).pdf');
 });
 
 test('opening an older recent moves it to the top of Home', async ({app, page}) => {
   await seeded(app);
   await page.getByRole('button', {name: /^Alpha\.pdf/}).click();
-  await expect(app.subtitle).toHaveText('Alpha.pdf');
+  await expect(app.subtitle).toHaveText('Alpha (edited).pdf');
   await app.view('Home');
   await expect(page.locator('.recent-name strong')).toHaveText(['Alpha.pdf', 'Beta.pdf']);
 });
