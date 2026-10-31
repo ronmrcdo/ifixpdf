@@ -1,0 +1,100 @@
+{
+  "MIT": [
+    {
+      "name": "@dnd-kit/accessibility",
+      "versions": [
+        "3.1.1"
+      ],
+      "paths": [
+        "/x/node_modules/@dnd-kit/accessibility"
+      ],
+      "license": "MIT"
+    }
+  ],
+  "OFL-1.1": [
+    {
+      "name": "@fontsource/ibm-plex-sans",
+      "versions": [
+        "5.3.0"
+      ],
+      "paths": [
+        "/x/node_modules/@fontsource/ibm-plex-sans"
+      ],
+      "license": "OFL-1.1"
+    }
+  ],
+  "Apache-2.0 OR MIT": [
+    {
+      "name": "@tauri-apps/api",
+      "versions": [
+        "2.12.4"
+      ],
+      "paths": [
+        "/x/node_modules/@tauri-apps/api"
+      ],
+      "license": "Apache-2.0 OR MIT"
+    }
+  ],
+  "MIT OR Apache-2.0": [
+    {
+      "name": "@tauri-apps/plugin-dialog",
+      "versions": [
+        "2.8.4"
+      ],
+      "paths": [
+        "/x/node_modules/@tauri-apps/plugin-dialog"
+      ],
+      "license": "MIT OR Apache-2.0"
+    }
+  ],
+  "ISC": [
+    {
+      "name": "lucide-react",
+      "versions": [
+        "1.64.0"
+      ],
+      "paths": [
+        "/x/node_modules/lucide-react"
+      ],
+      "license": "ISC"
+    }
+  ],
+  "(MIT AND Zlib)": [
+    {
+      "name": "pako",
+      "versions": [
+        "1.0.11"
+      ],
+      "paths": [
+        "/x/node_modules/pako"
+      ],
+      "license": "(MIT AND Zlib)"
+    }
+  ],
+  "Apache-2.0": [
+    {
+      "name": "pdfjs-dist",
+      "versions": [
+        "4.10.38"
+      ],
+      "paths": [
+        "/x/node_modules/pdfjs-dist"
+      ],
+      "license": "Apache-2.0"
+    }
+  ],
+  "0BSD": [
+    {
+      "name": "tslib",
+      "versions": [
+        "1.14.1",
+        "2.8.1"
+      ],
+      "paths": [
+        "/x/node_modules/tslib@1.14.1",
+        "/x/node_modules/tslib@2.8.1"
+      ],
+      "license": "0BSD"
+    }
+  ]
+}

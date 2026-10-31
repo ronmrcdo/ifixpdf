@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import {readdirSync} from 'node:fs';
 import {render, screen, waitFor, within} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {beforeEach, describe, expect, it, vi} from 'vitest';
@@ -134,7 +136,10 @@ describe('SettingsView', () => {
     expect(await screen.findByText('Developer: Ron Mercado')).toBeInTheDocument();
     expect(screen.getByText(/^Version \d+\.\d+\.\d+/)).toBeInTheDocument();
     expect(container.querySelector('.about #updates')).not.toBeNull();
-    expect(container.querySelectorAll('.about-licenses details')).toHaveLength(7);
+    expect(container.querySelectorAll('.about-licenses details')).toHaveLength(
+      readdirSync('licenses', {recursive: true, withFileTypes: true}).filter((e) => e.isFile())
+        .length,
+    );
     expect(container.querySelector('.about-privacy')?.textContent).toMatch(/^Your PDFs are opened/);
   });
 });
