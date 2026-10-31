@@ -9,7 +9,8 @@ import {
   setCargoPackageVersion,
 } from './release-lib.ts';
 
-const git = (...args: string[]) => execFileSync('git', args, {encoding: 'utf8'});
+const git = (...args: string[]) =>
+  execFileSync('git', args, {encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe']});
 const fail = (msg: string): void => {
   console.error(msg);
   process.exitCode = 1;
