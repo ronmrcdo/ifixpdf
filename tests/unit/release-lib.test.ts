@@ -1,6 +1,7 @@
 import {describe, expect, it} from 'vitest';
 import {
   blockingChanges,
+  bumpVersion,
   cargoPackageVersion,
   changelogSection,
   checkVersions,
@@ -9,6 +10,8 @@ import {
   parseVersion,
   releaseBody,
   setCargoPackageVersion,
+  stampUnreleased,
+  unreleasedSection,
 } from '../../scripts/release-lib.ts';
 
 const md = `What's new.
@@ -71,6 +74,37 @@ describe('changelogSection', () => {
   });
 });
 
+describe('bumpVersion', () => {
+  it('bumps patch, minor and major', () => {
+    expect(bumpVersion('1.2.3', 'patch')).toBe('1.2.4');
+    expect(bumpVersion('1.2.3', 'minor')).toBe('1.3.0');
+    expect(bumpVersion('1.2.3', 'major')).toBe('2.0.0');
+  });
+  it('rejects a bad version', () => expect(() => bumpVersion('1.2', 'patch')).toThrow());
+});
+
+describe('unreleased changelog section', () => {
+  const draft = `What's new.\n\n## Unreleased\n\nNext.\n\n## v1.2.0 — Oct 2026\n\nOld.\n`;
+  it('returns the Unreleased body only', () => expect(unreleasedSection(draft)).toBe('Next.'));
+  it('returns null when missing or empty', () => {
+    expect(unreleasedSection(md)).toBeNull();
+    expect(unreleasedSection('## Unreleased\n\n## v1.0.0\nA\n')).toBeNull();
+  });
+  it('ignores a heading that only starts with Unreleased', () =>
+    expect(unreleasedSection('## Unreleased stuff\n\nX\n')).toBeNull());
+  it('stamps the heading with the version and date', () => {
+    const out = stampUnreleased(draft, '1.3.0', 'November 2026');
+    expect(out).toContain('## v1.3.0 — November 2026\n\nNext.');
+    expect(out).not.toContain('Unreleased');
+    expect(changelogSection(out, '1.3.0')).toBe('Next.');
+    expect(changelogSection(out, '1.2.0')).toBe('Old.');
+  });
+  it('stamps a CRLF file', () =>
+    expect(stampUnreleased(draft.replace(/\n/g, '\r\n'), '1.3.0', 'Nov')).toContain(
+      '## v1.3.0 — Nov\r\n',
+    ));
+});
+
 describe('blockingChanges', () => {
   it('ignores CHANGELOG.md only', () => {
     expect(blockingChanges(' M CHANGELOG.md\n M src/App.tsx\n?? notes.txt\n')).toEqual([
@@ -94,6 +128,12 @@ describe('cargo version', () => {
     const out = setCargoPackageVersion(toml, '0.2.0');
     expect(out).toBe(toml.replace('version = "0.1.0"', 'version = "0.2.0"'));
     expect(cargoPackageVersion(out)).toBe('0.2.0');
+  });
+  it('finds the version after a key holding brackets', () => {
+    const t =
+      '[package]\nname = "a"\nauthors = ["x"]\nversion = "1.0.0"\n\n[dependencies]\nx = { version = "0.1.0" }\n';
+    expect(cargoPackageVersion(t)).toBe('1.0.0');
+    expect(setCargoPackageVersion(t, '1.1.0')).toBe(t.replace('"1.0.0"', '"1.1.0"'));
   });
   it('returns null without a package version', () =>
     expect(cargoPackageVersion('[dependencies]\nversion = "1.0.0"\n')).toBeNull());
@@ -131,7 +171,9 @@ describe('releaseBody', () => {
       'xattr -cr /Applications/iFixPDF.app',
     ])
       expect(body).toContain(t);
-    expect(body).toContain('downloading the new `.deb`');
+    expect(body).toContain('AppImage or the `.deb`, press **Check for updates**');
+    expect(body).toContain('asks for your password');
+    expect(body).not.toContain('downloading the new');
     expect(body).toContain('https://github.com/ronmrcdo/ifixpdf/blob/main/EULA.txt');
   });
 });
