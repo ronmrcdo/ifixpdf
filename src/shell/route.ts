@@ -1,4 +1,4 @@
-import {busyExporting} from '../actions/save';
+import {busyExporting, WAIT_FOR_SAVE} from '../actions/save';
 import type {SourceFile} from '../domain/types';
 import {FileMissingError, platform, type PickedFile} from '../platform';
 import {useApp, type View} from '../state/app';
@@ -143,7 +143,7 @@ export async function startup(): Promise<void> {
   // Every close (titlebar, Alt+F4, taskbar) passes here: keep an exporting window open, else save the draft.
   platform.window?.onCloseRequested(async () => {
     if (busy()) {
-      useApp.getState().notify('Wait for the save to finish.');
+      useApp.getState().notify(WAIT_FOR_SAVE);
       return false;
     }
     await flushDraft(); // never rejects: a failed write has already toasted

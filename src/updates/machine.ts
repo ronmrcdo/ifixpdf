@@ -136,20 +136,22 @@ export async function runDownload(update: UpdateHandle, dispatch: Dispatch): Pro
   }
 }
 
+const INSTALL_AFTER_EXPORT = 'Install the update after your export finishes.';
+
 // On Windows, install() hands off to the NSIS installer and exits the app, which then restarts.
 export async function runInstall(
   update: UpdateHandle,
   deps: Pick<UpdateDeps, 'busy' | 'saveDraft' | 'notify'>,
   dispatch: Dispatch,
 ): Promise<void> {
-  if (deps.busy()) return deps.notify('Install the update after your export finishes.');
+  if (deps.busy()) return deps.notify(INSTALL_AFTER_EXPORT);
   try {
     await deps.saveDraft();
   } catch {
     return dispatch({type: 'save-failed'});
   }
   // An export may have started while the draft was saving; it must not be cut short.
-  if (deps.busy()) return deps.notify('Install the update after your export finishes.');
+  if (deps.busy()) return deps.notify(INSTALL_AFTER_EXPORT);
   dispatch({type: 'install'});
   try {
     await update.install();
