@@ -54,7 +54,7 @@ function run(): void {
   git('add', 'package.json', cargo, 'src-tauri/Cargo.lock', 'CHANGELOG.md');
   git('commit', '-m', `chore(release): v${version}`);
   git('tag', `v${version}`);
-  console.log(`Ready. Push with: git push origin main v${version}`);
+  console.log(`Ready. Push with: git push --atomic origin main v${version}`);
 }
 
 run();

@@ -78,8 +78,8 @@ Working in the browser; not yet production-ready.
    - Then 3–6 items, each labeled **New**, **Improved** or **Fixed**, with a bold short title and one or two sentences. No nested bullets.
    - Say "you"; no file names, code, hashes, library names or jargon; skip behind-the-scenes work.
 2. On `main` with a clean tree, run `pnpm release X.Y.Z`. It bumps `package.json`, `Cargo.toml` and `Cargo.lock`, commits `chore(release): vX.Y.Z` and tags it. Without an entry it lists the `feat`/`fix` commits since the last tag and stops.
-3. Push the command it prints: `git push origin main vX.Y.Z`.
-4. Review the draft release on GitHub, then publish it. Publish only after all three build jobs are green: a partial draft has a `latest.json` missing platforms.
+3. Push the command it prints: `git push --atomic origin main vX.Y.Z` (atomic, so a rejected `main` does not push the tag either).
+4. Review the draft release on GitHub, then publish it. Publish only after all three build jobs are green: a partial draft has a `latest.json` missing platforms. The jobs also edit `latest.json` without a lock, so even with all jobs green, open the draft's `latest.json` and confirm it lists `windows-x86_64`, `darwin-aarch64`, `darwin-x86_64` and `linux-x86_64`. If one is missing, re-run that build job.
 
 ## Documentation
 
