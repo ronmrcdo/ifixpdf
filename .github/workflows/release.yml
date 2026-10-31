@@ -2,6 +2,8 @@ name: Release
 
 # Tag push: preflight, draft GitHub Release, signed installers uploaded to it.
 # workflow_dispatch: dry run that builds unsigned installers as workflow artifacts only.
+# Signing secrets live in the `release` environment, used only by the tag-run jobs `secrets`
+# and `build`; dry runs never enter it, so they run from any branch with a read-only token.
 on:
   push:
     tags: ['v*.*.*']
@@ -17,11 +19,12 @@ env:
   HUSKY: '0'
 
 jobs:
-  preflight:
+  secrets:
+    if: github.event_name == 'push'
     runs-on: ubuntu-22.04
+    environment: release
     steps:
       - name: Check signing secrets
-        if: github.event_name == 'push'
         env:
           KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
@@ -32,11 +35,27 @@ jobs:
           [ -n "$KEY_PASSWORD" ] || missing="$missing secret TAURI_SIGNING_PRIVATE_KEY_PASSWORD,"
           [ -n "$PUBKEY" ] || missing="$missing variable TAURI_UPDATER_PUBKEY,"
           if [ -n "$missing" ]; then
-            echo "::error::Release signing is not configured. Missing:${missing%,}. Add them under Settings > Secrets and variables > Actions."
+            echo "::error::Release signing is not configured. Missing:${missing%,}. Add them under Settings > Environments > release."
             exit 1
           fi
+
+  preflight:
+    runs-on: ubuntu-22.04
+    steps:
       - uses: actions/checkout@v7.0.1
-      - uses: pnpm/action-setup@v6.1.0
+        with:
+          fetch-depth: 0 # all branches, so origin/main is present for the check below
+          persist-credentials: false
+      - name: Tag is on main
+        if: github.event_name == 'push'
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main || {
+            echo "::error::Tag $TAG is not on main"
+            exit 1
+          }
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
       - uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
@@ -49,7 +68,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
         with:
           toolchain: stable
-      - uses: taiki-e/install-action@v2.88.1
+      - uses: taiki-e/install-action@68a389c788b2cd04016ce8c80ee23b80d2ab3d68 # v2.88.1
         with:
           tool: cargo-about@0.9.3
       - name: Rust license gate
@@ -72,7 +91,7 @@ jobs:
 
   draft:
     if: github.event_name == 'push'
-    needs: preflight
+    needs: [secrets, preflight]
     runs-on: ubuntu-22.04
     permissions:
       contents: write
@@ -100,14 +119,13 @@ jobs:
           echo "id=$(gh release view "$TAG" --json databaseId --jq .databaseId)" >> "$GITHUB_OUTPUT"
 
   build:
-    needs: [preflight, draft]
-    # draft is skipped on dry runs; tag runs build only after a successful draft.
-    if: >-
-      !cancelled() && needs.preflight.result == 'success' &&
-      (needs.draft.result == 'success' || (github.event_name != 'push' && needs.draft.result == 'skipped'))
+    # Tag runs only: draft is skipped on dry runs, and a failed or cancelled draft skips this job.
+    needs: draft
+    runs-on: ${{ matrix.platform }}
+    environment: release
     permissions:
       contents: write
-    strategy:
+    strategy: &platforms
       fail-fast: false
       matrix:
         include:
@@ -118,35 +136,44 @@ jobs:
             rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
           - platform: ubuntu-22.04
             args: --bundles appimage,deb
-    runs-on: ${{ matrix.platform }}
+    # The &anchors mark the setup steps dry-run reuses.
     steps:
-      - uses: actions/checkout@v7.0.1
+      - &checkout
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
       # About bundles licenses/**, so the generated notices must be in place before the build.
-      - uses: actions/download-artifact@v8.0.2
+      - &notices
+        uses: actions/download-artifact@v8.0.2
         with:
           name: notices
           path: licenses/generated
-      - uses: pnpm/action-setup@v6.1.0
-      - uses: actions/setup-node@v7.1.0
+      - &pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - &node
+        uses: actions/setup-node@v7.1.0
         with:
           node-version: 22
           cache: pnpm
-      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
+      - &rust
+        uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8
         with:
           toolchain: stable
           targets: ${{ matrix.rust-targets }}
-      - uses: swatinem/rust-cache@v2.9.3
+      - &rust-cache
+        uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           workspaces: src-tauri
-      - name: Linux build dependencies
+      - &linux-deps
+        name: Linux build dependencies
         if: matrix.platform == 'ubuntu-22.04'
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
-      - run: pnpm install --frozen-lockfile
+      - &install
+        run: pnpm install --frozen-lockfile
       - name: Build and upload to the draft release
-        if: github.event_name == 'push'
-        uses: tauri-apps/tauri-action@v1.0.0
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         env:
           GITHUB_TOKEN: ${{ github.token }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -156,13 +183,26 @@ jobs:
           uploadUpdaterJson: true
           args: >-
             ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true},"plugins":{"updater":{"pubkey":"${{ vars.TAURI_UPDATER_PUBKEY }}","endpoints":["https://github.com/ronmrcdo/ifixpdf/releases/latest/download/latest.json"]}}}'
-      - name: Build (dry run, no release)
-        if: github.event_name != 'push'
-        uses: tauri-apps/tauri-action@v1.0.0
+
+  dry-run:
+    if: github.event_name != 'push'
+    needs: preflight
+    runs-on: ${{ matrix.platform }}
+    strategy: *platforms
+    steps:
+      - *checkout
+      - *notices
+      - *pnpm
+      - *node
+      - *rust
+      - *rust-cache
+      - *linux-deps
+      - *install
+      - name: Build (unsigned, no release)
+        uses: tauri-apps/tauri-action@1deb371b0cd8bd54025b384f1cd735e725c4060f # v1.0.0
         with:
           args: ${{ matrix.args }}
-      - name: Upload installers (dry run)
-        if: github.event_name != 'push'
+      - name: Upload installers
         uses: actions/upload-artifact@v7.0.2
         with:
           name: installers-${{ matrix.platform }}
