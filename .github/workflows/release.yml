@@ -54,7 +54,8 @@ jobs:
           tool: cargo-about@0.9.3
       - name: Rust license gate
         working-directory: src-tauri
-        run: cargo about generate --fail -c about.toml about.hbs -o ../licenses/generated/rust-THIRD-PARTY.txt
+        # licenses/generated/ is gitignored and cargo-about does not create it.
+        run: mkdir -p ../licenses/generated && cargo about generate --fail -c about.toml about.hbs -o ../licenses/generated/rust-THIRD-PARTY.txt
       - name: npm license gate
         run: pnpm notices
       - uses: actions/upload-artifact@v7.0.2
@@ -100,8 +101,10 @@ jobs:
 
   build:
     needs: [preflight, draft]
-    # draft is skipped on dry runs; build still runs then, but never after a failed draft.
-    if: always() && needs.preflight.result == 'success' && needs.draft.result != 'failure'
+    # draft is skipped on dry runs; tag runs build only after a successful draft.
+    if: >-
+      !cancelled() && needs.preflight.result == 'success' &&
+      (needs.draft.result == 'success' || (github.event_name != 'push' && needs.draft.result == 'skipped'))
     permissions:
       contents: write
     strategy:
