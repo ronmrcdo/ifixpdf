@@ -85,10 +85,8 @@ async fn save_as(window: tauri::Window, request: Request<'_>) -> Result<Option<S
     let path = picked.into_path().map_err(|e| e.to_string())?;
     write_atomic(&path, bytes).map_err(|e| e.to_string())?;
     // Read scope only (the webview has no write permission): recents reopen the saved file, as after the dialog plugin's save.
-    window
-        .fs_scope()
-        .allow_file(&path)
-        .map_err(|e| e.to_string())?;
+    // Best effort: the file is already written, so a grant failure must not report "Could not save".
+    let _ = window.fs_scope().allow_file(&path);
     Ok(Some(path.to_string_lossy().into_owned()))
 }
 
