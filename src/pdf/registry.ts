@@ -1,4 +1,4 @@
-import type {PDFDocumentProxy} from 'pdfjs-dist';
+import type {PDFDocumentProxy, PDFWorker} from 'pdfjs-dist';
 import {dropBytes, getBytes} from './bytes';
 import {releaseFile} from './thumbnail-cache';
 
@@ -40,17 +40,30 @@ function entryFor(fileId: string): Entry {
 const pdfjsAsset = (dir: string): string =>
   new URL(`${import.meta.env.BASE_URL}pdfjs/${dir}/`, document.baseURI).href;
 
-export function acquire(fileId: string): Promise<PDFDocumentProxy> {
-  const entry = entryFor(fileId);
-  entry.proxy ??= (async () => {
-    const [pdfjs, worker] = await Promise.all([
+type Engine = {pdfjs: typeof import('pdfjs-dist'); worker: PDFWorker};
+// One worker for every document: a worker per document multiplies threads and re-parses fonts.
+let engine: Promise<Engine> | undefined;
+function loadEngine(): Promise<Engine> {
+  engine ??= (async () => {
+    const [pdfjs, workerSrc] = await Promise.all([
       import('pdfjs-dist'),
       import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
     ]);
-    pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
+    pdfjs.GlobalWorkerOptions.workerSrc = workerSrc.default;
+    return {pdfjs, worker: new pdfjs.PDFWorker()};
+  })();
+  return engine;
+}
+
+export function acquire(fileId: string): Promise<PDFDocumentProxy> {
+  const entry = entryFor(fileId);
+  entry.proxy ??= (async () => {
+    const {pdfjs, worker} = await loadEngine();
     // pdf.js transfers the buffer to its worker, so hand it a copy.
     return pdfjs.getDocument({
       data: getBytes(fileId).slice(),
+      worker,
+      isEvalSupported: false,
       cMapUrl: pdfjsAsset('cmaps'),
       cMapPacked: true,
       standardFontDataUrl: pdfjsAsset('standard_fonts'),
