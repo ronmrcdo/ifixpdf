@@ -24,7 +24,7 @@ export function Statusbar() {
         {text}
       </span>
       {workspace === 'document' && files > 0 && (
-        <span className="right" id="draft-status">
+        <span id="draft-status">
           {draft === 'failed' ? 'Draft not saved' : 'Draft saved on this device'}
         </span>
       )}

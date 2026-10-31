@@ -157,8 +157,8 @@
   font-size: var(--text-label);
   font-variant-numeric: tabular-nums;
 }
-.statusbar .right {
-  margin-left: auto;
+.statusbar>#status {
+  margin-right: auto;
 }
 .app-version {
   color: var(--muted);
