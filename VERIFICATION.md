@@ -209,6 +209,21 @@ x86_64-linux-gnu
 
 Windows and macOS bundles are not built locally; they are pending the release workflow.
 
+## Release workflow (31 October 2026, Linux, local only)
+
+`.github/workflows/release.yml` was checked locally only: it parses as YAML, `actionlint` 1.7.12 (Docker image, with shellcheck) reports no findings, and `tests/unit/tooling.test.ts` checks that the release is created only with `--draft`, top-level permissions are `contents: read`, and no `run:` script interpolates `${{ secrets.* }}`. It has not run on GitHub.
+
+### Pending on GitHub (owner-run, Task 5 Step 6)
+
+- [ ] Push the branch; `ci.yml` passes.
+- [ ] `workflow_dispatch` dry run on the branch: the three build jobs pass and the artifacts hold `iFixPDF_<v>_x64-setup.exe`, `iFixPDF_<v>_universal.dmg`, `iFixPDF_<v>_amd64.AppImage` and `iFixPDF_<v>_amd64.deb` (the names the release body assumes).
+- [ ] Re-check `licenses/linux-appimage-system-libraries.txt` against the `usr/lib` listing of the CI ubuntu-22.04 AppImage from that dry run. The current file came from the local Ubuntu 24.04 AppImage above.
+- [ ] Owner review: the AppImage bundles `libjbig.so.0` (GPL-2.0-or-later), not LGPL like the other system libraries.
+- [ ] After the secrets and variable are added: a throwaway tag gives draft `iFixPDF v<v>` with installers, `.sig` files and one `latest.json` holding `windows-x86_64`, `darwin-aarch64`, `darwin-x86_64` and `linux-x86_64`; the body starts with What's new. Re-running updates the same draft with no duplicate. Delete the throwaway draft and tag afterwards.
+- [ ] With the pubkey variable removed, `preflight` fails with the missing-configuration message and no draft is created.
+
+Linux CI results go here; Windows and macOS install and N→N+1 upgrade results stay pending in the Windows checklist until the owner tests them on real machines.
+
 ## Historical sections
 
 The sections from the top through "Save flows, Preview paging, About and manual updates" record the pre-React prototype and its retired scripts (`npm run`, `pnpm check:*`, the launch update check, Print Jobs, This Session). They describe code that no longer exists and stay as a record only. The current suites are `pnpm test` and `pnpm test:e2e`. The Windows checklist inside the last of those sections is current.
