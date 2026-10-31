@@ -2,7 +2,7 @@ import {IDBFactory} from 'fake-indexeddb';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {PageInstance, SourceFile} from '../domain/types';
 import {clearDraft, readDraft, writeDraft, type DraftRecord} from './draft';
-import {openDb, tx} from './idb';
+import {openDb, req, tx} from './idb';
 
 const file = (id: string): SourceFile => ({id, name: `${id}.pdf`, pages: 1, size: 1});
 const page = (fileId: string): PageInstance => ({
@@ -100,6 +100,24 @@ describe('draft', () => {
     expect(await readDraft()).toBeNull();
     await writeDraft(record('a'), bytesOf('a'));
     expect((await readDraft())?.record.files[0]?.id).toBe('a');
+  });
+  it.each([
+    ['no pages', () => ({...record('a'), pages: undefined})],
+    ['an unknown view', () => ({...record('a'), view: 'settings'})],
+    ['a page past its file', () => ({...record('a'), pages: [{...page('a'), local: 5}]})],
+  ])('drops a damaged draft (%s) and clears both stores', async (_n, bad) => {
+    await writeDraft(record('a'), bytesOf('a'));
+    const db = await openDb('ifixpdf-workspace-draft', 2, () => {});
+    await tx(db, 'draft', 'readwrite', (t) => {
+      t.objectStore('draft').put(bad(), 'document');
+    });
+    expect(await readDraft()).toBeNull();
+    const counts = await tx(db, ['draft', 'draft-files'], 'readonly', async (t) => [
+      await req(t.objectStore('draft').count()),
+      await req(t.objectStore('draft-files').count()),
+    ]);
+    db.close();
+    expect(counts).toEqual([0, 0]);
   });
   it('clearDraft empties everything', async () => {
     await writeDraft(record('a'), bytesOf('a'));

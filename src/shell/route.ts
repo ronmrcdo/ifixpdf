@@ -4,7 +4,7 @@ import {FileMissingError, type PickedFile} from '../platform';
 import {useApp, type View} from '../state/app';
 import {flushDraft, startDraftSync} from '../state/draft-sync';
 import {documentStore} from '../state/workspaces';
-import {readDraft} from '../storage/draft';
+import {clearDraft, readDraft} from '../storage/draft';
 import {recents} from '../storage/app-recents';
 import {isTransitioning, withViewTransition} from './viewTransition';
 
@@ -101,9 +101,16 @@ export async function startup(): Promise<void> {
   const route = parseRoute(window.location.search); // before the first render rewrites the URL
   let shown = useApp.getState().view;
   const moved = () => useApp.getState().view !== shown; // the user navigated while startup was waiting; theirs wins
-  const draft = await readDraft().catch(() => null);
+  let draft = await readDraft().catch(() => null);
   if (draft) {
-    await documentStore.getState().restore(draft.record, draft.bytes);
+    try {
+      await documentStore.getState().restore(draft.record, draft.bytes);
+    } catch {
+      draft = null; // an unrestorable draft must not block startup or leave sync stuck
+      await clearDraft().catch(() => {});
+    }
+  }
+  if (draft) {
     if (!moved()) {
       useApp.getState().setView(draft.record.view); // Home and Settings now act on the document, as today
       shown = draft.record.view;

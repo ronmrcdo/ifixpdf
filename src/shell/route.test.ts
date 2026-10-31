@@ -1,7 +1,7 @@
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {SourceFile} from '../domain/types';
 import {loadPdf, InvalidPdfError} from '../pdf/load';
-import {readDraft, type DraftRecord} from '../storage/draft';
+import {clearDraft, readDraft, type DraftRecord} from '../storage/draft';
 import {recents} from '../storage/app-recents';
 import {flushDraft, startDraftSync} from '../state/draft-sync';
 import {useApp} from '../state/app';
@@ -14,7 +14,7 @@ vi.mock('../pdf/load', async (orig) => ({
   loadPdf: vi.fn(),
 }));
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
-vi.mock('../storage/draft', () => ({readDraft: vi.fn()}));
+vi.mock('../storage/draft', () => ({readDraft: vi.fn(), clearDraft: vi.fn(async () => {})}));
 vi.mock('../state/draft-sync', () => ({
   startDraftSync: vi.fn(() => () => {}),
   flushDraft: vi.fn(async () => {}),
@@ -213,6 +213,18 @@ describe('startup', () => {
     await startup();
     expect(useApp.getState()).toMatchObject({view: 'home', toast: null});
     expect(startDraftSync).toHaveBeenCalledWith(documentStore);
+  });
+
+  it('drops a draft that fails to restore and still starts draft sync', async () => {
+    vi.mocked(readDraft).mockResolvedValue(draft('edit'));
+    const restore = vi
+      .spyOn(documentStore.getState(), 'restore')
+      .mockRejectedValue(new Error('bad'));
+    await expect(startup()).resolves.toBeUndefined();
+    restore.mockRestore();
+    expect(clearDraft).toHaveBeenCalledOnce();
+    expect(startDraftSync).toHaveBeenCalledOnce();
+    expect(useApp.getState()).toMatchObject({view: 'home', toast: null});
   });
 
   it('restores the draft into the document store, then starts draft sync', async () => {
