@@ -645,3 +645,48 @@ describe('setRecentId', () => {
     expect(store.getState().files).toBe(files);
   });
 });
+
+describe('page cap', () => {
+  const MSG = 'iFixPDF works with up to 2,000 pages at a time.';
+
+  it('refuses files that would pass 2,000 pages, before retaining them', async () => {
+    pageCount['big.pdf'] = 1999;
+    const store = await make('document', [pdf('big.pdf')]);
+    vi.mocked(retain).mockClear();
+    vi.mocked(putBytes).mockClear();
+    const notify = vi.spyOn(useApp.getState(), 'notify');
+    await store.getState().addFiles([pdf('a.pdf')]);
+    expect(store.getState().pages).toHaveLength(1999);
+    expect(retain).not.toHaveBeenCalled();
+    expect(putBytes).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(MSG, 'error');
+    notify.mockRestore();
+  });
+
+  it('refuses to open a PDF over 2,000 pages', async () => {
+    pageCount['huge.pdf'] = 2001;
+    const notify = vi.spyOn(useApp.getState(), 'notify');
+    const store = createWorkspaceStore('document');
+    await store.getState().replaceWith(pdf('huge.pdf'));
+    expect(store.getState().files).toEqual([]);
+    expect(retain).not.toHaveBeenCalled();
+    expect(notify).toHaveBeenCalledWith(MSG, 'error');
+    notify.mockRestore();
+  });
+
+  it('refuses a duplicate that would pass 2,000 pages', async () => {
+    pageCount['max.pdf'] = 2000;
+    const store = await make('document', [pdf('max.pdf')]);
+    store.getState().duplicate(new Set([store.getState().pages[0]!.uid]));
+    expect(store.getState().pages).toHaveLength(2000);
+    store.getState().undo(); // only the add is on the stack, so the refused duplicate pushed nothing
+    expect(store.getState().pages).toHaveLength(0);
+  });
+
+  it('still lets an over-cap workspace shrink', async () => {
+    pageCount['max.pdf'] = 2000;
+    const store = await make('document', [pdf('max.pdf')]);
+    store.getState().remove(new Set([store.getState().pages[0]!.uid]));
+    expect(store.getState().pages).toHaveLength(1999);
+  });
+});

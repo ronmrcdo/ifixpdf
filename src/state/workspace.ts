@@ -39,6 +39,8 @@ export interface SavedResult {
 }
 type Uids = ReadonlySet<PageUid>;
 
+export const MAX_PAGES = 2000;
+
 interface Data {
   files: SourceFile[];
   pages: PageInstance[];
@@ -118,6 +120,17 @@ const clamp = (i: number, length: number): number => Math.max(0, Math.min(i, len
 const couldNotOpen = (name: string) =>
   useApp.getState().notify(`Could not open ${name}. Use a valid PDF without a password.`, 'error');
 
+const tooMany = (count: number): boolean => {
+  if (count <= MAX_PAGES) return false;
+  useApp
+    .getState()
+    .notify(
+      `iFixPDF works with up to ${MAX_PAGES.toLocaleString('en-US')} pages at a time.`,
+      'error',
+    );
+  return true;
+};
+
 async function load(picked: PickedFile): Promise<SourceFile | null> {
   try {
     const {pages} = await loadPdf(picked.name, picked.bytes);
@@ -173,6 +186,7 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
       const pages = next.pages ?? s.pages;
       // Domain ops keep untouched page objects, so an edit with nothing to act on yields the same items.
       if (sameItems(pages, s.pages) && sameItems(next.files ?? s.files, s.files)) return;
+      if (pages.length > s.pages.length && tooMany(pages.length)) return;
       history.push(snapshot(s));
       const current = s.pages[s.currentPage]?.uid;
       const followed = pages.findIndex((p) => p.uid === current);
@@ -205,6 +219,7 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         }
         const files = loaded.map(([f]) => f);
         if (!files.length || get().exporting || generation !== started) return;
+        if (tooMany(get().pages.length + files.reduce((n, f) => n + f.pages, 0))) return;
         own(loaded);
         edit((s) => ({
           files: [...s.files, ...files],
@@ -218,6 +233,7 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         const started = ++generation;
         const file = await load(picked);
         if (!file || get().exporting || generation !== started) return;
+        if (tooMany(file.pages)) return;
         if (recentId) file.recentId = recentId;
         own([[file, picked.bytes]]);
         const fresh = blank(kind);
