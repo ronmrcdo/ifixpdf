@@ -41,7 +41,7 @@ describe('UpdatesRow copy and controls', () => {
     ],
     [
       {status: 'save-error', ...info},
-      "iFixPDF couldn't save your workspace, so the update was not installed. Save your PDF, then try again.",
+      "iFixPDF couldn't save your Preview and Edit draft, so the update was not installed. Save your PDF, then try again.",
       'Restart and install',
     ],
     [{status: 'installing', ...info}, 'Installing update…', null],
