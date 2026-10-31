@@ -133,13 +133,7 @@ describe('saveOutput', () => {
     expect(documentStore.getState()).toMatchObject({
       exporting: false,
       progress: null,
-      completed: {
-        name: 'Report.pdf',
-        folder: '/docs',
-        path: '/docs/Report.pdf',
-        pages: 3,
-        size: saved[0]!.byteLength,
-      },
+      completed: null,
     });
   });
 
@@ -290,7 +284,7 @@ describe('saveOutput', () => {
     vi.mocked(platform.openPath).mockRejectedValue(new Error('no app'));
     await saveOutput(documentStore);
     expect(toast()).toMatchObject({text: 'Saved, but could not open the PDF.'});
-    expect(documentStore.getState().completed?.name).toBe('Report.pdf');
+    expect(documentStore.getState().completed).toBeNull();
   });
 
   it('is tracked for the update deferral while it runs', async () => {

@@ -440,7 +440,7 @@ describe('export', () => {
     expect(store.getState().beginExport()).toBe(true);
   });
 
-  it('endExport with a result completes; merge moves to done, document stays', async () => {
+  it('keeps the saved result only in Merge', async () => {
     const merge = await make('merge');
     merge.getState().beginExport();
     merge.getState().endExport(saved);
@@ -449,7 +449,7 @@ describe('export', () => {
     const doc = await make('document');
     doc.getState().beginExport();
     doc.getState().endExport(saved);
-    expect(doc.getState().completed).toBe(saved);
+    expect(doc.getState().completed).toBeNull();
     expect(doc.getState().workflow).toBe('review');
   });
 

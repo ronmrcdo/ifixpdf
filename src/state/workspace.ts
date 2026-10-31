@@ -336,7 +336,7 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         set({
           exporting: false,
           progress: null,
-          completed: result,
+          completed: kind === 'merge' ? result : null,
           workflow: kind === 'merge' ? 'done' : get().workflow,
         });
       },
