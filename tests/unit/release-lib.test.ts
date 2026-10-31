@@ -119,6 +119,10 @@ describe('releaseBody', () => {
     for (const f of ['x64-setup.exe', 'universal.dmg', 'amd64.AppImage', 'amd64.deb'])
       expect(body).toContain(`iFixPDF_1.2.0_${f}`);
   });
+  it('makes no safety or auto-update claims', () => {
+    expect(body).not.toContain('safe to open');
+    expect(body).not.toContain('updates itself');
+  });
   it('explains the unsigned warnings, .deb updates and privacy', () => {
     for (const t of [
       'More info',

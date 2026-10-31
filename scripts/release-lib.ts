@@ -67,13 +67,13 @@ ${notes}
 
 | Your computer | Download |
 | --- | --- |
-| Windows 10 or 11 | ${f('x64-setup.exe')} |
+| Windows 10 or 11 (64-bit) | ${f('x64-setup.exe')} |
 | Mac | ${f('universal.dmg')} |
 | Linux | ${f('amd64.AppImage')} or ${f('amd64.deb')} |
 
 ## If your computer warns you
 
-iFixPDF is not signed with a paid certificate yet, so Windows and macOS may warn you the first time. The app is safe to open.
+iFixPDF is not signed with a paid certificate yet, so Windows and macOS don't recognise it and may warn you the first time you open it.
 
 **Windows:** if you see "Windows protected your PC", click **More info**, then **Run anyway**.
 
@@ -85,7 +85,7 @@ xattr -cr /Applications/iFixPDF.app
 
 ## Updating on Linux
 
-The AppImage updates itself from Settings. If you installed the \`.deb\`, update by downloading the new \`.deb\` from this page.
+If you use the AppImage, press **Check for updates** in Settings. If you installed the \`.deb\`, update by downloading the new \`.deb\` from this page and installing it.
 
 ## Privacy
 
