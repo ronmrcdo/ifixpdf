@@ -59,6 +59,7 @@ fn save_filter(kind: &str) -> Result<(&'static str, &'static str), String> {
 /// Returns the chosen path, or `None` when the dialog is cancelled. Async: the blocking dialog must not run on the main thread.
 #[tauri::command]
 async fn save_as(window: tauri::Window, request: Request<'_>) -> Result<Option<String>, String> {
+    // shortcut: raw body only (the custom-protocol IPC); the postMessage fallback sends a JSON array and is refused, accept it if Windows shows that fallback.
     let InvokeBody::Raw(bytes) = request.body() else {
         return Err("save_as expects raw bytes".into());
     };
