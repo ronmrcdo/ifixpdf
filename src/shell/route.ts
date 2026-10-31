@@ -102,6 +102,8 @@ export async function startup(): Promise<void> {
   let shown = useApp.getState().view;
   const moved = () => useApp.getState().view !== shown; // the user navigated while startup was waiting; theirs wins
   let draft = await readDraft().catch(() => null);
+  // A file the user opened while the draft was loading wins; draft sync overwrites the stored draft later.
+  if (draft && !documentStore.getState().pristine()) draft = null;
   if (draft) {
     try {
       await documentStore.getState().restore(draft.record, draft.bytes);

@@ -64,6 +64,8 @@ export interface WorkspaceState extends Data {
   replaceWith(picked: PickedFile, recentId?: string): Promise<void>;
   /** Links a file to its recents row; not an edit, so no history entry. */
   setRecentId(fileId: FileId, recentId: string): void;
+  /** True until the user first adds or opens a file; startup uses it to keep a draft from overwriting that file. */
+  pristine(): boolean;
   /** Puts a saved draft back without loading or an undo step. */
   restore(record: DraftRecord, bytes: Map<FileId, Uint8Array>): Promise<void>;
   /** targetIndex is the final index of the first moved page, as in `movePages`. Page actions default to the selection. */
@@ -151,6 +153,7 @@ async function load(picked: PickedFile): Promise<SourceFile | null> {
 export function createWorkspaceStore(kind: WorkspaceKind) {
   const history = createHistory<Snapshot>();
   let generation = 0; // bumped by every restart and replaceWith; a load that sees it change is stale
+  let untouched = true; // cleared at the start of addFiles/replaceWith, before any await; reset() sets it again
   const owned = new Set<FileId>(); // every file this workspace retained; removed files stay owned so undo can bring them back
 
   return createStore<WorkspaceState>()((set, get) => {
@@ -209,7 +212,10 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
     return {
       ...blank(kind),
 
+      pristine: () => untouched,
+
       async addFiles(picked) {
+        untouched = false;
         if (get().exporting) return;
         const started = generation;
         const loaded: Array<[SourceFile, Uint8Array]> = [];
@@ -229,6 +235,7 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
       },
 
       async replaceWith(picked, recentId) {
+        untouched = false;
         if (get().exporting) return;
         const started = ++generation;
         const file = await load(picked);
@@ -340,7 +347,11 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
           workflow: kind === 'merge' ? 'done' : get().workflow,
         });
       },
-      reset: () => (get().exporting ? Promise.resolve() : restart(blank(kind))),
+      reset() {
+        if (get().exporting) return Promise.resolve();
+        untouched = true;
+        return restart(blank(kind));
+      },
     };
   });
 }
