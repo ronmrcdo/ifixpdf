@@ -14,6 +14,7 @@ import {MergeView} from '../views/merge/MergeView';
 import {SettingsView} from '../views/settings/SettingsView';
 import {PreviewView} from '../views/preview/PreviewView';
 import {useFileImport} from './useFileImport';
+import {loadPdf} from '../pdf/load';
 import {recents} from '../storage/app-recents';
 import {DialogHost, showPasswordDialog, showSplitDialog} from '../dialogs/host';
 import type {RecentEntry} from '../storage/recents';
@@ -33,6 +34,7 @@ const PANE: Partial<Record<View, string>> = {
 async function addPassword(entry: RecentEntry) {
   try {
     const {entry: opened, bytes} = await recents.open(entry.id);
+    await loadPdf(opened.name, bytes); // rejects for a corrupt or already-locked file
     showPasswordDialog({name: opened.name, bytes});
   } catch (e) {
     useApp.getState().notify(openErrorText(e), 'error');

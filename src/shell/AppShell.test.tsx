@@ -4,6 +4,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {PageInstance, SourceFile} from '../domain/types';
 import {putBytes} from '../pdf/bytes';
 import {makePdf} from '../pdf/fixtures';
+import {InvalidPdfError, loadPdf} from '../pdf/load';
 import {platform} from '../platform';
 import {useApp, type View} from '../state/app';
 import {documentStore, mergeStore} from '../state/workspaces';
@@ -12,6 +13,10 @@ import {flushDraft} from '../state/draft-sync';
 import {AppShell} from './AppShell';
 
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
+vi.mock('../pdf/load', async (orig) => {
+  const m = await orig<typeof import('../pdf/load')>();
+  return {...m, loadPdf: vi.fn(m.loadPdf)};
+});
 vi.mock('../state/draft-sync', async (orig) => ({
   ...(await orig<object>()),
   flushDraft: vi.fn(async () => {}),
@@ -388,10 +393,24 @@ describe('dialogs', () => {
     expect(screen.getByLabelText(/^Ranges/)).toHaveValue('1-1, 2-3');
   });
 
+  it('does not open Add password for a recent that is no longer a valid unlocked PDF', async () => {
+    const {recents} = await import('../storage/app-recents');
+    await recents.record({name: 'Stale.pdf', bytes: await makePdf(1), pages: 1});
+    const opening = vi.spyOn(recents, 'open');
+    vi.mocked(loadPdf).mockRejectedValueOnce(new InvalidPdfError('Stale.pdf'));
+    render(<AppShell />);
+    await userEvent.click(await screen.findByRole('button', {name: 'More actions for Stale.pdf'}));
+    await userEvent.click(screen.getByRole('menuitem', {name: 'Add password…'}));
+    await vi.waitFor(() => expect(useApp.getState().toast?.tone).toBe('error'));
+    expect(screen.queryByRole('dialog', {name: 'Add password'})).toBeNull();
+    opening.mockRestore();
+  });
+
   it('Home: Add password opens the password dialog for the recent PDF', async () => {
     const {recents} = await import('../storage/app-recents');
     await recents.record({name: 'Recent.pdf', bytes: await makePdf(1), pages: 1});
     const opening = vi.spyOn(recents, 'open');
+    vi.mocked(loadPdf).mockResolvedValueOnce({pages: 1});
     render(<AppShell />);
     await userEvent.click(await screen.findByRole('button', {name: 'More actions for Recent.pdf'}));
     await userEvent.click(screen.getByRole('menuitem', {name: 'Add password…'}));
