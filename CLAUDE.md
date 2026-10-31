@@ -9,7 +9,7 @@ Windows desktop PDF tool. Frontend is React 19 + TypeScript (strict) on Vite 6, 
 ## Commands
 
 - `pnpm install --frozen-lockfile`, `pnpm dev`, `pnpm build` (output `dist/`; the PDF-engine chunk size warning is expected), `pnpm preview --port 4173`.
-- `pnpm typecheck`, `pnpm lint` (Biome, lint only; no formatter), `pnpm test` (Vitest, jsdom).
+- `pnpm typecheck`, `pnpm lint` (Biome check: lint and formatting), `pnpm format` (Biome formatter: 2 spaces, 100 columns, single quotes), `pnpm test` (Vitest, jsdom).
 - `pnpm test:e2e` — Playwright on system Chrome (`CHROME` overrides), mocked Tauri bridge from `tests/e2e/fixtures.ts`. Run `pnpm exec playwright test --workers=1`; timing-sensitive specs flake under load.
 - `pnpm tauri dev` / `pnpm tauri build` — native builds need a configured Windows machine.
 
