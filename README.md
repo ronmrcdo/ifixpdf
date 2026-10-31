@@ -70,6 +70,17 @@ Working in the browser; not yet production-ready.
 - Fidelity with large or complex PDFs still needs validation.
 - “Use file names as PDF title” sets the document title, not outline bookmarks.
 
+## How to release
+
+1. Write the entry in `CHANGELOG.md`, newest first, for users rather than developers:
+   - Heading `## vX.Y.Z — Month YYYY`, then a one-sentence summary.
+   - Optional `### Featured: <title>` with a short paragraph and a three-step **How to use it** list naming buttons as they appear in the app.
+   - Then 3–6 items, each labeled **New**, **Improved** or **Fixed**, with a bold short title and one or two sentences. No nested bullets.
+   - Say "you"; no file names, code, hashes, library names or jargon; skip behind-the-scenes work.
+2. On `main` with a clean tree, run `pnpm release X.Y.Z`. It bumps `package.json`, `Cargo.toml` and `Cargo.lock`, commits `chore(release): vX.Y.Z` and tags it. Without an entry it lists the `feat`/`fix` commits since the last tag and stops.
+3. Push the command it prints: `git push origin main vX.Y.Z`.
+4. Review the draft release on GitHub, then publish it.
+
 ## Documentation
 
 - [IMPLEMENTATION.md](IMPLEMENTATION.md) — native Windows roadmap, compression, signed updates, release criteria
