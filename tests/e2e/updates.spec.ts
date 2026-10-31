@@ -155,7 +155,7 @@ test.describe('native', () => {
     });
     await install.click();
     await expect(
-      updates(page).getByText("couldn't save your workspace", {exact: false}),
+      updates(page).getByText("couldn't save your Preview and Edit draft", {exact: false}),
     ).toBeVisible();
     expect(
       await called(app, 'plugin:updater|install'),
