@@ -45,3 +45,23 @@ describe('bundle config', () => {
     expect(conf.identifier).toBe('com.ifixpdf.desktop');
   });
 });
+
+describe('release workflow', () => {
+  const wf = () => read('.github/workflows/release.yml');
+
+  test('creates the release only as a draft', () => {
+    expect(wf()).toMatch(/gh release create "\$TAG" --draft /);
+    expect(wf()).not.toMatch(/releaseDraft|gh release edit [^\n]*--draft=false/);
+  });
+
+  test('defaults to read-only permissions', () => {
+    expect(wf()).toMatch(/^permissions:\n {2}contents: read\n/m);
+  });
+
+  test('never interpolates secrets into a shell script', () => {
+    // Each `run:` block runs until the next step or key at the same or lower indent.
+    const runs = wf().match(/^( *)(?:- )?run: [|>]?[^\n]*\n(?:\1 {2,}[^\n]*\n|\n)*/gm) ?? [];
+    expect(runs.length).toBeGreaterThan(0);
+    for (const run of runs) expect(run).not.toContain('${{ secrets.');
+  });
+});
