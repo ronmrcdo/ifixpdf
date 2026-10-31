@@ -12,15 +12,32 @@ import {flushDraft} from '../state/draft-sync';
 import {AppShell} from './AppShell';
 
 vi.mock('../pdf/registry', () => ({retain: vi.fn(), release: vi.fn(async () => {})}));
-vi.mock('../state/draft-sync', async (orig) => ({...(await orig<object>()), flushDraft: vi.fn(async () => {})}));
-vi.mock('../actions/save', async (orig) => ({...(await orig<object>()), saveOrContinue: vi.fn(), printDocument: vi.fn()}));
+vi.mock('../state/draft-sync', async (orig) => ({
+  ...(await orig<object>()),
+  flushDraft: vi.fn(async () => {}),
+}));
+vi.mock('../actions/save', async (orig) => ({
+  ...(await orig<object>()),
+  saveOrContinue: vi.fn(),
+  printDocument: vi.fn(),
+}));
 
 const file = (id: string, pages: number): SourceFile => ({id, name: `${id}.pdf`, pages, size: 1});
-const pagesOf = (f: SourceFile): PageInstance[] => Array.from({length: f.pages}, (_, i) => ({uid: `${f.id}-${i}`, fileId: f.id, local: i, rotation: 0}));
-const fill = (store: typeof documentStore, files: SourceFile[]) => store.setState({files, pages: files.flatMap(pagesOf)});
+const pagesOf = (f: SourceFile): PageInstance[] =>
+  Array.from({length: f.pages}, (_, i) => ({
+    uid: `${f.id}-${i}`,
+    fileId: f.id,
+    local: i,
+    rotation: 0,
+  }));
+const fill = (store: typeof documentStore, files: SourceFile[]) =>
+  store.setState({files, pages: files.flatMap(pagesOf)});
 const nav = () => screen.getByRole('navigation', {name: 'Main'});
 const at = (view: View) => act(() => useApp.getState().setView(view));
-const actions = () => [...document.querySelectorAll('.header-actions button')].map((b) => b.getAttribute('aria-label') ?? b.textContent?.trim());
+const actions = () =>
+  [...document.querySelectorAll('.header-actions button')].map(
+    (b) => b.getAttribute('aria-label') ?? b.textContent?.trim(),
+  );
 
 beforeEach(() => {
   useApp.setState({view: 'home', documentView: 'preview', workspace: 'merge', toast: null});
@@ -36,10 +53,18 @@ afterEach(async () => {
 describe('sidebar', () => {
   it('lists the five views and marks the active one', () => {
     render(<AppShell />);
-    const items = within(nav()).getAllByRole('button').map((b) => b.textContent);
+    const items = within(nav())
+      .getAllByRole('button')
+      .map((b) => b.textContent);
     expect(items).toEqual(['Home', 'Merge PDFs', 'Preview PDF', 'Edit PDF', 'Settings']);
-    expect(within(nav()).getByRole('button', {name: 'Home'})).toHaveAttribute('aria-current', 'page');
-    expect(within(nav()).getByText(/Your documents\./)).toHaveTextContent('Your documents.On your device.');
+    expect(within(nav()).getByRole('button', {name: 'Home'})).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(
+      within(nav()).queryByText(/Your documents/),
+      'device storage is said on Home and in the editor, not the rail',
+    ).toBeNull();
   });
 
   it('clicking an item moves aria-current and never reloads', async () => {
@@ -48,7 +73,10 @@ describe('sidebar', () => {
     const href = window.location.href;
     await userEvent.click(within(nav()).getByRole('button', {name: 'Settings'}));
     expect(useApp.getState().view).toBe('settings');
-    expect(within(nav()).getByRole('button', {name: 'Settings'})).toHaveAttribute('aria-current', 'page');
+    expect(within(nav()).getByRole('button', {name: 'Settings'})).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     expect(within(nav()).getByRole('button', {name: 'Home'})).not.toHaveAttribute('aria-current');
     expect(nav()).toBe(before);
     expect(window.location.href).toBe(href);
@@ -68,7 +96,7 @@ describe('header', () => {
     ['merge', 'Merge PDFs', 'A few files. One well-ordered document.'],
     ['preview', 'Preview PDF', 'Read and inspect your document.'],
     ['edit', 'Edit PDF', 'Organize pages and save an edited copy.'],
-    ['settings', 'Settings', 'A workspace that works your way.']
+    ['settings', 'Settings', 'A workspace that works your way.'],
   ] as const)('%s title and subtitle', (view, title, subtitle) => {
     useApp.setState({view});
     render(<AppShell />);
@@ -103,7 +131,10 @@ describe('header', () => {
     useApp.setState({view: 'preview'});
     render(<AppShell />);
     expect(actions()).toEqual(['Open PDF', 'Print PDF', 'Edit PDF']);
-    const edit = within(document.querySelector('.header-actions') as HTMLElement).getByRole('button', {name: 'Edit PDF'});
+    const edit = within(document.querySelector('.header-actions') as HTMLElement).getByRole(
+      'button',
+      {name: 'Edit PDF'},
+    );
     expect(edit).toBeEnabled();
     await userEvent.click(edit);
     expect(useApp.getState().view).toBe('edit');
@@ -113,7 +144,11 @@ describe('header', () => {
   it('Edit PDF is disabled in Preview with no document', () => {
     useApp.setState({view: 'preview'});
     render(<AppShell />);
-    expect(within(document.querySelector('.header-actions') as HTMLElement).getByRole('button', {name: 'Edit PDF'})).toBeDisabled();
+    expect(
+      within(document.querySelector('.header-actions') as HTMLElement).getByRole('button', {
+        name: 'Edit PDF',
+      }),
+    ).toBeDisabled();
   });
 
   it('Merge in review shows New merge and Continue to save; New merge clears Merge only', async () => {
@@ -156,7 +191,11 @@ describe('header', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Save PDF'}));
     expect(saveOrContinue).toHaveBeenLastCalledWith(documentStore);
     at('merge');
-    await userEvent.click(within(document.querySelector('.header-actions') as HTMLElement).getByRole('button', {name: 'Continue to save'}));
+    await userEvent.click(
+      within(document.querySelector('.header-actions') as HTMLElement).getByRole('button', {
+        name: 'Continue to save',
+      }),
+    );
     expect(saveOrContinue).toHaveBeenLastCalledWith(mergeStore);
     at('preview');
     await userEvent.click(screen.getByRole('button', {name: 'Print PDF'}));
@@ -197,7 +236,8 @@ describe('statusbar', () => {
 });
 
 describe('toast', () => {
-  const region = (role: 'status' | 'alert') => screen.getAllByRole(role).find((el) => el.id !== 'status')!;
+  const region = (role: 'status' | 'alert') =>
+    screen.getAllByRole(role).find((el) => el.id !== 'status')!;
 
   it('keeps both regions mounted with no toast', () => {
     render(<AppShell />);
@@ -208,7 +248,8 @@ describe('toast', () => {
 
   it('info goes to the status region, errors to the alert region', () => {
     render(<AppShell />);
-    const info = region('status'), alert = region('alert');
+    const info = region('status'),
+      alert = region('alert');
     act(() => useApp.getState().notify('2 PDFs added'));
     expect(info).toHaveTextContent('2 PDFs added');
     expect(alert).toBeEmptyDOMElement();
@@ -259,15 +300,32 @@ describe('route', () => {
 describe('titlebar', () => {
   it('a failing native window call shows an error toast', async () => {
     const saved = platform.window;
-    Object.assign(platform, {window: {minimize: vi.fn(async () => { throw new Error('denied') }), toggleMaximize: vi.fn(), close: vi.fn()}});
+    Object.assign(platform, {
+      window: {
+        minimize: vi.fn(async () => {
+          throw new Error('denied');
+        }),
+        toggleMaximize: vi.fn(),
+        close: vi.fn(),
+      },
+    });
     render(<AppShell />);
     await userEvent.click(screen.getByRole('button', {name: 'Minimize window'}));
     Object.assign(platform, {window: saved});
-    await vi.waitFor(() => expect(useApp.getState().toast).toMatchObject({text: 'Could not change the window. Try again.', tone: 'error'}));
+    await vi.waitFor(() =>
+      expect(useApp.getState().toast).toMatchObject({
+        text: 'Could not change the window. Try again.',
+        tone: 'error',
+      }),
+    );
   });
 
   it('calls the native window in Tauri', async () => {
-    const win = {minimize: vi.fn(async () => {}), toggleMaximize: vi.fn(async () => {}), close: vi.fn(async () => {})};
+    const win = {
+      minimize: vi.fn(async () => {}),
+      toggleMaximize: vi.fn(async () => {}),
+      close: vi.fn(async () => {}),
+    };
     const saved = platform.window;
     Object.assign(platform, {window: win});
     render(<AppShell />);
@@ -275,14 +333,25 @@ describe('titlebar', () => {
     await userEvent.click(screen.getByRole('button', {name: 'Maximize window'}));
     await userEvent.click(screen.getByRole('button', {name: 'Close window'}));
     Object.assign(platform, {window: saved});
-    expect([win.minimize, win.toggleMaximize, win.close].map((f) => f.mock.calls.length)).toEqual([1, 1, 1]);
+    expect([win.minimize, win.toggleMaximize, win.close].map((f) => f.mock.calls.length)).toEqual([
+      1, 1, 1,
+    ]);
     expect(useApp.getState().toast).toBeNull();
   });
 
   it('Close waits for the pending draft write before closing the window', async () => {
     let settle = () => {};
-    vi.mocked(flushDraft).mockImplementationOnce(() => new Promise<void>((r) => { settle = r }));
-    const win = {minimize: vi.fn(async () => {}), toggleMaximize: vi.fn(async () => {}), close: vi.fn(async () => {})};
+    vi.mocked(flushDraft).mockImplementationOnce(
+      () =>
+        new Promise<void>((r) => {
+          settle = r;
+        }),
+    );
+    const win = {
+      minimize: vi.fn(async () => {}),
+      toggleMaximize: vi.fn(async () => {}),
+      close: vi.fn(async () => {}),
+    };
     const saved = platform.window;
     Object.assign(platform, {window: win});
     render(<AppShell />);
@@ -300,10 +369,11 @@ describe('titlebar', () => {
     for (const name of ['Minimize window', 'Maximize window', 'Close window']) {
       act(() => useApp.setState({toast: null}));
       await userEvent.click(screen.getByRole('button', {name}));
-      expect(useApp.getState().toast).toMatchObject({text: 'Window controls are available in the Tauri desktop build.'});
+      expect(useApp.getState().toast).toMatchObject({
+        text: 'Window controls are available in the Tauri desktop build.',
+      });
     }
   });
-
 });
 
 describe('dialogs', () => {

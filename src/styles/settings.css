@@ -3,152 +3,69 @@
   border-collapse: collapse;
   text-align: left;
 }
-.jobs-table th {
-  font-size: 11px;
-  color: var(--muted);
-  font-weight: 500;
-  padding: 12px 14px;
-  border-bottom: 1px solid var(--line);
-}
-.jobs-table td {
-  font-size: 12px;
-  padding: 19px 14px;
-  border-bottom: 1px solid var(--line);
-}
-.job-name {
-  font-weight: 550;
-}
-.job-name small {
-  display: block;
-  color: var(--muted);
-  font-weight: 400;
-  font-size: 11px;
-  margin-top: 5px;
-}
 .state {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--text-label);
 }
 .state.ready {
-  color: #436c59;
+  color: var(--success);
 }
 .settings-form {
   max-width: 580px;
 }
 .settings-row {
-  padding: 20px 0;
+  padding: 15px 0;
   border-bottom: 1px solid var(--line);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
+  gap: 22px;
 }
 .settings-row p {
   margin: 5px 0 0;
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-label);
+  line-height: 1.7;
 }
 .settings-row select {
   width: 170px;
 }
 .danger {
-  color: #a13c3c;
+  color: var(--danger);
 }
 .loading {
   padding: 40px;
   color: var(--muted);
 }
-.settings-note {
-  background: #f2f5f8;
-  padding: 16px;
-  line-height: 1.7;
-  max-width: 700px;
-  border-radius: 6px;
-  font-size: 12px;
-}
 .quality-note {
   display: flex;
   align-items: flex-start;
   gap: 9px;
-  padding: 13px 0 20px;
-  color: #53667d;
+  padding: 0 0 24px;
+  color: var(--muted);
 }
 .quality-note svg {
-  width: 16px;
+  width: 15px;
   height: 16px;
   margin-top: 1px;
 }
 .quality-note strong {
   display: block;
-  font-size: 12px;
+  font-size: var(--text-label);
   font-weight: 500;
-  color: #34465d;
+  color: var(--ink);
 }
 .quality-note span {
-  font-size: 11px;
-  line-height: 1.6;
+  font-size: var(--text-label);
+  line-height: 1.7;
   display: block;
   margin-top: 4px;
+  color: var(--muted);
 }
 .range-field small.danger {
-  color: #a13c3c;
-}
-.sample-link {
-  font-size: 12px;
-  color: #3465a7;
-  min-height: 28px;
-  padding: 5px;
-}
-.job-progress-wrap {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 9px;
-}
-.job-progress-wrap progress {
-  appearance: none;
-  width: 150px;
-  height: 5px;
-  border: 0;
-  border-radius: 4px;
-  background: #e2e8f1;
-  accent-color: #3465a7;
-}
-.job-progress-wrap progress::-webkit-progress-bar {
-  background: #e2e8f1;
-  border-radius: 4px;
-}
-.job-progress-wrap progress::-webkit-progress-value {
-  background: #3465a7;
-  border-radius: 4px;
-}
-.job-progress-wrap progress::-moz-progress-bar {
-  background: #3465a7;
-  border-radius: 4px;
-}
-.job-percentage {
-  font-size: 11px;
-  min-width: 32px;
-  color: #5c6878;
-  font-variant-numeric: tabular-nums;
-}
-.job-stage-detail {
-  font-size: 11px!important;
-  color: #5c6878;
-}
-.job-actions {
-  white-space: nowrap;
-}
-.job-actions>button {
-  font-size: 11px;
-  min-height: 29px;
-  padding: 6px;
-}
-.job-actions svg {
-  width: 14px;
-  height: 14px;
+  color: var(--danger);
 }
 .workspace:has(.save-instruction) .quality-note {
   padding: 9px 0 15px;
@@ -188,58 +105,47 @@
   overflow: auto;
   margin: 8px 0 0;
   padding: 10px;
-  background: #f6f7f9;
+  background: var(--hover);
   border: 1px solid var(--line);
-  border-radius: 5px;
+  border-radius: var(--radius-control);
   font: 11px/1.45 Consolas,monospace;
   white-space: pre-wrap;
 }
 .about-legal>div {
   width: 100%;
 }
-
-@media (max-width:1000px) {
-  .job-progress-wrap progress {
-    width: 95px;
-  }
+.settings-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+.settings-row strong {
+  font-size: var(--text-document);
+  font-weight: 500;
+}
+.settings-row button {
+  font-size: var(--text-label);
+  white-space: nowrap;
 }
 
 @media (max-width:760px) {
-  .jobs-table th:nth-child(2),
-  .jobs-table td:nth-child(2) {
-    display: none;
-  }
   .settings-row {
     align-items: flex-start;
     flex-direction: column;
   }
-  .job-progress-wrap progress {
-    width: 85px;
+  .settings-form {
+    width: 100%;
   }
 }
 
 @media (max-width:520px) {
-  .jobs-table td,
-  .jobs-table th {
-    padding: 12px 7px;
+  .settings-row {
+    gap: 15px;
   }
-  .jobs-table td:last-child {
-    font-size: 10px;
+  .settings-row p {
+    font-size: var(--text-label);
   }
-  .job-progress-wrap {
-    gap: 5px;
-  }
-  .job-progress-wrap progress {
-    width: 65px;
-  }
-  .job-percentage {
-    font-size: 11px;
-    min-width: 26px;
-  }
-  .job-actions {
-    white-space: normal;
-  }
-  .job-actions>button {
-    padding: 5px;
+  .settings-row button {
+    font-size: var(--text-label);
+    padding: 7px;
   }
 }

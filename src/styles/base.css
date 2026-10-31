@@ -15,19 +15,20 @@ button {
   background: transparent;
   color: inherit;
   cursor: pointer;
-  border-radius: 5px;
-  min-height: 32px;
-  padding: 7px 10px;
-  transition: background 120ms,transform 120ms var(--ease);
+  border-radius: var(--radius-control);
+  min-height: 34px;
+  padding: 7px 11px;
+  transition: background-color 120ms, color 120ms, transform 120ms var(--ease);
+  font: inherit;
 }
 button:hover:where(:not(:disabled)) { /* :where keeps the specificity, so disabled buttons get no hover or pressed look */
-  background: #e8ecf1;
+  background: var(--canvas);
 }
 button:active:where(:not(:disabled)) {
   transform: scale(.98);
 }
 button:disabled {
-  opacity: .4;
+  opacity: 0.38;
   cursor: default;
 }
 :is(button,a,input,select,textarea,summary,[tabindex]):focus-visible {
@@ -37,18 +38,20 @@ button:disabled {
 svg {
   width: 17px;
   height: 17px;
-  stroke-width: 1.65;
+  stroke-width: 1.7;
   flex: none;
 }
 input,
 select {
   width: 100%;
-  border: 1px solid #d9dfe6;
-  border-radius: 5px;
-  background: white;
-  padding: 9px 10px;
-  color: #29303a;
+  border: 1px solid var(--control-line);
+  border-radius: var(--radius-control);
+  background: var(--paper);
+  padding: 9px 11px;
+  color: var(--ink);
   min-width: 0;
+  font: inherit;
+  caret-color: var(--accent);
 }
 input[type=checkbox] {
   appearance: none;
@@ -57,14 +60,15 @@ input[type=checkbox] {
   padding: 0;
   margin: 0;
   flex: none;
-  border: 1px solid #b9c2cd;
-  border-radius: 3px;
-  background: white center/100% no-repeat;
+  border: 1px solid var(--strong-line);
+  border-radius: var(--radius-keycap);
+  background: var(--paper) center/100% no-repeat;
   cursor: pointer;
   transition: background-color 120ms,border-color 120ms;
+  accent-color: var(--accent);
 }
 input[type=checkbox]:hover {
-  border-color: #8d98a7;
+  border-color: var(--faint);
 }
 input[type=checkbox]:checked,
 input[type=checkbox]:indeterminate {
@@ -82,34 +86,20 @@ input[type=checkbox]:disabled {
   cursor: default;
 }
 ::selection {
-  background: #cbdcf4;
+  background: var(--page-selected);
+  color: var(--ink);
 }
 * {
   box-sizing: border-box;
   scrollbar-width: thin;
-  scrollbar-color: #bdc4cd transparent;
+  scrollbar-color: var(--strong-line) transparent;
 }
 h1 {
-  font-size: 22px;
-  letter-spacing: -.6px;
-  line-height: 1.25;
-  margin: 0 0 5px;
+  font-size: var(--text-headline);
+  letter-spacing: -0.65px;
+  line-height: 1.3;
+  margin: 0;
   font-weight: 600;
-}
-tr[data-status=Completed] progress {
-  accent-color: #4d7b63;
-}
-tr[data-status=Completed] progress::-webkit-progress-value {
-  background: #4d7b63;
-}
-tr[data-status=Canceled] progress::-webkit-progress-value {
-  background: #9ca6b4;
-}
-
-@media (max-width:760px) {
-  h1 {
-    font-size: 18px;
-  }
 }
 
 @media (prefers-reduced-motion:reduce) {

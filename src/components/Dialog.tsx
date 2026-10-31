@@ -1,6 +1,12 @@
+import {X} from 'lucide-react';
 import {useLayoutEffect, useId, useRef, type ReactNode} from 'react';
 
-interface Props { title: string; open: boolean; onClose(): void; children: ReactNode }
+interface Props {
+  title: string;
+  open: boolean;
+  onClose(): void;
+  children: ReactNode;
+}
 
 /** Native modal <dialog>: Esc and the Close button go through onClose; focus returns to whatever had it before opening. */
 export function Dialog({title, open, onClose, children}: Props) {
@@ -20,8 +26,21 @@ export function Dialog({title, open, onClose, children}: Props) {
     };
   }, [open]);
   return (
-    <dialog ref={ref} className="document-dialog" aria-labelledby={titleId} onCancel={(e) => { e.preventDefault(); onClose() }}>
-      <header><h2 id={titleId}>{title}</h2><button type="button" aria-label="Close" onClick={onClose}>×</button></header>
+    <dialog
+      ref={ref}
+      className="document-dialog"
+      aria-labelledby={titleId}
+      onCancel={(e) => {
+        e.preventDefault();
+        onClose();
+      }}
+    >
+      <header>
+        <h2 id={titleId}>{title}</h2>
+        <button type="button" aria-label="Close" onClick={onClose}>
+          <X aria-hidden="true" />
+        </button>
+      </header>
       {open && children}
     </dialog>
   );
