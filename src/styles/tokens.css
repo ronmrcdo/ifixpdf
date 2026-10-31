@@ -1,11 +1,55 @@
+/* The DESIGN.md frontmatter as variables. Use these instead of literal values. */
 :root {
-  color: #252a32;
-  background: #eef1f4;
-  font-synthesis: none;
-  font-size: 13px;
+  --paper: #fff;
+  --ink: #24272c;
+  --muted: #64696f;
+  --faint: #9299a3;
+  --line: #e6e7e9;
+  --control-line: #d9dce0;
+  --strong-line: #c4c7cb;
+  --frame: #fafafb;
+  --hover: #f4f5f6;
+  --canvas: #f0f1f3;
+  --inspector: #fbfbfc;
   --accent: #3465a7;
-  --line: #e6e9ed;
+  --action-hover: #28568f;
+  --nav-selected: #e9eaed;
+  --cover-selected: #e7effa;
+  --cover-selected-line: #5280bd;
+  --page-selected: #dfe9f6;
+  --page-selected-line: #83a5ce;
+  --danger: #ad3935;
+  --danger-soft: #faeae9;
+  --success: #517964;
+  --close: #c42b1c;
+  --toast: #292e36;
+  --backdrop: #242b3655;
+  --shadow-menu: 0 6px 22px #1d253222;
+  --shadow-dialog: 0 12px 40px #17223133;
+
+  --text-label: 11px;
+  --text-document: 12px;
+  --text-body: 13px;
+  --text-section: 15px;
+  --text-empty: 17px;
+  --text-dialog: 19px;
+  --text-completion: 23px;
+  --text-headline: 24px;
+  --text-headline-compact: 21px;
+  --text-headline-phone: 22px;
+
+  --radius-keycap: 3px;
+  --radius-badge: 4px;
+  --radius-control: 6px;
+  --radius-search: 7px;
+  --radius-cover: 8px;
+  --radius-dialog: 10px;
+
   --ease: cubic-bezier(.23,1,.32,1);
-  font-family: 'IBM Plex Sans','Segoe UI',Arial,sans-serif;
-  --muted: #5c6878;
+
+  color: var(--ink);
+  background: var(--paper);
+  font-synthesis: none;
+  font-size: var(--text-body);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
 }

@@ -1,55 +1,68 @@
 ---
-name: iFixPDF
-description: A desktop-style browser prototype for a Windows PDF workspace.
+name: "iFixPDF"
+description: "A light desktop PDF workspace with a quiet frame, visible documents and clear tools."
 colors:
-  brand-blue: "#3465A7"
+  brand-blue: "#3465a7"
   brand-fold: "#BED2EE"
-  brand-paper: "#FFFFFF"
-  brand-wordmark: "#253245"
-  editor-accent: "#3465a7"
-  editor-accent-hover: "#28568f"
-  editor-ink: "#252a32"
-  editor-muted: "#5c6878"
-  editor-ground: "#eef1f4"
-  editor-surface: "#ffffff"
-  editor-line: "#e6e9ed"
-  editor-frame-line: "#e0e4e9"
-  editor-preview: "#e8edf3"
-  editor-hover: "#e8ecf1"
-  editor-source-selected: "#edf3fb"
-  editor-source-selected-line: "#b8cde8"
-  editor-nav-selected: "#dfe5ec"
-  editor-field-line: "#d9dfe6"
-  editor-toast: "#27313f"
-  editor-workflow: "#f9fbfd"
-  editor-page-card: "#f4f7fb"
-  editor-step-complete: "#4d7560"
-  editor-page-selected: "#d9e6f8"
-  editor-page-selected-line: "#81a1cc"
-  editor-selection-bar: "#f4f7fc"
-  editor-progress-track: "#e2e8f1"
+  paper: "#ffffff"
+  ink: "#24272c"
+  muted: "#64696f"
+  faint: "#9299a3"
+  line: "#e6e7e9"
+  control-line: "#d9dce0"
+  strong-line: "#c4c7cb"
+  frame: "#fafafb"
+  hover: "#f4f5f6"
+  canvas: "#f0f1f3"
+  inspector: "#fbfbfc"
+  action: "#3465a7"
+  action-hover: "#28568f"
+  nav-selected: "#e9eaed"
+  cover-selected: "#e7effa"
+  cover-selected-line: "#5280bd"
+  page-selected: "#dfe9f6"
+  page-selected-line: "#83a5ce"
+  danger: "#ad3935"
+  danger-soft: "#faeae9"
+  success: "#517964"
+  close: "#c42b1c"
+  toast: "#292e36"
 typography:
-  brand-wordmark:
-    fontFamily: "IBM Plex Sans, sans-serif"
-    fontSize: "64px"
+  headline:
+    fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
+    fontSize: "24px"
     fontWeight: 600
-    letterSpacing: "-1.5px"
-  brand-titlebar:
-    fontFamily: "IBM Plex Sans, Segoe UI, Arial, sans-serif"
-    fontSize: "16px"
+    lineHeight: 1.3
+    letterSpacing: "-0.65px"
+  headline-compact:
+    fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
+    fontSize: "21px"
     fontWeight: 600
-    lineHeight: 1
-    letterSpacing: "-0.35px"
-  editor-headline:
-    fontFamily: "IBM Plex Sans, Segoe UI, Arial, sans-serif"
+  headline-phone:
+    fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
     fontSize: "22px"
     fontWeight: 600
-    lineHeight: 1.25
-    letterSpacing: "-0.6px"
   body:
     fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
     fontSize: "13px"
     fontWeight: 400
+  section-title:
+    fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    letterSpacing: "-0.2px"
+  empty-title:
+    fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
+    fontSize: "17px"
+    fontWeight: 600
+  dialog-title:
+    fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
+    fontSize: "19px"
+    fontWeight: 500
+  completion-title:
+    fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
+    fontSize: "23px"
+    fontWeight: 500
   document-title:
     fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
     fontSize: "12px"
@@ -58,15 +71,18 @@ typography:
     fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
     fontSize: "11px"
     fontWeight: 400
+  brand-titlebar:
+    fontFamily: "IBM Plex Sans, Segoe UI, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    letterSpacing: "-0.4px"
 rounded:
-  brand-tile: "10px"
   keycap: "3px"
   badge: "4px"
-  control: "5px"
-  cover: "6px"
-  source: "7px"
-  band: "8px"
-  workspace: "12px"
+  control: "6px"
+  search: "7px"
+  cover: "8px"
+  dialog: "10px"
 spacing:
   tight: "4px"
   control-gap: "8px"
@@ -75,178 +91,139 @@ spacing:
   section: "24px"
   broad: "32px"
 components:
-  brand-mark:
-    backgroundColor: "{colors.brand-blue}"
-    textColor: "{colors.brand-paper}"
-    rounded: "{rounded.brand-tile}"
-    size: "48px"
-  brand-titlebar:
-    typography: "{typography.brand-titlebar}"
-    size: "24px"
-  brand-wordmark:
-    textColor: "{colors.brand-wordmark}"
-    typography: "{typography.brand-wordmark}"
-    width: "380px"
-    height: "96px"
-  editor-primary:
-    backgroundColor: "{colors.editor-accent}"
-    textColor: "{colors.editor-surface}"
+  button-primary:
+    backgroundColor: "{colors.action}"
+    textColor: "{colors.paper}"
     rounded: "{rounded.control}"
-    padding: "7px 10px"
-  editor-primary-hover:
-    backgroundColor: "{colors.editor-accent-hover}"
-  editor-workflow:
-    backgroundColor: "{colors.editor-workflow}"
-    height: "56px"
-    padding: "0 24px"
-  editor-page-card:
-    backgroundColor: "{colors.editor-page-card}"
+    padding: "7px 11px"
+    height: "34px"
+  button-primary-hover:
+    backgroundColor: "{colors.action-hover}"
+  button-secondary:
+    backgroundColor: "{colors.paper}"
+    textColor: "{colors.ink}"
+    rounded: "{rounded.control}"
+    padding: "7px 11px"
+    height: "34px"
+  search:
+    backgroundColor: "{colors.frame}"
+    rounded: "{rounded.search}"
+    padding: "0 12px"
+    height: "38px"
+  navigation-selected:
+    backgroundColor: "{colors.nav-selected}"
+    rounded: "{rounded.control}"
+    padding: "10px 2px"
+    height: "62px"
+  document-cover:
+    backgroundColor: "{colors.canvas}"
+    rounded: "{rounded.cover}"
+    height: "282px"
+  page-selected:
+    backgroundColor: "{colors.page-selected}"
     rounded: "{rounded.control}"
     padding: "5px"
-  editor-workspace:
-    backgroundColor: "{colors.editor-surface}"
-    rounded: "{rounded.workspace}"
+  count-badge:
+    backgroundColor: "{colors.canvas}"
+    textColor: "{colors.muted}"
+    rounded: "{rounded.badge}"
+    padding: "2px 6px"
 ---
 
 # Design System: iFixPDF
 
 ## Overview
 
-**Creative North Star: “A document assembly desk.”** This descriptive metaphor comes from the supplied direction contract. iFixPDF keeps document content visible while the user chooses, orders, and exports PDFs. The preferred original editor remains a blue-grey framed sheet with a source pane, central PDF canvas, and output inspector. Its matching Home uses a flat recent-PDF list inside the same shell, with compact Merge PDFs and Merge selected actions.
+**Creative North Star: "A clear document workspace"**
+
+iFixPDF uses a continuous white working surface, a narrow task rail and a quiet desktop frame. Real PDF pages carry the visual weight; blue primary action buttons and restrained blue selection make the next step legible. The accepted direction replaces the former blue-grey framed-sheet composition across Home, Merge, Preview, Edit and Settings.
+
+The folded-F logo and iFixPDF name remain fixed. This specification describes the browser interface, not verified native Windows behavior.
 
 **Key Characteristics:**
 
-- Real document previews provide the imagery.
-- Self-hosted IBM Plex Sans and Lucide line icons supply a consistent vocabulary.
-- Flat surfaces, restrained rounding, and tonal selection establish hierarchy.
-- Compact desktop controls have explicit keyboard focus and reduced-motion behavior.
-
-This records browser prototypes and a Tauri 2 + Rust shell scaffold. The Windows shell has not been compiled or tested; native printing, filesystem integration, and installer behavior are outside this visual specification.
+- Real PDF previews provide the imagery.
+- Self-hosted IBM Plex Sans and Lucide line icons provide the shared vocabulary.
+- Continuous surfaces, fine dividers and tonal selections organize the workspace.
+- Compact controls expose visible focus and respect reduced motion.
 
 ## Colors
 
-The frontmatter is normative.
+The frontmatter is normative. Each value is a CSS variable in `src/styles/tokens.css`: colours as `--<name>` (brand blue and action share `--accent`), type sizes as `--text-<role>` (dropping any `-title` suffix), and corners as `--radius-<name>`. Style rules use the variables, not literal values; a new value is added to the frontmatter and `tokens.css` together.
 
-### Primary
+Primary actions use **brand blue** with white labels and a deeper blue hover. **Brand blue** belongs to the supplied identity, active icons, tab rules, focus and drag cues. Selection pairs pale blue backgrounds with visible blue borders; selected navigation is neutral with a blue icon. **Danger red** marks destructive actions and invalid range feedback.
 
-- **Editor muted blue:** primary save actions, active tab rules, focus outlines, and drag outlines. The deeper hover token belongs only to the editor.
+White paper and workspace sit beside an **almost-white frame** and inspector. A **soft neutral canvas** supports PDF pages and document covers. Fine neutral lines separate regions without enclosing the whole application in a rounded sheet. Ink and muted text remain distinct. Fields and secondary buttons take the slightly darker **control line**; checkboxes, scrollbars and dashed drop targets the **strong line**. **Hover** is a pale neutral on white; **faint** marks grips and checkbox hover. **Success green** marks completed steps and the ready dot; the titlebar Close button uses the Windows **close** red on hover.
 
-### Neutral
-
-- **Editor:** white workspace and paper sit inside a blue-grey frame. The preview has its own cooler ground. Selected source rows combine a pale blue fill with a visible blue-grey border; selected navigation uses a separate neutral fill.
+**The Action and Selection Rule.** Use brand blue for primary actions and blue for identity, keyboard focus and selected-state cues.
 
 ## Typography
 
-**Display and body font:** IBM Plex Sans, self-hosted through bundled Fontsource Latin files at weights 400, 500, and 600. Segoe UI is the first fallback. The editor also specifies Arial before the generic sans-serif fallback. There is no separate display or monospace family; even shortcut keycaps inherit the interface font.
+IBM Plex Sans is self-hosted at weights (400), (500) and (600), with Segoe UI and sans-serif fallbacks. Use the frontmatter roles for titles, document names, controls and metadata. The main title is compact rather than promotional; section headings sit only slightly above the body scale. Line icons generally use (17px) geometry and a (1.7px) stroke, with local smaller utility sizes.
 
-### Hierarchy
-
-- **Editor headline:** use `editor-headline`; it reduces to (18px) at the (760px) breakpoint.
-- **Body:** use `body` for ordinary controls and Home descriptions. Secondary labels and metadata generally use `label`.
-- **Document titles:** Desktop chrome uses (12px), with secondary metadata and status text at (11px).
-
-Do not assume an inherited line-height token: body line-height is not globally declared. Explanatory text sets local values such as (1.5), (1.6), or (1.7). Final editor overrides use (12px) filenames at weight (500) on desktop, (11px) metadata, (12px) field labels and controls where specified, and real first-page source thumbnails instead of the earlier PDF silhouette. Source/output panel headings are (14px); filenames reduce to (11px) at (1000px).
+Headlines reduce to (21px) below (760px), then use (22px) below (520px). Most metadata stays at (11px). Filenames truncate in rows and tiles. Preserve local explanatory line heights rather than assuming a global body line-height.
 
 ## Layout
 
-**Editor:** a viewport-height shell has a (190px) navigation column, (48px) titlebar, and (28px) statusbar. The white framed workspace retains its rounded border, with an (86px) header and (43px) toolbar. Editing columns are (266px / minmax(260px, 1fr) / 260px). At (1500px), source/output panes grow to (284px / 280px). At (1200px), navigation narrows to (168px) and editing columns become (238px / minmax(220px, 1fr) / 235px). At (1000px), navigation is a (65px) icon rail, with (215px / minmax(220px, 1fr) / 228px) editing columns. At (760px), the source pane is (190px) and the output inspector toggles as a dedicated panel. Two further breakpoints, (1150px) and (960px), are kept from the earlier build for the shell, editor and Merge layouts, so the full set is (1500), (1200), (1150), (1000), (960), (760) and (520px). At (520px), a (48px) navigation rail surrounds a single editing column with a (170px) source area above the preview; source items remain a vertical list. The default preview fits the whole page to available space rather than enforcing the earlier paper-width cap. Its footer provides a bounded page-number input and previous/next controls; the current source name disappears below (1000px).
+The viewport-height shell uses an (86px) task rail, (44px) titlebar and (26px) statusbar. The working surface fills the remaining space. Its header has a (103px) minimum height and (24px 32px) padding. The shell has a (600px) minimum height and internal scrolling.
 
-**Merge stages:** the same frame now contains an ordered four-step task strip: Add PDFs → Arrange & review → Save PDF → Done. It is (56px) high with (24px) side padding; height becomes (50px) at (760px) and (59px) at (520px), where markers stack above labels. The Add stage uses a flexible two-column layout with a dashed drop area and short instructions; below (760px), it stacks and hides the instruction column. Save keeps the document and inspector in context. Completion fills the available workspace with a centered file summary and compact follow-up actions. These are task stages, not new navigation or a new visual world. User-facing labels say Merge; the `combine` route and CSS keys remain implementation details.
+Home is the approved list layout: Merge PDFs and Merge selected above divided recent rows, each with a selection checkbox, a (54 × 65px) cover of the actual first page on the canvas grey, name and metadata, date, Open and More. Home padding is (26px 32px). The approved gallery, search, sorting and detail inspector are not implemented; adding them is product work, not restyling.
 
-**Preview and Edit PDF:** Preview is a dedicated read-only surface filling the workspace width, with no source pane or output inspector. Its preview toolbar is (44px) high; document-stage padding is (18px 35px 20px), reducing at (760px) and (520px). Read-only page browsing uses auto-fill columns between (145px) and (185px) with (23px) gaps; phones use two equal columns with (14px) gaps. Edit PDF retains the page editor but hides the source pane: flexible preview plus a (260px) output inspector, growing to (280px) above (1500px), reducing to (235px) below (1200px), and switching to a separate output panel below (760px). Keep these two screen roles distinct inside the shared frame.
+Merge uses source / preview / save columns of (238px / flexible / 268px); Edit omits the source column and uses flexible preview plus the same save inspector. Preview is read-only and fills the workspace without an output inspector. Merge retains Add PDFs → Arrange & review → Save PDF → Done, with a compact task strip rather than a new shell. The page organizer supports selection, drag/keyboard ordering and persistent thumbnail nodes. Settings uses plain divided sections in one column.
 
-**Original Home:** the same white workspace contains two small toolbar actions (Merge PDFs and Merge selected), a recent-document heading, and flat divided rows. The view uses (25px) padding, reducing to (20px) at (760px) and (18px 13px) at (520px). Rows are at least (88px) high, with first-page thumbnails, filename, page/size metadata, last-opened date, a selection checkbox, a quiet Open action, and a More actions button. Selected rows use a pale blue fill; Merge selected enables when documents are checked and shows the selection count. Date, Open action, and thumbnails are hidden on phones; the filename, checkbox, and More actions remain accessible.
+Above (1600px), the editor uses (255px / flexible / 290px). At (1200px), editor columns narrow to (205px / flexible / 238px). At (960px), the rail narrows to (72px) and editing columns become (185px / flexible / 215px); Edit uses a (225px) save inspector. At (760px), the rail is (64px), the editor hides its save inspector behind the panel switch, and Settings stacks. At (520px), a (40px) titlebar and (58px) bottom navigation replace the side rail/statusbar; Home rows drop the cover, date and Open, Merge sources scroll horizontally above the preview, and the page organizer uses two columns with wrapping compact guidance and reserves (70px) for its two-row selection toolbar. Its Split control has a (34px) minimum height. The phone shell minimum height is (560px).
 
-**Shared desktop shell:** Home fills (100dvh), has a minimum height of (620px), and hide shell overflow while document panes scroll independently. A (34px) titlebar, (28px) menu bar, and (29px) bottom statusbar frame the workspace. Titlebar controls use compact rectangular hit areas. These are browser-rendered desktop controls; window actions call Tauri only when its runtime exists.
-
-Spacing is deliberate but not a rigid global scale: preserve component-specific measurements rather than rounding every dimension to the frontmatter's recurring spacing steps.
+**The Continuous Surface Rule.** Keep the preferred workspace continuous and white; use dividers and local tonal grounds to separate task regions.
 
 ## Elevation & Depth
 
-Surfaces are flat. Borders, changes in tone, document edges, and selected fills create depth. Paper has no shadow. Transient notifications, open menu popovers, and modal dialogs use shadows: editor toast (`0 6px 24px #17223126`), Home notice (`0 5px 20px #0002`), desktop menu (`0 6px 18px #0002`), recent-file menu (`0 6px 18px #17223126`), and document dialog (`0 12px 40px #17223133`). These exact values are carried in the sidecar, not promoted to general card elevation.
+Surface tone, fine borders and document edges create hierarchy. Paper and document covers have no shadow. Menus and notifications use (`0 6px 22px #1d253222`); document dialogs use (`0 12px 40px #17223133`) with a dimmed backdrop. Do not promote these transient effects to resting surfaces.
 
-**The Flat Surface Rule.** Resting panes, navigation, cards, paper, and fields stay flat; transient notifications, open menu popovers, and modal dialogs receive shadows.
+**The Transient Depth Rule.** Keep resting panes and document covers flat; reserve shadows for menus, dialogs and notifications.
 
 ## Shapes
 
-Desktop commands use (4px) corners. Desktop menu popovers use the control radius. Source selections use the source radius. The original workspace uses the larger workspace radius and reduces to the band radius at (520px). Badges and keycaps are slightly tighter. The active tab has a (2px) accent top rule. Document canvases remain rectangular. The source-add target uses a dashed border rather than a decorative container.
+Controls are gently rounded; document covers are slightly softer and dialogs slightly larger, as recorded in the frontmatter. PDF paper remains rectangular. Task tabs use square edges and a slim blue active rule. Selection outlines hug the existing cover or page card. Dashed outlines belong to file-drop targets. The workspace itself has no enclosing rounded frame.
 
 ## Components
 
 ### Brand identity
 
-The iFixPDF mark is a white folded F on a solid brand-blue tile. Its master SVG uses a (48 × 48) viewBox and the brand-tile radius; the pale brand-fold triangle distinguishes the folded top corner. Use `public/brand/ifixpdf-mark.svg` directly, without recoloring, shadows, gradients, or animation. This shared identity stays blue across all three concepts while their interface accents remain separate.
+Use `public/brand/ifixpdf-mark.svg` directly. The shared (48 × 48) master mark has a white folded F, blue tile and pale fold. The titlebar displays it at (24px), reducing to (22px) on phones. The standalone SVG lockup embeds IBM Plex Sans (600); PNG and ICO exports support browser and Tauri identity. Keep those assets aligned without treating them as evidence of a verified installer.
 
-The original titlebar pairs the mark at (24px) with live iFixPDF text using `brand-titlebar` and an (8px) gap. Preserve these compact proportions at narrow widths. The standalone `public/brand/ifixpdf-logo.svg` lockup uses the `brand-wordmark` typography and embeds the IBM Plex Sans (600) WOFF2 font so the exported asset retains its letterforms without an external font request; its mark is (80px) inside the (380 × 96) artwork.
+**The Fixed Identity Rule.** Preserve the supplied folded F, blue tile, pale fold and iFixPDF spelling; scale artwork proportionally and keep it static.
 
-The favicon uses the same mark. Raster exports in `public/brand/` cover (32px), (128px), (256px), and (512px); the Tauri bundle references `src-tauri/icons/icon.png` and `src-tauri/icons/icon.ico`. Keep the installer icon and browser identity aligned with the master mark. These assets do not establish native Windows installer verification.
+### Buttons and fields
 
-**The Fixed Identity Rule.** Preserve the folded F geometry, solid blue tile, pale fold, and iFixPDF spelling; scale the supplied artwork proportionally and keep it static.
+Primary buttons use brand blue; secondary buttons are white with a quiet border; utilities remain transparent. Standard buttons have a (34px) minimum height, with local (36–38px) actions. Hover changes tone, press scales to (.98), and disabled controls use (.38) opacity. Field focus uses a blue (2px) outline with a (3px) offset. Search is an almost-white icon/input wrapper; its focus-within outline has a (2px) offset. Output fields are compact and show inline invalid-state feedback. Segmented controls use a neutral track with a white active item.
 
-### Buttons
+### Navigation
 
-The editor's standard button is at least (32px) high, with a (7px 10px) inset and (8px) icon gap. Its primary button uses the editor accent and a weight request of (550). Home primary hover applies `brightness(.91)`; it is not a distinct green or amber token. Editor secondary buttons retain a white fill and quiet border.
+Stack icon and short label in the task rail. Selected navigation uses a neutral fill, darker text and blue icon. The compact bottom navigation preserves the same task identities. Titlebar window controls remain rectangular; their actions depend on the Tauri runtime. Preserve accessible names when responsive controls display icons alone.
 
-Buttons scale to (.98) while pressed. Editor hover transitions run for (120ms), with transform using `cubic-bezier(.23,1,.32,1)`; Home background and text transitions run for (120ms). Reduced-motion mode disables animation and transitions. Preserve feedback without adding spring motion.
+### Recent documents
 
-### Inputs / Fields
+A neutral cover contains the actual first PDF page. Checkboxes and More controls remain visible. A selected row takes the pale blue cover-selected fill. The empty state uses concise text and a restrained line icon.
 
-Editor fields are white, outlined, and gently rounded; output inputs and selects use (10px) padding and (12px) text. Custom page ranges persist across rendering and show inline invalid-state borders and help. A compact quality note replaces the single-option quality selector; the export summary reports the actual selected page count. Select menus remain compact and visually subordinate.
+### Page organizer and save workflow
 
-Keyboard focus uses an accent outline (2px), offset by (3px) in the editor and (4px) on Home controls and links. Preserve a visible focus treatment when composing or wrapping controls.
-
-### Navigation and desktop chrome
-
-Editor navigation retains its full-width tonal selected row and collapses to icons at the documented breakpoint. Print Jobs and the This Session / Project Pack navigation block have been removed. Home includes File, View, and Help menus; dropdowns expose commands and shortcuts, with hover fill and a bordered popover. The fixed bottom statusbar shows document count, local workspace and prototype status as space permits. It is utility chrome, not a website footer.
-
-### Cards / Containers
-
-The editor source cards, page cards and Home rows are the only card surfaces; do not nest them in another card.
-
-### Guided merge and draggable pages
-
-The ordered step strip distinguishes the current step with an editor-blue circular marker and completed steps with a quiet green check. Unavailable steps remain readable but disabled. The Add screen uses the existing frame, restrained dashed border, and file picker/drop target. The Save stage highlights the inspector with a near-white fill and concise instruction. Done shows the actual output name, page count, and size, then Open, a new merge, or return to the document. Its message confirms the save request rather than filesystem completion. The Merge workspace is never persisted; only the Preview/Edit document draft is restored on a normal return, scoped to this browser origin/device without implying a native file save or cross-device sync.
-
-Pages uses an auto-fill grid with a minimum column width of (135px) and (16px) gaps. Each flat page card contains a cached image of its rendered PDF page, current sequence number, source filename, a selection checkbox, and earlier/later controls. Retain keyed cards, thumbnail images, scroll position, and focus when moving pages; reorder within the current grid instead of recreating the editor. The card has a (5px) inset and radius, a grab cursor, and half opacity during dragging. A (3px) editor-blue insertion mark sits just before or after the prospective destination; keep it separate from the selected-card fill and (1px) outline. Selection belongs to the outer card; the preview button’s pressed state has a transparent fill and border. Do not restore the superseded selected-button blue fill. Keyboard focus uses a (2px) blue outline with (1px) offset on the thumbnail. Preserve Alt+Left/Right and explicit earlier/later buttons as drag alternatives, disabling moves beyond the first/last page. Source-page spans and export summaries must describe the current page sequence after individual moves, including non-contiguous source positions.
-
-### Editing selection and history
-
-Undo/redo are compact icon controls beside the Document/Pages tabs: (30px) wide, at least (28px) high, with (15px) icons and disabled opacity (.3). Preserve Ctrl+Z, Ctrl+Shift+Z, and Ctrl+Y. Checkboxes support multiple selected page cards; the selection toolbar includes select-all/partial state and batch delete, duplicate, and extract actions. It spans the grid, sticks at top (-1px), uses a (41px) minimum height, (7px 9px) padding, and control-radius corners. At (760px) it becomes non-sticky; at (520px), the selection label takes a full row and actions share the next row. Page checkboxes sit inside small pale backplates at the top-left of each card. Delete receives a restrained red hover state, while selection remains blue.
-
-Printing remains a manual action that opens the PDF viewer. There is no Print Jobs surface or simulated queue in the current UI.
-
-### Read-only Preview and Edit PDF
-
-Preview exposes Open PDF, Print PDF, and Edit PDF in its header, with Document/Pages browsing, zoom, fit, and page navigation. Its footer labels the document “Read-only.” Thumbnail buttons open pages and use quiet hover fills; they have no drag handles, checkboxes, batch actions, rotation, history controls, or output form. Print PDF is hidden at the compact breakpoint. The empty state invites opening a PDF and explains that page changes belong in Edit PDF.
-
-Edit PDF is a separate sidebar destination. It reuses page selection, reorder, duplicate/delete/extract, rotation, and undo/redo, while omitting the source-file pane and Merge workflow strip. The inspector and primary export action say “Save edited PDF,” with an edited-document summary. Preserve current document state when switching between Preview and Edit; reading must not mutate page content or sequence.
-
-### Recent-file actions and document dialogs
-
-Right-clicking a Home row or activating its More actions button opens the same menu: View PDF, Edit PDF, Merge PDFs, and Add password. Merge uses the clicked document together with checked rows, deduplicated; a single document opens Merge ready for another PDF. The fixed menu stays inside the viewport, has a (205px) minimum width, (5px) padding and radius, and compact (12px) commands. Arrow keys, Home, and End move menu focus; Escape restores focus to the trigger, and outside click, Tab, or resize dismisses it.
-
-Password and Split PDF share a native modal dialog: width `min(440px, calc(100vw - 32px))`, a viewport-bounded scrolling body, (24px) padding, (8px) corners, and a muted backdrop. Heading text is (18px) at weight (600), helper text (11px), and inline errors (12px). Cancel, close, and completion restore focus to the originating control. Processing disables the primary action and replaces its label; completion confirms a download request and keeps the original document unchanged.
-
-Add password requires matching password and confirmation fields with at least eight characters (the password field allows up to 64). A Show passwords checkbox toggles visibility. Save protected copy downloads an AES-256 encrypted PDF with a protected filename suffix; the password is never persisted. Failure stays in the dialog with an inline error. Protected output is a downloaded copy, not a replacement for the recent file or workspace draft.
-
-Split PDF appears in Edit PDF above page selection tools. Page ranges use comma-separated parts (for example, `1-3, 4-6`); Every page creates one part per current page. A live text preview reports the number of PDFs and included pages. Malformed, out-of-bounds, reversed, or overlapping ranges show inline errors. Split & download ZIP exports numbered PDF parts in one ZIP from the current page order, preserving current rotation and leaving the workspace unchanged.
-
-### Document workspace
-
-The editor connects ordered source rows to the combined page preview. Source cards use real first-page thumbnails (35px × 48px), a filename, page-count metadata and page spans, with compact reorder/remove tools below. Thumbnail dimensions reduce at narrower breakpoints and disappear on phones. Preserve bordered blue selection, separate file selection and reorder actions, fit-whole-page preview, and a bounded page-number input in the footer. A current-source label anchors the preview on wider screens. Selected page thumbnails use a distinct fill and border. Custom ranges accept comma-separated pages and ranges, retain input state, and drive the export summary; the quality note states that source page content is preserved. Lucide icons normally render at (17px) with stroke width (1.65) in the editor and (18px) with stroke width (1.6) on Home; smaller metadata icons use local sizing. Empty states use the same line-icon vocabulary and concise guidance.
+Selected pages use the dedicated pale fill and blue outline. The white selection toolbar stays within the neutral canvas. Preserve keyed thumbnail identity during reordering. Preview remains read-only; Edit owns mutations and its save settings. Save/Done must distinguish a real download from an explicitly labeled demonstration. Notifications enter with a small (5px) translation over (160ms); ordinary control feedback uses (120ms) transitions and `cubic-bezier(.23,1,.32,1)`. Reduced-motion mode removes animations and transitions.
 
 ## Do's and Don'ts
 
 ### Do:
 
-- **Do** preserve the preferred original framed-sheet world, its matching flat-list Home, real source thumbnails, final metadata sizes, and mobile source-list behavior.
-- **Do** use bundled IBM Plex Sans, Lucide SVGs, real document previews, and visible keyboard focus.
-- **Do** preserve reduced-motion preferences and separate hover from selected states.
-- **Do** keep the browser prototype and unverified native shell status explicit in product claims.
+- Do keep real document content visible and filenames readable.
+- Do preserve keyboard focus, explicit selection states and the distinction between read-only Preview and editable pages.
+- Do let document panes scroll independently and expose the save inspector through its compact-window control.
 
 ### Don't:
 
-- **Don't** imply the Home screen has the editor's three-pane composition.
-- **Don't** introduce promotional hero bands, website navigation, decorative stock imagery, gradients, nested cards, or resting surface shadows.
-- **Don't** treat the earlier Segoe UI direction note as the final font choice.
-- **Don't** imply native Windows print completion when opening a PDF viewer.
+- Don't restore the old blue-grey outer sheet, broad navigation column or rounded workspace frame.
+- Don't turn every primary action blue or apply the alternative concepts’ palettes to the preferred interface.
+- Don't add shadows to resting panes or use decorative imagery in place of real PDF previews.
+- Don't describe compression, updates, browser downloads or desktop-like chrome as verified native capabilities.
+
+### Version display
+
+The current package version appears at the right end of the bottom status bar in muted 11px tabular text, separated from the draft status. It does not appear in the sidebar. At 520px and below, it moves to a 22px status footer beneath the five-item navigation. Settings reads the same version metadata.

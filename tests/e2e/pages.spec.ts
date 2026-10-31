@@ -3,7 +3,8 @@ import type {Locator, Page} from '@playwright/test';
 import {test, expect, pdfFile} from './fixtures';
 
 const cards = (page: Page) => page.locator('.page-card');
-const order = (page: Page) => cards(page).evaluateAll(cs => cs.map(c => (c as HTMLElement).dataset.uid));
+const order = (page: Page) =>
+  cards(page).evaluateAll((cs) => cs.map((c) => (c as HTMLElement).dataset.uid));
 const thumb = (card: Locator) => card.locator('.page-thumbnail');
 
 async function center(l: Locator) {
@@ -14,12 +15,14 @@ async function center(l: Locator) {
 
 /** Presses on `from`'s thumbnail and moves in steps to the left or right quarter of `to`; returns before releasing. */
 async function dragTo(page: Page, from: Locator, to: Locator, side: 'before' | 'after') {
-  await page.evaluate(() => Promise.all(document.getAnimations().map(a => a.finished))); // boxes are read mid-glide otherwise
+  await page.evaluate(() => Promise.all(document.getAnimations().map((a) => a.finished))); // boxes are read mid-glide otherwise
   const a = await center(thumb(from));
   const {b} = await center(to);
   await page.mouse.move(a.x, a.y);
   await page.mouse.down();
-  await page.mouse.move(b.x + b.width * (side === 'after' ? 0.75 : 0.25), b.y + b.height / 2, {steps: 15});
+  await page.mouse.move(b.x + b.width * (side === 'after' ? 0.75 : 0.25), b.y + b.height / 2, {
+    steps: 15,
+  });
 }
 
 test.beforeEach(async ({app, page}) => {
@@ -27,7 +30,10 @@ test.beforeEach(async ({app, page}) => {
   await page.addInitScript(() => {
     const make = URL.createObjectURL.bind(URL);
     window.__objectUrls = 0;
-    URL.createObjectURL = (b: Blob | MediaSource) => { window.__objectUrls++; return make(b) };
+    URL.createObjectURL = (b: Blob | MediaSource) => {
+      window.__objectUrls++;
+      return make(b);
+    };
   });
   await app.goto('view=home');
   await app.openPdf(await pdfFile('Report.pdf', 3));
@@ -35,14 +41,21 @@ test.beforeEach(async ({app, page}) => {
   await expect(app.title).toHaveText('Edit PDF');
   await app.tab('Pages').click();
   await expect(cards(page)).toHaveCount(3);
-  for (let i = 0; i < 3; i++) await expect(cards(page).nth(i).locator('img')).toHaveAttribute('src', /.+/);
+  for (let i = 0; i < 3; i++)
+    await expect(cards(page).nth(i).locator('img')).toHaveAttribute('src', /.+/);
 });
 
-test('a pointer drag of page 1 after page 3 reorders without remounting cards or reloading thumbnails', async ({page}) => {
+test('a pointer drag of page 1 after page 3 reorders without remounting cards or reloading thumbnails', async ({
+  page,
+}) => {
   const [u0, u1, u2] = await order(page);
   const first = await cards(page).nth(0).elementHandle();
   const firstImg = await cards(page).nth(0).locator('img').elementHandle();
-  await cards(page).nth(0).evaluate(n => { (n as HTMLElement & {__keep?: number}).__keep = 1 });
+  await cards(page)
+    .nth(0)
+    .evaluate((n) => {
+      (n as HTMLElement & {__keep?: number}).__keep = 1;
+    });
   const src = await cards(page).nth(0).locator('img').getAttribute('src');
   const urls = await page.evaluate(() => window.__objectUrls);
 
@@ -51,16 +64,41 @@ test('a pointer drag of page 1 after page 3 reorders without remounting cards or
   await page.mouse.up();
 
   await expect.poll(() => order(page)).toEqual([u1, u2, u0]);
-  expect(await first!.evaluate(n => (n as HTMLElement).dataset.uid), 'same element handle').toBe(u0);
-  expect(await cards(page).nth(2).evaluate((n, h) => n === h, first), 'moved card is the same node').toBe(true);
-  expect(await cards(page).nth(2).evaluate(n => (n as HTMLElement & {__keep?: number}).__keep), 'marker survives').toBe(1);
-  expect(await cards(page).nth(2).locator('img').evaluate((n, h) => n === h, firstImg), 'same img node').toBe(true);
-  expect(await cards(page).nth(2).locator('img').getAttribute('src'), 'thumbnail src unchanged').toBe(src);
+  expect(await first!.evaluate((n) => (n as HTMLElement).dataset.uid), 'same element handle').toBe(
+    u0,
+  );
+  expect(
+    await cards(page)
+      .nth(2)
+      .evaluate((n, h) => n === h, first),
+    'moved card is the same node',
+  ).toBe(true);
+  expect(
+    await cards(page)
+      .nth(2)
+      .evaluate((n) => (n as HTMLElement & {__keep?: number}).__keep),
+    'marker survives',
+  ).toBe(1);
+  expect(
+    await cards(page)
+      .nth(2)
+      .locator('img')
+      .evaluate((n, h) => n === h, firstImg),
+    'same img node',
+  ).toBe(true);
+  expect(
+    await cards(page).nth(2).locator('img').getAttribute('src'),
+    'thumbnail src unchanged',
+  ).toBe(src);
   expect(await page.evaluate(() => window.__objectUrls), 'no new thumbnail rendered').toBe(urls);
-  await expect(page.locator('.drop-before, .drop-after, .dragging'), 'marks cleared').toHaveCount(0);
+  await expect(page.locator('.drop-before, .drop-after, .dragging'), 'marks cleared').toHaveCount(
+    0,
+  );
 });
 
-test('dragging a selected page moves the selection; dragging an unselected one selects only it', async ({page}) => {
+test('dragging a selected page moves the selection; dragging an unselected one selects only it', async ({
+  page,
+}) => {
   const [u0, u1, u2] = await order(page);
   await thumb(cards(page).nth(0)).click();
   await thumb(cards(page).nth(1)).click({modifiers: ['Control']});
@@ -100,8 +138,19 @@ test('Duplicate, Rotate and Delete act on the selection', async ({page}) => {
   await thumb(cards(page).nth(2)).click();
   await page.getByRole('button', {name: 'Rotate selected pages'}).click();
   const img = cards(page).nth(2).locator('img');
-  await expect.poll(() => img.evaluate((i: HTMLImageElement) => i.naturalWidth > i.naturalHeight), 'rotated thumbnail is landscape').toBe(true);
-  expect(await cards(page).nth(1).locator('img').evaluate((i: HTMLImageElement) => i.naturalWidth < i.naturalHeight), 'others stay portrait').toBe(true);
+  await expect
+    .poll(
+      () => img.evaluate((i: HTMLImageElement) => i.naturalWidth > i.naturalHeight),
+      'rotated thumbnail is landscape',
+    )
+    .toBe(true);
+  expect(
+    await cards(page)
+      .nth(1)
+      .locator('img')
+      .evaluate((i: HTMLImageElement) => i.naturalWidth < i.naturalHeight),
+    'others stay portrait',
+  ).toBe(true);
 
   await thumb(cards(page).nth(0)).click();
   await thumb(cards(page).nth(3)).click({modifiers: ['Control']});
@@ -122,14 +171,61 @@ test('Alt+Right moves the focused page and keeps focus on it', async ({page}) =>
   await thumb(cards(page).nth(0)).focus();
   await page.keyboard.press('Alt+ArrowRight');
   await expect.poll(() => order(page)).toEqual([u1, u0, u2]);
-  expect(await page.evaluate(() => (document.activeElement?.closest('.page-card') as HTMLElement | null)?.dataset.uid)).toBe(u0);
+  expect(
+    await page.evaluate(
+      () => (document.activeElement?.closest('.page-card') as HTMLElement | null)?.dataset.uid,
+    ),
+  ).toBe(u0);
   await page.keyboard.press('Alt+ArrowRight');
   await expect.poll(() => order(page)).toEqual([u1, u2, u0]);
-  expect(await page.evaluate(() => (document.activeElement?.closest('.page-card') as HTMLElement | null)?.dataset.uid)).toBe(u0);
+  expect(
+    await page.evaluate(
+      () => (document.activeElement?.closest('.page-card') as HTMLElement | null)?.dataset.uid,
+    ),
+  ).toBe(u0);
 });
 
 test('double-click opens the page on the Document tab', async ({page}) => {
   await thumb(cards(page).nth(2)).dblclick();
   await expect(page.getByRole('spinbutton', {name: 'Go to page'})).toHaveValue('3');
   await expect(cards(page)).toHaveCount(0);
+});
+
+// Phone width puts page 3 in the next row, so the drag runs along the scroll axis, where a browser pan would cancel it.
+test.describe('touch', () => {
+  test.use({viewport: {width: 390, height: 844}, hasTouch: true});
+
+  async function touch(page: Page, points: Array<{x: number; y: number}>, holdMs: number) {
+    const cdp = await page.context().newCDPSession(page);
+    const send = (type: 'touchStart' | 'touchMove' | 'touchEnd', p?: {x: number; y: number}) =>
+      cdp.send('Input.dispatchTouchEvent', {type, touchPoints: p ? [p] : []});
+    await send('touchStart', points[0]);
+    await page.waitForTimeout(holdMs);
+    for (const p of points.slice(1)) {
+      await send('touchMove', p);
+      await page.waitForTimeout(16);
+    }
+    await send('touchEnd');
+  }
+  const path = (a: {x: number; y: number}, b: {x: number; y: number}, steps = 12) =>
+    Array.from({length: steps + 1}, (_, i) => ({
+      x: a.x + ((b.x - a.x) * i) / steps,
+      y: a.y + ((b.y - a.y) * i) / steps,
+    }));
+
+  test('press-and-hold then drag moves page 1 after page 3', async ({page}) => {
+    const before = await order(page);
+    const a = await center(thumb(cards(page).nth(0)));
+    const {b} = await center(cards(page).nth(2));
+    await touch(page, path(a, {x: b.x + b.width * 0.75, y: b.y + b.height / 2}), 400);
+    await expect.poll(() => order(page)).toEqual([before[1], before[2], before[0]]);
+  });
+
+  test('a quick swipe over the cards scrolls instead of reordering', async ({page}) => {
+    const before = await order(page);
+    const a = await center(thumb(cards(page).nth(2)));
+    await touch(page, path(a, {x: a.x, y: a.y - 200}, 8), 0);
+    await expect(page.locator('.page-card.dragging')).toHaveCount(0);
+    expect(await order(page)).toEqual(before);
+  });
 });

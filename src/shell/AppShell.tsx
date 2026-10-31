@@ -23,9 +23,12 @@ const TITLES: Record<View, [string, string]> = {
   merge: ['Merge PDFs', 'A few files. One well-ordered document.'],
   preview: ['Preview PDF', 'Read and inspect your document.'],
   edit: ['Edit PDF', 'Organize pages and save an edited copy.'],
-  settings: ['Settings', 'A workspace that works your way.']
+  settings: ['Settings', 'A workspace that works your way.'],
 };
-const PANE: Partial<Record<View, string>> = {preview: 'workspace preview-only', edit: 'workspace edit-only'};
+const PANE: Partial<Record<View, string>> = {
+  preview: 'workspace preview-only',
+  edit: 'workspace edit-only',
+};
 
 async function addPassword(entry: RecentEntry) {
   try {
@@ -38,7 +41,12 @@ async function addPassword(entry: RecentEntry) {
 
 function split() {
   const s = documentStore.getState();
-  if (s.pages.length) showSplitDialog({count: s.pages.length, name: s.exportSettings.name, spec: s.snapshotForExport()});
+  if (s.pages.length)
+    showSplitDialog({
+      count: s.pages.length,
+      name: s.exportSettings.name,
+      spec: s.snapshotForExport(),
+    });
 }
 
 function Body({view}: {view: View}) {
@@ -64,11 +72,13 @@ export function AppShell() {
       <div className="app">
         <Titlebar />
         <Sidebar />
-        <main className={PANE[view] ?? 'workspace'}>
+        <main className={PANE[view] ?? 'workspace'} data-view={view}>
           <header className="workspace-header">
             <div>
               <h1 id="view-title">{title}</h1>
-              <div className="subtitle" id="view-subtitle">{named ? name : subtitle}</div>
+              <div className="subtitle" id="view-subtitle">
+                {named ? name : subtitle}
+              </div>
             </div>
             <HeaderActions />
           </header>
