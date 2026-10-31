@@ -21,7 +21,7 @@ async function addToMerge(app: App, names: string[], status: string) {
 
 async function previewIsReport(app: App, page?: number) {
   await app.view('Preview PDF');
-  await expect(app.subtitle, 'Preview still shows the document').toHaveText('Report.pdf');
+  await expect(app.subtitle, 'Preview still shows the document').toHaveText('Report (edited).pdf');
   if (page)
     await expect(
       app.page.getByRole('spinbutton', {name: 'Go to page'}),
@@ -115,7 +115,9 @@ test('New merge clears only Merge', async ({app, page}) => {
   await previewIsReport(app, 2);
   await app.goto();
   await expect(app.title).toHaveText('Preview PDF');
-  await expect(app.subtitle, 'document draft restored after New merge').toHaveText('Report.pdf');
+  await expect(app.subtitle, 'document draft restored after New merge').toHaveText(
+    'Report (edited).pdf',
+  );
   expect(await app.draftKeys(), 'New merge deleted only the merge draft').toEqual(['document']);
   await app.view('Merge PDFs');
   await mergeIsEmpty(app);

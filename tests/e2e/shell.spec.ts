@@ -61,7 +61,7 @@ test.describe('routing', () => {
     const id = await app.seedRecent('Recent.pdf', 2);
     await app.goto(`recent=${id}&view=edit`);
     await expect(app.title).toHaveText('Edit PDF');
-    await expect(app.subtitle).toHaveText('Recent.pdf');
+    await expect(app.subtitle).toHaveText('Recent (edited).pdf');
     await expect(app.status).toContainText('1 files · 2 pages · Ready');
   });
 

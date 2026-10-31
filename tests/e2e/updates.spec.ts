@@ -133,7 +133,7 @@ test.describe('native', () => {
     // Put a document in the workspace and stay in Edit: Settings keeps the ready state.
     await app.view('Edit PDF');
     await app.addFiles(await pdfFile('Report.pdf', 1));
-    await expect(app.subtitle).toHaveText('Report.pdf');
+    await expect(app.subtitle).toHaveText('Report (edited).pdf');
 
     await holdSaveDialog(page);
     await page.locator('.header-actions [data-action=export]').click();

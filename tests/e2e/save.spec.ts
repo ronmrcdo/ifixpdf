@@ -93,15 +93,15 @@ test.describe('native', () => {
     await expect(app.toast('extracted')).toBeVisible();
     const dialog = await lastDialog(app),
       out = await written(page);
-    expect(dialog?.defaultPath).toBe('Report – pages 1, 3.pdf');
+    expect(dialog?.defaultPath).toBe('Report (edited) – pages 1, 3.pdf');
     expect(dialog?.kind).toBe('pdf');
-    expect(out.path).toBe('/home/ron/Docs/Report – pages 1, 3.pdf');
+    expect(out.path).toBe('/home/ron/Docs/Report (edited) – pages 1, 3.pdf');
     expect(await pagesOf(out)).toBe(2);
     await check(3).uncheck();
     await check(2).check();
     await extract.click();
     await expect.poll(() => writes(page)).toBe(2);
-    expect((await lastDialog(app))?.defaultPath).toBe('Report – pages 1–2.pdf');
+    expect((await lastDialog(app))?.defaultPath).toBe('Report (edited) – pages 1–2.pdf');
   });
 
   test('Split: cancelling the save keeps the form open', async ({app, page}) => {
@@ -115,7 +115,7 @@ test.describe('native', () => {
     await submit.click();
     await waitCalls(app, 'save_as', 1);
     const options = await lastDialog(app);
-    expect(options?.defaultPath).toBe('Report — split.zip');
+    expect(options?.defaultPath).toBe('Report (edited) — split.zip');
     expect(options?.kind).toBe('zip');
     await expect(submit).toBeEnabled();
     await expect(
@@ -431,7 +431,7 @@ test.describe('native', () => {
     await page.waitForTimeout(300);
     await expect(page.locator('.page-card')).toHaveCount(3);
     await page.evaluate(() => window.__release());
-    await expect(app.toast('Saved Sized.pdf.')).toBeVisible();
+    await expect(app.toast('Saved Sized (edited).pdf.')).toBeVisible();
     expect(await count(app, 'save_as'), 'one dialog').toBe(1);
     const out = await PDFDocument.load(new Uint8Array((await written(page)).bytes));
     expect(out.getPages().map((p) => [p.getWidth(), p.getRotation().angle])).toEqual([
