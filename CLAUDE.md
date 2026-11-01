@@ -6,6 +6,7 @@ Desktop PDF tool (Windows, macOS, Linux; Windows is the primary target). Fronten
 - [DESIGN.md](DESIGN.md) — accepted interface; read before UI changes.
 - [VERIFICATION.md](VERIFICATION.md) — check results and their scope, including the pending Windows checklist.
 - [PRODUCT.md](PRODUCT.md) — product scope and what is implemented versus pending.
+- [RELEASE.md](RELEASE.md) — how to cut, check and publish a release, including choosing OSes.
 - [docs/adr/](docs/adr/) — architecture decisions; read before changing the area they cover.
 
 ## Commands
@@ -37,7 +38,7 @@ Desktop PDF tool (Windows, macOS, Linux; Windows is the primary target). Fronten
 | `public/brand/` | Brand mark, wordmark, icons |
 | `vite.config.ts` | Serves and bundles pdf.js CMaps and standard fonts under `/pdfjs/` |
 | `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS, dmg, AppImage and deb bundles; CSP), capabilities (no `core:default`; window minimize, toggle-maximize, close, destroy, start-dragging, internal-toggle-maximize; event listen/unlisten; resources close; updater check/download/install; dialog open; fs read-file; app `allow-save-as`; opener reveal-item-in-dir, open-path `**/*.pdf`, open-url to the GitHub repo) |
-| `scripts/`, `.github/workflows/` | Release script (`pnpm release`) and the release workflow (draft release, per-OS installers) |
+| `scripts/`, `.github/workflows/` | Release scripts (`pnpm release`, `pnpm release:publish`) and the release workflow (draft release, installers for the OSes in `releasePlatforms`) |
 | `CHANGELOG.md`, `licenses/` | User-facing release notes; bundled third-party license texts (`licenses/generated/` is gitignored) |
 | `docs/adr/` | Architecture decision records (`<timestamp>_<title>.md`) |
 
