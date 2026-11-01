@@ -1,5 +1,10 @@
 What's new in iFixPDF, newest first.
 
+## v0.1.3 — November 2026
+
+- **New** — Match the landing page's navy mark and primary buttons
+- **New** — Choose OSes per release and publish with pnpm release:publish
+
 ## v0.1.2 — November 2026
 
 - **New** — Write release notes and push automatically
