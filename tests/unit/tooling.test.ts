@@ -101,13 +101,24 @@ describe('release environment', () => {
 
   test('only the tag-run jobs that read signing secrets use the release environment', () => {
     for (const name of ['secrets', 'build']) expect(job(name)).toContain('environment: release');
-    for (const name of ['preflight', 'draft', 'dry-run'])
+    for (const name of ['preflight', 'draft', 'verify', 'dry-run'])
       expect(job(name)).not.toContain('environment:');
   });
 
   test('dry runs build without a write token', () => {
     expect(job('dry-run')).toContain("if: github.event_name != 'push'");
     expect(job('dry-run')).not.toContain('contents: write');
+  });
+
+  test('builds only the OSes preflight reads from package.json', () => {
+    expect(job('preflight')).toContain('node scripts/release-platforms.ts matrix');
+    expect(job('build')).toContain('fromJSON(needs.preflight.outputs.matrix)');
+    expect(job('dry-run')).toContain('strategy: *platforms');
+  });
+
+  test('verify checks the update feed after the builds', () => {
+    expect(job('verify')).toContain('needs: build');
+    expect(job('verify')).toContain('node scripts/release-platforms.ts check latest.json');
   });
 
   test('preflight rejects a tag that is not on main', () => {

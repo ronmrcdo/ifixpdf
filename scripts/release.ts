@@ -1,7 +1,8 @@
 import {execFileSync} from 'node:child_process';
-import {confirm, intro, isCancel, note, select} from '@clack/prompts';
+import {confirm, intro, isCancel, multiselect, note, select} from '@clack/prompts';
 import {readFileSync, writeFileSync} from 'node:fs';
 import {
+  ALL_PLATFORMS,
   addSection,
   autoNotes,
   type Bump,
@@ -11,7 +12,10 @@ import {
   changelogSection,
   featFixSubjects,
   isNewer,
+  PLATFORMS,
+  type Platform,
   parseVersion,
+  releasePlatforms,
   setCargoPackageVersion,
   stampUnreleased,
   unreleasedSection,
@@ -35,8 +39,14 @@ function lastTag(): string | null {
 const commitsSince = (tag: string | null) =>
   featFixSubjects(git('log', tag ? `${tag}..HEAD` : 'HEAD', '--format=%s'));
 
-/** Shows the last and next release, then asks for the bump. Null when stopped or cancelled. */
-async function pickVersion(current: string, md: string): Promise<string | null> {
+const names = (platforms: Platform[]) => platforms.map((p) => PLATFORMS[p].label).join(', ');
+
+/** Shows the last and next release, then asks for the bump and the OSes. Null when stopped or cancelled. */
+async function pick(
+  current: string,
+  md: string,
+  saved: Platform[],
+): Promise<{version: string; platforms: Platform[]} | null> {
   const tag = lastTag();
   const commits = commitsSince(tag);
   intro('iFixPDF release');
@@ -58,11 +68,18 @@ async function pickVersion(current: string, md: string): Promise<string | null> 
     })),
   });
   if (isCancel(version)) return null;
+  const platforms = await multiselect({
+    message: 'Release for which OS? (space toggles)',
+    options: ALL_PLATFORMS.map((p) => ({value: p, label: PLATFORMS[p].label})),
+    initialValues: saved,
+    required: true,
+  });
+  if (isCancel(platforms)) return null;
   const ok = await confirm({
-    message: `Release v${version}? This writes the notes to CHANGELOG.md and the tag, bumps the versions, commits, tags and pushes to origin.`,
+    message: `Release v${version} for ${names(platforms)}? This writes the notes to CHANGELOG.md and the tag, bumps the versions, commits, tags and pushes to origin.`,
     initialValue: false,
   });
-  return ok === true ? version : null;
+  return ok === true ? {version, platforms} : null;
 }
 
 async function run(): Promise<void> {
@@ -70,15 +87,19 @@ async function run(): Promise<void> {
   const dirty = blockingChanges(git('status', '--porcelain'));
   if (dirty.length) return fail(`Commit or stash first:\n${dirty.join('\n')}`);
 
-  const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {version: string};
+  const pkg = JSON.parse(readFileSync('package.json', 'utf8')) as {
+    version: string;
+    releasePlatforms?: unknown;
+  };
+  let platforms = releasePlatforms(pkg);
   const md = readFileSync('CHANGELOG.md', 'utf8');
   let version = process.argv[2];
   if (!version) {
     if (!process.stdin.isTTY)
       return fail('Run in a terminal, or pass the version: pnpm release X.Y.Z');
-    const picked = await pickVersion(pkg.version, md);
+    const picked = await pick(pkg.version, md, platforms);
     if (!picked) return fail('Release stopped.');
-    version = picked;
+    ({version, platforms} = picked);
   }
   if (!parseVersion(version)) return fail('Usage: pnpm release [X.Y.Z]');
   if (!isNewer(version, pkg.version)) return fail(`${version} is not newer than ${pkg.version}`);
@@ -107,7 +128,10 @@ async function run(): Promise<void> {
   let committed = false;
   try {
     writeFileSync('CHANGELOG.md', changelog);
-    writeFileSync('package.json', `${JSON.stringify({...pkg, version}, null, 2)}\n`);
+    writeFileSync(
+      'package.json',
+      `${JSON.stringify({...pkg, version, releasePlatforms: platforms}, null, 2)}\n`,
+    );
     writeFileSync(cargo, setCargoPackageVersion(toml, version));
     if (cargoPackageVersion(readFileSync(cargo, 'utf8')) !== version)
       throw new Error(`${cargo} version was not set to ${version}`);
@@ -137,7 +161,9 @@ async function run(): Promise<void> {
       `Committed and tagged v${version}, but the push failed. Fix it, then run: git ${push.join(' ')}`,
     );
   }
-  console.log(`Pushed v${version}. The release workflow is building the draft release.`);
+  console.log(
+    `Pushed v${version} for ${names(platforms)}. When the release workflow finishes, run: pnpm release:publish`,
+  );
 }
 
 await run();

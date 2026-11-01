@@ -3,14 +3,17 @@ import {
   addSection,
   autoNotes,
   blockingChanges,
+  buildMatrix,
   bumpVersion,
   cargoPackageVersion,
   changelogSection,
   checkVersions,
   featFixSubjects,
   isNewer,
+  missingUpdaterKeys,
   parseVersion,
   releaseBody,
+  releasePlatforms,
   setCargoPackageVersion,
   stampUnreleased,
   unreleasedSection,
@@ -189,8 +192,51 @@ describe('checkVersions', () => {
   });
 });
 
+describe('release platforms', () => {
+  it('defaults to every OS', () =>
+    expect(releasePlatforms({})).toEqual(['windows', 'macos', 'linux']));
+  it('keeps the chosen OSes in a fixed order', () =>
+    expect(releasePlatforms({releasePlatforms: ['linux', 'windows']})).toEqual([
+      'windows',
+      'linux',
+    ]));
+  it('rejects an unknown, empty or malformed list', () => {
+    expect(() => releasePlatforms({releasePlatforms: ['android']})).toThrow('android');
+    expect(() => releasePlatforms({releasePlatforms: []})).toThrow();
+    expect(() => releasePlatforms({releasePlatforms: 'windows'})).toThrow();
+  });
+  it('builds a matrix for the chosen OSes only', () => {
+    expect(buildMatrix(['windows'])).toEqual({
+      include: [{platform: 'windows-latest', args: '--bundles nsis'}],
+    });
+    expect(buildMatrix(['macos']).include[0]).toMatchObject({
+      platform: 'macos-latest',
+      'rust-targets': 'aarch64-apple-darwin,x86_64-apple-darwin',
+    });
+  });
+  it('lists the update-feed entries a release is missing', () => {
+    expect(missingUpdaterKeys(['windows', 'linux'], ['windows-x86_64', 'linux-x86_64'])).toEqual([
+      'linux-x86_64-deb',
+    ]);
+    expect(missingUpdaterKeys(['windows'], ['windows-x86_64', 'windows-x86_64-nsis'])).toEqual([]);
+  });
+});
+
+describe('releaseBody for some OSes', () => {
+  const body = releaseBody('1.2.0', 'NOTES', ['windows']);
+  it('lists and explains only the chosen OSes', () => {
+    expect(body).toContain('iFixPDF_1.2.0_x64-setup.exe');
+    expect(body).toContain('Run anyway');
+    for (const t of ['universal.dmg', 'AppImage', 'xattr', 'Updating on Linux'])
+      expect(body).not.toContain(t);
+    expect(body).toContain('EULA.txt');
+  });
+  it('drops the warning section when no chosen OS warns', () =>
+    expect(releaseBody('1.2.0', 'NOTES', ['linux'])).not.toContain('If your computer warns you'));
+});
+
 describe('releaseBody', () => {
-  const body = releaseBody('1.2.0', 'NOTES');
+  const body = releaseBody('1.2.0', 'NOTES', ['windows', 'macos', 'linux']);
   it('opens with the notes', () => expect(body.startsWith("## What's new\n\nNOTES")).toBe(true));
   it('lists every download', () => {
     for (const f of ['x64-setup.exe', 'universal.dmg', 'amd64.AppImage', 'amd64.deb'])
