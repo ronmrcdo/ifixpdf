@@ -3,12 +3,12 @@
   background: var(--paper);
 }
 .primary {
-  background: var(--accent);
+  background: var(--brand);
   color: var(--paper);
   font-weight: 500;
 }
 .primary:hover:where(:not(:disabled)) {
-  background: var(--action-hover);
+  background: var(--brand-hover);
 }
 .tab.active {
   color: var(--ink);

@@ -137,13 +137,13 @@
   white-space: nowrap;
 }
 .workspace[data-view=home] .header-actions [data-action=add] {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--brand);
+  border-color: var(--brand);
   color: var(--paper);
 }
 .workspace[data-view=home] .header-actions [data-action=add]:hover {
-  background: var(--action-hover);
-  border-color: var(--action-hover);
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
 }
 .statusbar {
   grid-column: 1/-1;
