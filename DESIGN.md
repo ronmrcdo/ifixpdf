@@ -2,8 +2,10 @@
 name: "iFixPDF"
 description: "A light desktop PDF workspace with a quiet frame, visible documents and clear tools."
 colors:
+  brand: "#111827"
+  brand-hover: "#1f2937"
   brand-blue: "#3465a7"
-  brand-fold: "#BED2EE"
+  brand-fold: "#9CA3AF"
   paper: "#ffffff"
   ink: "#24272c"
   muted: "#64696f"
@@ -149,13 +151,13 @@ The folded-F logo and iFixPDF name remain fixed. This specification describes th
 
 ## Colors
 
-The frontmatter is normative. Each value is a CSS variable in `src/styles/tokens.css`: colours as `--<name>` (brand blue and action share `--accent`), type sizes as `--text-<role>` (dropping any `-title` suffix), and corners as `--radius-<name>`. Style rules use the variables, not literal values; a new value is added to the frontmatter and `tokens.css` together.
+The frontmatter is normative. Each value is a CSS variable in `src/styles/tokens.css`: colours as `--<name>` (brand blue shares `--accent`), type sizes as `--text-<role>` (dropping any `-title` suffix), and corners as `--radius-<name>`. Style rules use the variables, not literal values; a new value is added to the frontmatter and `tokens.css` together.
 
-Primary actions use **brand blue** with white labels and a deeper blue hover. **Brand blue** belongs to the supplied identity, active icons, tab rules, focus and drag cues. Selection pairs pale blue backgrounds with visible blue borders; selected navigation is neutral with a blue icon. **Danger red** marks destructive actions and invalid range feedback.
+Primary actions use **brand navy** (`--brand`) with white labels and a lighter navy hover, matching the landing page. **Brand blue** belongs to active icons, tab rules, focus and drag cues. Selection pairs pale blue backgrounds with visible blue borders; selected navigation is neutral with a blue icon. **Danger red** marks destructive actions and invalid range feedback.
 
 White paper and workspace sit beside an **almost-white frame** and inspector. A **soft neutral canvas** supports PDF pages and document covers. Fine neutral lines separate regions without enclosing the whole application in a rounded sheet. Ink and muted text remain distinct. Fields and secondary buttons take the slightly darker **control line**; checkboxes, scrollbars and dashed drop targets the **strong line**. **Hover** is a pale neutral on white; **faint** marks grips and checkbox hover. **Success green** marks completed steps and the ready dot; the titlebar Close button uses the Windows **close** red on hover.
 
-**The Action and Selection Rule.** Use brand blue for primary actions and blue for identity, keyboard focus and selected-state cues.
+**The Action and Selection Rule.** Use brand navy for primary actions and the mark; use blue for keyboard focus and selected-state cues.
 
 ## Typography
 
@@ -189,13 +191,13 @@ Controls are gently rounded; document covers are slightly softer and dialogs sli
 
 ### Brand identity
 
-Use `public/brand/ifixpdf-mark.svg` directly. The shared (48 × 48) master mark has a white folded F, blue tile and pale fold. The titlebar displays it at (24px), reducing to (22px) on phones. The standalone SVG lockup embeds IBM Plex Sans (600); PNG and ICO exports support browser and Tauri identity. Keep those assets aligned without treating them as evidence of a verified installer.
+Use `public/brand/ifixpdf-mark.svg` directly. The shared (48 × 48) master mark has a white folded F, navy tile and grey fold, shared with the landing page. The titlebar displays it at (24px), reducing to (22px) on phones. The standalone SVG lockup embeds IBM Plex Sans (600); PNG and ICO exports support browser and Tauri identity. Keep those assets aligned without treating them as evidence of a verified installer.
 
-**The Fixed Identity Rule.** Preserve the supplied folded F, blue tile, pale fold and iFixPDF spelling; scale artwork proportionally and keep it static.
+**The Fixed Identity Rule.** Preserve the supplied folded F, navy tile, grey fold and iFixPDF spelling; scale artwork proportionally and keep it static.
 
 ### Buttons and fields
 
-Primary buttons use brand blue; secondary buttons are white with a quiet border; utilities remain transparent. Standard buttons have a (34px) minimum height, with local (36–38px) actions. Hover changes tone, press scales to (.98), and disabled controls use (.38) opacity. Field focus uses a blue (2px) outline with a (3px) offset. Search is an almost-white icon/input wrapper; its focus-within outline has a (2px) offset. Output fields are compact and show inline invalid-state feedback. Segmented controls use a neutral track with a white active item.
+Primary buttons use brand navy; secondary buttons are white with a quiet border; utilities remain transparent. Standard buttons have a (34px) minimum height, with local (36–38px) actions. Hover changes tone, press scales to (.98), and disabled controls use (.38) opacity. Field focus uses a blue (2px) outline with a (3px) offset. Search is an almost-white icon/input wrapper; its focus-within outline has a (2px) offset. Output fields are compact and show inline invalid-state feedback. Segmented controls use a neutral track with a white active item.
 
 ### Navigation
 
