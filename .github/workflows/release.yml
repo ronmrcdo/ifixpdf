@@ -2,6 +2,7 @@ name: Release
 
 # Tag push: preflight, draft GitHub Release, signed installers uploaded to it.
 # workflow_dispatch: dry run that builds unsigned installers as workflow artifacts only.
+# Both build only the OSes in package.json `releasePlatforms` (all when unset); see RELEASE.md.
 # Signing secrets live in the `release` environment, used only by the tag-run jobs `secrets`
 # and `build`; dry runs never enter it, so they run from any branch with a read-only token.
 on:
@@ -41,6 +42,8 @@ jobs:
 
   preflight:
     runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.platforms.outputs.matrix }}
     steps:
       - uses: actions/checkout@v7.0.1
         with:
@@ -60,6 +63,9 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - name: OSes to build
+        id: platforms
+        run: echo "matrix=$(node scripts/release-platforms.ts matrix)" >> "$GITHUB_OUTPUT"
       - name: Release notes (fails on version mismatch or missing CHANGELOG entry)
         if: github.event_name == 'push'
         run: node scripts/release-notes.ts "$GITHUB_REF_NAME" > body.md
@@ -120,22 +126,15 @@ jobs:
 
   build:
     # Tag runs only: draft is skipped on dry runs, and a failed or cancelled draft skips this job.
-    needs: draft
+    needs: [preflight, draft]
     runs-on: ${{ matrix.platform }}
     environment: release
     permissions:
       contents: write
     strategy: &platforms
       fail-fast: false
-      matrix:
-        include:
-          - platform: windows-latest
-            args: --bundles nsis
-          - platform: macos-latest
-            args: --target universal-apple-darwin --bundles app,dmg
-            rust-targets: aarch64-apple-darwin,x86_64-apple-darwin
-          - platform: ubuntu-22.04
-            args: --bundles appimage,deb
+      # platform (runner), args and rust-targets per chosen OS, from PLATFORMS in scripts/release-lib.ts.
+      matrix: ${{ fromJSON(needs.preflight.outputs.matrix) }}
     # The &anchors mark the setup steps dry-run reuses.
     steps:
       - &checkout
@@ -183,6 +182,26 @@ jobs:
           uploadUpdaterJson: true
           args: >-
             ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true},"plugins":{"updater":{"pubkey":"${{ vars.TAURI_UPDATER_PUBKEY }}","endpoints":["https://github.com/ronmrcdo/ifixpdf/releases/latest/download/latest.json"]}}}'
+
+  verify:
+    # Checks the draft's update feed lists every chosen OS and writes the next steps to the run summary.
+    needs: build
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write # drafts are visible only with write access
+    steps:
+      - *checkout
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: 22
+      - name: Check latest.json and write next steps
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release download "$TAG" -p latest.json
+          node scripts/release-platforms.ts check latest.json >> "$GITHUB_STEP_SUMMARY"
 
   dry-run:
     if: github.event_name != 'push'

@@ -105,38 +105,86 @@ export function checkVersions(tag: string, pkg: string, cargo: string): string |
   return null;
 }
 
-export function releaseBody(version: string, notes: string): string {
+/** Supported OSes: the GitHub runner and tauri build args, and the update-feed entries each must add. */
+export const PLATFORMS = {
+  windows: {
+    label: 'Windows',
+    runner: 'windows-latest',
+    args: '--bundles nsis',
+    updaterKeys: ['windows-x86_64'],
+  },
+  macos: {
+    label: 'macOS',
+    runner: 'macos-latest',
+    args: '--target universal-apple-darwin --bundles app,dmg',
+    rustTargets: 'aarch64-apple-darwin,x86_64-apple-darwin',
+    updaterKeys: ['darwin-aarch64', 'darwin-x86_64'],
+  },
+  linux: {
+    label: 'Linux',
+    runner: 'ubuntu-22.04',
+    args: '--bundles appimage,deb',
+    updaterKeys: ['linux-x86_64', 'linux-x86_64-deb'],
+  },
+} as const;
+export type Platform = keyof typeof PLATFORMS;
+export const ALL_PLATFORMS = Object.keys(PLATFORMS) as Platform[];
+const isPlatform = (p: unknown): p is Platform => ALL_PLATFORMS.includes(p as Platform);
+
+/** The OSes to release, from package.json `releasePlatforms`; every OS when unset. */
+export function releasePlatforms(pkg: {releasePlatforms?: unknown}): Platform[] {
+  const list = pkg.releasePlatforms;
+  if (list === undefined) return ALL_PLATFORMS;
+  if (!Array.isArray(list) || list.length === 0)
+    throw new Error('package.json releasePlatforms must be a non-empty list');
+  const unknown = list.filter((p) => !isPlatform(p));
+  if (unknown.length) throw new Error(`Unknown releasePlatforms: ${unknown.join(', ')}`);
+  return ALL_PLATFORMS.filter((p) => list.includes(p));
+}
+
+export function buildMatrix(platforms: Platform[]) {
+  return {
+    include: platforms.map((p) => {
+      const c: {runner: string; args: string; rustTargets?: string} = PLATFORMS[p];
+      return {
+        platform: c.runner,
+        args: c.args,
+        ...(c.rustTargets ? {'rust-targets': c.rustTargets} : {}),
+      };
+    }),
+  };
+}
+
+export function missingUpdaterKeys(platforms: Platform[], keys: string[]): string[] {
+  return platforms.flatMap((p) => PLATFORMS[p].updaterKeys).filter((k) => !keys.includes(k));
+}
+
+export function releaseBody(version: string, notes: string, platforms: Platform[]): string {
   const f = (suffix: string) => `iFixPDF_${version}_${suffix}`;
-  return `## What's new
-
-${notes}
-
-## Downloads
-
-| Your computer | Download |
-| --- | --- |
-| Windows 10 or 11 (64-bit) | ${f('x64-setup.exe')} |
-| Mac | ${f('universal.dmg')} |
-| Linux | ${f('amd64.AppImage')} or ${f('amd64.deb')} |
-
-## If your computer warns you
-
-iFixPDF is not signed with a paid certificate yet, so Windows and macOS don't recognize it and may warn you the first time you open it.
-
-**Windows:** if you see "Windows protected your PC", click **More info**, then **Run anyway**.
-
-**Mac:** if macOS blocks the app, right-click it and choose **Open**. You can also go to **System Settings > Privacy & Security** and click **Open Anyway**. If macOS says the app "is damaged", open Terminal and run:
+  const has = (p: Platform) => platforms.includes(p);
+  const rows = [
+    has('windows') && `| Windows 10 or 11 (64-bit) | ${f('x64-setup.exe')} |`,
+    has('macos') && `| Mac | ${f('universal.dmg')} |`,
+    has('linux') && `| Linux | ${f('amd64.AppImage')} or ${f('amd64.deb')} |`,
+  ].filter(Boolean);
+  const warnings = [
+    has('windows') &&
+      '**Windows:** if you see "Windows protected your PC", click **More info**, then **Run anyway**.',
+    has('macos') &&
+      `**Mac:** if macOS blocks the app, right-click it and choose **Open**. You can also go to **System Settings > Privacy & Security** and click **Open Anyway**. If macOS says the app "is damaged", open Terminal and run:
 
 \`\`\`
 xattr -cr /Applications/iFixPDF.app
-\`\`\`
-
-## Updating on Linux
-
-Whether you use the AppImage or the \`.deb\`, press **Check for updates** in Settings. If you installed the \`.deb\`, your computer asks for your password to install the update.
-
-## Privacy
-
-Read our [privacy statement](https://github.com/ronmrcdo/ifixpdf/blob/main/EULA.txt).
-`;
+\`\`\``,
+  ].filter(Boolean);
+  const sections = [
+    `## What's new\n\n${notes}`,
+    `## Downloads\n\n| Your computer | Download |\n| --- | --- |\n${rows.join('\n')}`,
+    warnings.length &&
+      `## If your computer warns you\n\niFixPDF is not signed with a paid certificate yet, so your computer may not recognize it and may warn you the first time you open it.\n\n${warnings.join('\n\n')}`,
+    has('linux') &&
+      '## Updating on Linux\n\nWhether you use the AppImage or the `.deb`, press **Check for updates** in Settings. If you installed the `.deb`, your computer asks for your password to install the update.',
+    '## Privacy\n\nRead our [privacy statement](https://github.com/ronmrcdo/ifixpdf/blob/main/EULA.txt).',
+  ];
+  return `${sections.filter(Boolean).join('\n\n')}\n`;
 }
