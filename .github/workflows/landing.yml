@@ -1,0 +1,20 @@
+name: Rebuild landing page
+
+# The landing site (ronmrcdo/ifixpdf-landing) is a static export that reads the latest release at
+# build time, so publishing a release (drafts don't count) pings its Cloudflare deploy hook.
+on:
+  release:
+    types: [published]
+
+permissions: {}
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Trigger the Cloudflare build
+        env:
+          HOOK: ${{ secrets.LANDING_DEPLOY_HOOK }}
+        run: |
+          [ -n "$HOOK" ] || { echo "::error::Add the LANDING_DEPLOY_HOOK secret (Cloudflare deploy hook URL)"; exit 1; }
+          curl -fsS -X POST "$HOOK"
