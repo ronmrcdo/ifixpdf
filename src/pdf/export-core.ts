@@ -1,7 +1,19 @@
 import * as pdfLib from 'pdf-lib';
-import {PDFDocument, type PDFPage, degrees} from 'pdf-lib';
+import {
+  PDFArray,
+  PDFDict,
+  PDFDocument,
+  PDFName,
+  type PDFObject,
+  type PDFPage,
+  PDFPageLeaf,
+  PDFRawStream,
+  PDFStream,
+  decodePDFRawStream,
+  degrees,
+} from 'pdf-lib';
 import {configure, lock} from 'pdf-lib-encrypt';
-import {zipSync} from 'fflate';
+import {strFromU8, zipSync} from 'fflate';
 import type {Fills, Markup} from '../domain/markup';
 import type {FileId, Rotation} from '../domain/types';
 import {splitPartName} from '../domain/naming';
@@ -71,6 +83,108 @@ export async function buildPdf(spec: ExportSpec, onProgress?: Progress): Promise
     spec.pages.map((p) => p.fileId),
   );
   return buildFrom(loaded, spec.pages, spec.title, spec.fills, onProgress);
+}
+
+const RESOURCES = PDFName.of('Resources');
+const decodeName = (n: string): string =>
+  n.replace(/#([0-9a-fA-F]{2})/g, (_, h: string) => String.fromCharCode(Number.parseInt(h, 16)));
+
+// Every /Name token in the content: a superset of the resource names it uses.
+function namesIn(streams: PDFStream[]): Set<string> {
+  const names = new Set<string>();
+  for (const s of streams) {
+    if (!(s instanceof PDFRawStream)) throw new Error('Unreadable page content.');
+    const text = strFromU8(decodePDFRawStream(s).decode(), true);
+    for (const [, n] of text.matchAll(/\/([^\s/[\]()<>{}%]+)/g)) names.add(decodeName(n!));
+  }
+  return names;
+}
+
+// Keeps only the resources `owner`'s content names, recursing into the streams it keeps, so a
+// resource dict shared with a redacted page cannot drag that page's content along on copy.
+function prune(owner: PDFDict, content: PDFStream[], seen: Set<PDFDict>): void {
+  if (seen.has(owner)) return;
+  seen.add(owner);
+  const res = owner.lookupMaybe(RESOURCES, PDFDict);
+  if (!res) return;
+  const names = namesIn(content);
+  const kept = owner.context.obj({});
+  for (const [category, value] of res.entries()) {
+    const sub = owner.context.lookup(value);
+    if (!(sub instanceof PDFDict)) {
+      kept.set(category, value); // e.g. /ProcSet
+      continue;
+    }
+    const keptSub = owner.context.obj({});
+    for (const [name, ref] of sub.entries()) {
+      if (!names.has(name.decodeText())) continue;
+      keptSub.set(name, ref);
+      const obj = owner.context.lookup(ref);
+      if (obj instanceof PDFStream) prune(obj.dict, [obj], seen);
+    }
+    kept.set(category, keptSub);
+  }
+  owner.set(RESOURCES, kept);
+}
+
+const streamsOf = (doc: PDFDocument, value: PDFObject | undefined): PDFStream[] => {
+  const obj = doc.context.lookup(value);
+  if (obj instanceof PDFStream) return [obj];
+  if (obj instanceof PDFArray) return obj.asArray().flatMap((v) => streamsOf(doc, v));
+  if (obj instanceof PDFDict) return obj.values().flatMap((v) => streamsOf(doc, v)); // AP states
+  return [];
+};
+
+// Cuts every path from the kept pages to a dropped page: dropped page dicts (and orphan copies
+// reached through link /Dest) become empty, and kept pages keep only resources they draw.
+function isolate(doc: PDFDocument, kept: PDFPage[]): void {
+  const keep = new Set(kept.map((p) => p.ref));
+  for (const [ref, obj] of doc.context.enumerateIndirectObjects()) {
+    if (obj instanceof PDFPageLeaf && !keep.has(ref)) doc.context.assign(ref, doc.context.obj({}));
+  }
+  const seen = new Set<PDFDict>();
+  for (const page of kept) {
+    prune(page.node, streamsOf(doc, page.node.get(PDFName.of('Contents'))), seen);
+    const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)?.asArray() ?? [];
+    for (const annot of annots) {
+      const ap = doc.context.lookup(annot);
+      if (!(ap instanceof PDFDict)) continue;
+      for (const form of streamsOf(doc, ap.get(PDFName.of('AP')))) prune(form.dict, [form], seen);
+    }
+  }
+}
+
+/** Swaps each listed page for a full-bleed JPEG and copies everything into a fresh document. */
+export async function replaceWithImages(
+  bytes: Uint8Array,
+  images: Array<{index: number; jpeg: Uint8Array}>,
+): Promise<Uint8Array> {
+  const doc = await PDFDocument.load(bytes);
+  const pages = doc.getPages();
+  const jpegs = new Map(images.map((i) => [i.index, i.jpeg]));
+  if (images.some((i) => !pages[i.index])) throw new Error('Redacted page is out of range.');
+  const keptAt = pages.flatMap((_, i) => (jpegs.has(i) ? [] : [i]));
+  isolate(
+    doc,
+    keptAt.map((i) => pages[i]!),
+  );
+  const out = await PDFDocument.create();
+  const copied = await out.copyPages(doc, keptAt);
+  let k = 0;
+  for (const [i, page] of pages.entries()) {
+    const jpeg = jpegs.get(i);
+    if (!jpeg) {
+      out.addPage(copied[k++]);
+      continue;
+    }
+    const {width, height} = page.getCropBox();
+    const [w, h] = page.getRotation().angle % 180 ? [height, width] : [width, height];
+    const image = await out.embedJpg(jpeg);
+    out.addPage([w, h]).drawImage(image, {x: 0, y: 0, width: w, height: h});
+  }
+  out.setTitle(doc.getTitle() ?? '');
+  out.setCreator(doc.getCreator() ?? '');
+  return out.save();
 }
 
 export async function countPages(bytes: Uint8Array): Promise<number> {

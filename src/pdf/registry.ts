@@ -2,7 +2,7 @@ import type {PDFDocumentProxy, PDFWorker} from 'pdfjs-dist';
 import {dropBytes, getBytes} from './bytes';
 import {releaseFile} from './thumbnail-cache';
 
-export type Owner = 'document' | 'merge' | 'home-thumb';
+export type Owner = 'document' | 'merge' | 'home-thumb' | 'export';
 
 interface Entry {
   owners: Set<string>;

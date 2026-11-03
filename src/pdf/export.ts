@@ -1,5 +1,7 @@
+import {hasRedaction} from '../domain/markup';
 import type {ExportSpec, Progress} from './export-core';
 import type {ExportRequest} from './export.worker';
+import type {RasterImage} from './rasterize';
 
 export type {ExportSpec} from './export-core';
 
@@ -61,6 +63,12 @@ const snapshot = (spec: ExportSpec, copyBytes: boolean): ExportSpec => ({
     : spec.sources,
 });
 
+function transfers(req: ExportRequest): Transferable[] {
+  if (req.op === 'protect' || req.op === 'count') return [req.bytes.buffer];
+  if (req.op === 'raster') return [req.bytes.buffer, ...req.images.map((i) => i.jpeg.buffer)];
+  return Object.values(req.spec.sources).map((b) => b.buffer);
+}
+
 function inWorker<T extends Uint8Array | number>(
   w: Worker,
   call: Call,
@@ -71,12 +79,8 @@ function inWorker<T extends Uint8Array | number>(
     // The op determines the result type; the worker reply is only known as a union.
     pending.set(id, {resolve: resolve as Pending['resolve'], reject, onProgress});
     const req = {...call, id} as ExportRequest;
-    const transfer: Transferable[] =
-      req.op === 'protect' || req.op === 'count'
-        ? [req.bytes.buffer]
-        : Object.values(req.spec.sources).map((b) => b.buffer);
     try {
-      w.postMessage(req, transfer);
+      w.postMessage(req, transfers(req));
     } catch (e) {
       pending.delete(id);
       reject(e);
@@ -84,11 +88,42 @@ function inWorker<T extends Uint8Array | number>(
   });
 }
 
-export async function buildPdf(spec: ExportSpec, onProgress?: Progress): Promise<Uint8Array> {
+export type Raster = (
+  bytes: Uint8Array,
+  indices: number[],
+  onProgress?: Progress,
+) => Promise<RasterImage[]>;
+// Lazy: pdf.js rendering for redaction loads only when a redaction is exported.
+const rasterizePages: Raster = async (...args) =>
+  (await import('./rasterize')).rasterizePages(...args);
+
+async function build(spec: ExportSpec, onProgress?: Progress): Promise<Uint8Array> {
   const w = getWorker();
   const snap = snapshot(spec, !!w);
   if (w) return inWorker(w, {op: 'build', spec: snap}, onProgress);
   return (await import('./export-core')).buildPdf(snap, onProgress);
+}
+
+/** Pass 1 builds the PDF; pass 2 swaps every redacted page for an image. Fails closed. */
+export async function buildPdf(
+  spec: ExportSpec,
+  onProgress?: Progress,
+  raster: Raster = rasterizePages,
+): Promise<Uint8Array> {
+  const redacted = spec.pages.flatMap((p, i) => (hasRedaction(p) ? [i] : []));
+  if (!redacted.length) return build(spec, onProgress);
+  const done = spec.pages.length;
+  const total = done + redacted.length;
+  const bytes = await build(spec, onProgress && ((d) => onProgress(d, total)));
+  const images = await raster(bytes, redacted, onProgress && ((d) => onProgress(done + d, total)));
+  if (images.map((i) => i.index).join() !== redacted.join()) {
+    throw new Error('A redacted page was not rendered.');
+  }
+  const w = getWorker();
+  // Copies, so whatever raster or its caller still holds survives the transfer.
+  const copies = images.map((i) => ({index: i.index, jpeg: i.jpeg.slice()}));
+  if (w) return inWorker(w, {op: 'raster', bytes: bytes.slice(), images: copies});
+  return (await import('./export-core')).replaceWithImages(bytes, copies);
 }
 
 export async function protectPdf(bytes: Uint8Array, password: string): Promise<Uint8Array> {
