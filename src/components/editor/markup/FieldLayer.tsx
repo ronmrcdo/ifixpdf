@@ -67,7 +67,7 @@ function TextField({w, shown, style, disabled, onCommit}: TextProps) {
   const errorId = useId();
   const error = unsupportedMessage(unsupportedChars(draft));
   const props = {
-    className: 'field',
+    className: 'form-field',
     'aria-label': w.alternativeText || w.fieldName,
     'aria-invalid': !!error,
     'aria-describedby': error ? errorId : undefined,
@@ -142,7 +142,7 @@ export function FieldLayer({
             <input
               key={key}
               type="checkbox"
-              className="field"
+              className="form-field"
               aria-label={label}
               style={style}
               disabled={disabled}
@@ -155,7 +155,7 @@ export function FieldLayer({
             <input
               key={key}
               type="radio"
-              className="field"
+              className="form-field"
               name={w.fieldName}
               value={w.buttonValue ?? undefined}
               aria-label={label}
@@ -170,7 +170,7 @@ export function FieldLayer({
           return (
             <select
               key={key}
-              className="field"
+              className="form-field"
               aria-label={label}
               style={style}
               disabled={disabled}

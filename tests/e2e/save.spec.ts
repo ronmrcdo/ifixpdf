@@ -538,6 +538,13 @@ test.describe('native', () => {
     await page.getByRole('checkbox', {name: 'agree'}).check();
     await page.getByRole('radio', {name: 'pay'}).nth(1).check();
     await page.getByRole('combobox', {name: 'city'}).selectOption('Rome');
+    const labels = page.getByRole('complementary', {name: 'Output settings'}).locator('label');
+    for (const label of await labels.all()) {
+      expect(
+        await label.evaluate((e) => getComputedStyle(e).position),
+        'form CSS stays scoped',
+      ).not.toBe('absolute');
+    }
     await app.title.click();
     await page.keyboard.press('Control+s');
     await expect.poll(() => writes(page), {timeout: 30000}).toBe(1);

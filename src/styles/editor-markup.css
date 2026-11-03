@@ -207,7 +207,7 @@
   inset: 0;
   pointer-events: none;
 }
-.field {
+.form-field {
   position: absolute;
   box-sizing: border-box;
   margin: 0;
@@ -222,10 +222,10 @@
   line-height: 1.2;
   pointer-events: auto;
 }
-textarea.field {
+textarea.form-field {
   resize: none;
 }
-.field-layer[data-tool] .field {
+.field-layer[data-tool] .form-field {
   pointer-events: none;
 }
 .field-error {
