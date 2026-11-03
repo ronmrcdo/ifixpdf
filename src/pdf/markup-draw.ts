@@ -104,7 +104,11 @@ export function applyFills(doc: PDFDocument, values: Readonly<Record<string, Fie
     const field = form.getFieldMaybe(name);
     try {
       // flatten() redraws dirty fields in Helvetica and throws on anything it can't encode.
-      if (typeof value === 'string') font.encodeText(value);
+      if (typeof value === 'string') {
+        const multiline = field instanceof PDFTextField && field.isMultiline();
+        // multiline layout splits lines before encoding, so newlines are fine there
+        for (const line of multiline ? value.split(/\r\n|\r|\n/) : [value]) font.encodeText(line);
+      }
       if (field instanceof PDFTextField && typeof value === 'string') field.setText(value);
       else if (field instanceof PDFCheckBox && typeof value === 'boolean') {
         if (value) field.check();
