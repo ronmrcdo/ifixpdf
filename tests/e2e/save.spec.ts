@@ -1,6 +1,6 @@
 // Every export goes through one "Save as" (native dialog + fs in Tauri, picker or download in the browser).
 import type {Download, Page} from '@playwright/test';
-import {PDFDocument, StandardFonts} from 'pdf-lib';
+import {PDFDocument, StandardFonts, degrees} from 'pdf-lib';
 import {findSecret, makeFormPdf} from '../../src/pdf/fixtures';
 import {test, expect, pdfFile, type App} from './fixtures';
 
@@ -77,6 +77,54 @@ async function expectRedacted(page: Page, bytes: number[]) {
   expect(await findSecret(file, 'SECRET-ONE')).toEqual([]);
   expect(await findSecret(file, 'KEEP-TWO'), 'the scan finds text that is there').not.toEqual([]);
 }
+
+// Page 1 of `saved` drawn by the app's pdf.js, sampled where `rect` (PDF space of page 1 of
+// `original`, shown at its /Rotate plus `rotation`) lands: luminance inside and just outside it,
+// and the count of dark pixels inside `field`.
+const redactionPixels = (
+  page: Page,
+  args: {saved: number[]; original: number[]; rect: number[]; field: number[]; rotation: number},
+): Promise<{inside: number[]; outside: number[]; fieldInk: number}> =>
+  page.evaluate(`(async ({saved, original, rect, field, rotation}) => {
+    const {putBytes} = await import('/src/pdf/bytes.ts');
+    const {acquire, retain, release} = await import('/src/pdf/registry.ts');
+    const first = async (id, bytes) => {
+      putBytes(id, new Uint8Array(bytes));
+      retain(id, 'export');
+      return (await acquire(id)).getPage(1);
+    };
+    const src = await first('e2e-src', original);
+    const vp = src.getViewport({scale: 2, rotation: (src.rotate + rotation) % 360});
+    const box = (r) => {
+      const [a, b, c, d] = vp.convertToViewportRectangle(r);
+      return [Math.min(a, c), Math.min(b, d), Math.max(a, c), Math.max(b, d)];
+    };
+    const out = await first('e2e-out', saved);
+    const ov = out.getViewport({scale: 2});
+    const canvas = document.createElement('canvas');
+    canvas.width = ov.width;
+    canvas.height = ov.height;
+    const ctx = canvas.getContext('2d', {willReadFrequently: true});
+    await out.render({canvasContext: ctx, viewport: ov}).promise;
+    const lum = (x, y) => {
+      const [r, g, b] = ctx.getImageData(Math.round(x), Math.round(y), 1, 1).data;
+      return (r + g + b) / 3;
+    };
+    const [x1, y1, x2, y2] = box(rect);
+    const at = (fx, fy) => lum(x1 + (x2 - x1) * fx, y1 + (y2 - y1) * fy);
+    const inside = [[0.05, 0.05], [0.5, 0.5], [0.95, 0.95], [0.05, 0.95], [0.95, 0.05]].map(([fx, fy]) => at(fx, fy));
+    const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+    const outside = [[mx, y2 + 10], [mx, y1 - 10], [x1 - 10, my], [x2 + 10, my]]
+      .filter(([x, y]) => x >= 0 && y >= 0 && x < ov.width && y < ov.height)
+      .map(([x, y]) => lum(x, y));
+    const [f1, g1, f2, g2] = box(field).map(Math.round);
+    const data = ctx.getImageData(f1, g1, f2 - f1, g2 - g1).data;
+    let fieldInk = 0;
+    for (let i = 0; i < data.length; i += 4) if ((data[i] + data[i + 1] + data[i + 2]) / 3 < 128) fieldInk++;
+    await release('e2e-src', 'export');
+    await release('e2e-out', 'export');
+    return {inside, outside, fieldInk};
+  })(${JSON.stringify(args)})`);
 
 async function mergeToSave(app: App, files: Awaited<ReturnType<typeof pdfFile>>[], status: string) {
   const m = merge(app.page);
@@ -521,6 +569,75 @@ test.describe('native', () => {
     await page.keyboard.press('Control+s');
     await expect.poll(() => writes(page), {timeout: 30000}).toBe(1);
     await expectRedacted(page, (await written(page)).bytes);
+  });
+
+  test('a redaction on a /Rotate 90 page turned once more is solid black exactly where drawn; the page keeps its form value', async ({
+    app,
+    page,
+  }) => {
+    test.setTimeout(60000);
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont(StandardFonts.Helvetica);
+    const p0 = doc.addPage([400, 400]);
+    p0.setRotation(degrees(90));
+    p0.drawText('SECRET-ONE', {x: 50, y: 100, size: 24, font});
+    const pre = doc.getForm().createTextField('pre');
+    pre.setText('PREFILLED');
+    const field = {x: 50, y: 300, width: 200, height: 30};
+    pre.addToPage(p0, {
+      ...field,
+      borderWidth: 0,
+      borderColor: undefined,
+      backgroundColor: undefined,
+    });
+    const original = await doc.save();
+    await app.openPdf({
+      name: 'Rotated.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from(original),
+    });
+    await app.view('Edit PDF');
+    await app.tab('Document').click();
+    await page.getByRole('button', {name: 'Rotate current page clockwise'}).click();
+    // Shown at 180 degrees, the display's top half is PDF y 0-200, where the secret is.
+    await page.getByRole('button', {name: 'Redact'}).click();
+    const layer = page.locator('.markup-layer');
+    await expect
+      .poll(async () => {
+        const b = (await layer.boundingBox())!;
+        return Math.round(b.width) === Math.round(b.height);
+      })
+      .toBe(true);
+    const b = (await layer.boundingBox())!;
+    await page.mouse.move(b.x + b.width * 0.1, b.y + b.height * 0.1);
+    await page.mouse.down();
+    await page.mouse.move(b.x + b.width * 0.5, b.y + b.height * 0.3);
+    await page.mouse.move(b.x + b.width * 0.9, b.y + b.height * 0.45);
+    await page.mouse.up();
+    await expect(page.getByRole('button', {name: 'Redaction'})).toBeVisible();
+    const r = await page.evaluate<{x: number; y: number; w: number; h: number}>(
+      `import('/src/state/workspaces.ts').then((m) => m.documentStore.getState().pages[0].markup[0].rect)`,
+    );
+    await app.title.click();
+    await page.keyboard.press('Control+s');
+    await expect.poll(() => writes(page), {timeout: 30000}).toBe(1);
+    const saved = (await written(page)).bytes;
+
+    const {inside, outside, fieldInk} = await redactionPixels(page, {
+      saved,
+      original: [...original],
+      rect: [r.x, r.y, r.x + r.w, r.y + r.h],
+      field: [field.x, field.y, field.x + field.width, field.y + field.height],
+      rotation: 90,
+    });
+    for (const l of inside) expect(l, 'dark inside the redaction').toBeLessThan(40);
+    expect(outside.length).toBeGreaterThan(1);
+    for (const l of outside) expect(l, 'light just outside it').toBeGreaterThan(215);
+    expect(fieldInk, 'the untouched form value is drawn in the image').toBeGreaterThan(20);
+    expect(await pageTexts(page, [...original])).toEqual(['SECRET-ONE']); // positive control
+    expect(await pageTexts(page, saved)).toEqual(['']);
+    expect(await findSecret(new Uint8Array(original), 'SECRET-ONE')).not.toEqual([]);
+    expect(await findSecret(new Uint8Array(saved), 'SECRET-ONE')).toEqual([]);
   });
 
   test('Save as after filling every form field flattens it with the values', async ({
