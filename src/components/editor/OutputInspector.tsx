@@ -22,24 +22,29 @@ function summarize(state: Parameters<typeof outputIndices>[0]): {text: string; e
   }
 }
 
-const KINDS: Record<Markup['kind'], 0 | 1 | 2 | 3> = {
-  text: 0,
-  cross: 1,
-  check: 1,
-  dot: 1,
-  signature: 2,
-  redact: 3,
+const NOUN: Record<Markup['kind'], string> = {
+  text: 'text item',
+  cross: 'mark',
+  check: 'mark',
+  dot: 'mark',
+  signature: 'signature',
+  redact: 'redaction',
 };
-const NOUNS = ['text item', 'mark', 'signature', 'redaction', 'filled field'];
 
 /** What the copy includes besides pages, e.g. "2 marks, 1 redaction. Redacted pages are saved as images." */
 function markupSummary(pages: readonly PageInstance[], fills: Fills): string {
-  const counts = [0, 0, 0, 0, 0];
-  for (const m of pages.flatMap((p) => p.markup ?? [])) counts[KINDS[m.kind]]! += 1;
-  counts[4] = filledCount(pages, fills);
-  const parts = counts.flatMap((n, i) => (n ? [`${n} ${NOUNS[i]}${n === 1 ? '' : 's'}`] : []));
+  // Seeded in display order; the repeated 'mark' keeps its first place.
+  const counts = new Map(Object.values(NOUN).map((noun) => [noun, 0]));
+  for (const m of pages.flatMap((p) => p.markup ?? [])) {
+    counts.set(NOUN[m.kind], (counts.get(NOUN[m.kind]) ?? 0) + 1);
+  }
+  counts.set('filled field', filledCount(pages, fills));
+  const parts = [...counts].flatMap(([noun, n]) =>
+    n ? [`${n} ${noun}${n === 1 ? '' : 's'}`] : [],
+  );
   if (!parts.length) return '';
-  return `${parts.join(', ')}.${counts[3] ? ' Redacted pages are saved as images.' : ''}`;
+  const redacted = counts.get(NOUN.redact) ? ' Redacted pages are saved as images.' : '';
+  return `${parts.join(', ')}.${redacted}`;
 }
 
 /** The output pane of Edit and Merge: name, pages, options, summary and Save. */
