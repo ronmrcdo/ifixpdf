@@ -449,12 +449,8 @@ export async function splitZip(
   );
   const entries: Record<string, Uint8Array> = {};
   for (const [i, pages] of parts.entries()) {
-    entries[splitPartName(baseName, i + 1)] = await buildFrom(
-      loaded,
-      pages,
-      spec.title,
-      spec.fills,
-    );
+    // No fills here: export.ts builds fills and markup first, then splits that output.
+    entries[splitPartName(baseName, i + 1)] = await buildFrom(loaded, pages, spec.title);
     onProgress?.(i + 1, groups.length);
   }
   return zipSync(entries);
