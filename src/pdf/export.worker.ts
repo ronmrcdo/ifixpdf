@@ -1,11 +1,5 @@
-import {
-  buildPdf,
-  countPages,
-  protectPdf,
-  replaceWithImages,
-  splitZip,
-  type ExportSpec,
-} from './export-core';
+import {buildPdf, countPages, protectPdf, splitZip, type ExportSpec} from './export-core';
+import {replaceWithImages} from './redact';
 
 export type ExportRequest =
   | {id: number; op: 'build'; spec: ExportSpec}

@@ -20,7 +20,8 @@ import {
   setGraphicsState,
 } from 'pdf-lib';
 import {unzipSync, strFromU8} from 'fflate';
-import {buildPdf, protectPdf, replaceWithImages, splitZip, type ExportSpec} from './export-core';
+import {buildPdf, protectPdf, splitZip, type ExportSpec} from './export-core';
+import {replaceWithImages} from './redact';
 import {applyFills, drawMarkup} from './markup-draw';
 import {TINY_JPEG, findSecret, makeFormPdf, makePdf} from './fixtures';
 import type {Markup} from '../domain/markup';

@@ -126,7 +126,7 @@ export async function buildPdf(
   const w = getWorker();
   // Transferred as-is: nothing reads the pass-1 bytes or the JPEGs after this.
   if (w) return inWorker(w, {op: 'raster', bytes, images});
-  return (await import('./export-core')).replaceWithImages(bytes, images);
+  return (await import('./redact')).replaceWithImages(bytes, images);
 }
 
 export async function protectPdf(bytes: Uint8Array, password: string): Promise<Uint8Array> {
