@@ -1,6 +1,7 @@
 import {afterEach, describe, expect, it, vi} from 'vitest';
 import {PDFDocument} from 'pdf-lib';
-import {TINY_JPEG, makePdf} from './fixtures';
+import {unzipSync} from 'fflate';
+import {TINY_JPEG, findSecret, makePdf} from './fixtures';
 import type {Markup} from '../domain/markup';
 
 afterEach(() => {
@@ -329,5 +330,48 @@ describe('export.ts redaction pass', () => {
     expect(jpeg.byteLength).toBe(TINY_JPEG.byteLength); // caller's array survives the transfer
     reply({id: posted[1]!.msg.id, error: 'bad'});
     await expect(p).rejects.toThrow('bad');
+  });
+
+  it('splits a redacted spec from the rasterized output, rasterizing once', async () => {
+    vi.stubGlobal('Worker', undefined);
+    const {splitZip} = await import('./export');
+    const doc = await PDFDocument.create();
+    const font = await doc.embedFont('Helvetica');
+    for (const t of ['alpha', 'TOPSECRET', 'gamma']) {
+      doc.addPage([200, 200]).drawText(t, {font, size: 12, x: 10, y: 100});
+    }
+    const sp = {
+      title: 't',
+      sources: {a: await doc.save()},
+      pages: [0, 1, 2].map((local) => ({
+        fileId: 'a',
+        local,
+        rotation: 0 as const,
+        markup: local === 1 ? [redact] : undefined,
+      })),
+    };
+    const raster = vi.fn(images);
+    const progress = vi.fn();
+    const files = unzipSync(
+      await splitZip(
+        sp,
+        [
+          [0, 1],
+          [1, 2],
+        ],
+        'D.pdf',
+        progress,
+        raster,
+      ),
+    );
+    expect(raster).toHaveBeenCalledTimes(1);
+    expect(Object.keys(files)).toHaveLength(2);
+    for (const bytes of Object.values(files)) {
+      expect(await findSecret(bytes, 'TOPSECRET')).toEqual([]);
+    }
+    expect(await findSecret(Object.values(files)[0]!, 'alpha')).not.toEqual([]);
+    expect(progress).toHaveBeenLastCalledWith(expect.any(Number), expect.any(Number));
+    const [d, t] = progress.mock.calls.at(-1)!;
+    expect(d).toBe(t);
   });
 });
