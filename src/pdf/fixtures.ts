@@ -30,11 +30,19 @@ export const TINY_JPEG = Uint8Array.from(
   (c) => c.charCodeAt(0),
 );
 
-/** Refs of every indirect object holding `secret` as Latin-1 text or hex (Helvetica `Tj`), inflating Flate streams. */
+/**
+ * Refs of every indirect object holding `secret` as Latin-1 text, hex (Helvetica `Tj`), or
+ * UTF-16BE (hex or literal bytes, as pdf-lib writes some /V values), inflating Flate streams.
+ */
 export async function findSecret(bytes: Uint8Array, secret: string): Promise<string[]> {
   const doc = await PDFDocument.load(bytes);
   const hex = Array.from(secret, (c) => c.charCodeAt(0).toString(16).padStart(2, '0')).join('');
-  const hit = (s: string) => s.includes(secret) || s.toLowerCase().includes(hex);
+  const hex16 = hex.replace(/../g, '00$&');
+  const utf16 = secret.replace(/./g, '\0$&');
+  const hit = (s: string) =>
+    s.includes(secret) ||
+    s.includes(utf16) ||
+    [hex, hex16].some((h) => s.toLowerCase().includes(h));
   return doc.context.enumerateIndirectObjects().flatMap(([ref, obj]) => {
     let text = obj.toString();
     if (obj instanceof PDFRawStream) {
