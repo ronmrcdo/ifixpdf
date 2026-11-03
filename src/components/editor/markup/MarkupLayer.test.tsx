@@ -5,6 +5,7 @@ import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {Markup} from '../../../domain/markup';
 import type {PageInstance} from '../../../domain/types';
 import {createWorkspaceStore, type WorkspaceStore} from '../../../state/workspace';
+import {pngOf} from '../../../test/png';
 import type {PageView} from '../Stage';
 import {MarkupLayer} from './MarkupLayer';
 import {useTool} from './tool';
@@ -272,6 +273,113 @@ describe('MarkupLayer keyboard and drag', () => {
     click(200, 190, screen.getByRole('button', {name: 'Check mark'}));
     expect(useTool.getState().selected).toBe('c1');
     expect(markup()).toHaveLength(1);
+  });
+});
+
+describe('MarkupLayer signatures', () => {
+  const PNG = pngOf(300, 100);
+  const sig: Markup = {
+    id: 's1',
+    kind: 'signature',
+    image: PNG,
+    angle: 0,
+    rect: {x: 100, y: 600, w: 150, h: 50},
+  };
+
+  it('a click places one 150 pt signature centered on it, keeping the aspect, then resets the tool', () => {
+    useTool.setState({tool: 'sign', signature: PNG});
+    setup();
+    click(200, 100);
+    expect(markup()).toEqual([
+      expect.objectContaining({
+        kind: 'signature',
+        image: PNG,
+        angle: 0,
+        rect: {x: 125, y: 675, w: 150, h: 50},
+      }),
+    ]);
+    expect(useTool.getState().tool).toBeNull();
+    expect(useTool.getState().selected).toBe(markup()[0]?.id);
+    expect(screen.getByRole('button', {name: 'Signature'}).querySelector('img')).toHaveAttribute(
+      'src',
+      PNG,
+    );
+  });
+
+  it('on a page shown at 90°, 150 pt is the width along the display', () => {
+    useTool.setState({tool: 'sign', signature: PNG});
+    const turned = {...page, rotation: 90 as const};
+    store.setState({pages: [turned]});
+    render(<MarkupLayer store={store} view={{...view, page: turned}} />);
+    click(200, 100);
+    expect(markup()[0]).toMatchObject({angle: 90, rect: {x: 175, y: 625, w: 50, h: 150}});
+  });
+
+  it('without a signature, a click places nothing', () => {
+    useTool.setState({tool: 'sign', signature: null});
+    setup();
+    click(200, 100);
+    expect(markup()).toEqual([]);
+  });
+
+  it('a selected signature has 4 corner handles; others and text have none', () => {
+    seed(sig, check);
+    useTool.setState({selected: 'c1'});
+    const {rerender} = setup();
+    expect(screen.queryAllByRole('button', {name: /^Resize signature/})).toHaveLength(0);
+    act(() => useTool.setState({selected: 's1'}));
+    rerender(<MarkupLayer store={store} view={view} />);
+    expect(
+      screen.getAllByRole('button', {name: /^Resize signature/}).map((b) => b.ariaLabel),
+    ).toEqual([
+      'Resize signature, top-left',
+      'Resize signature, top-right',
+      'Resize signature, bottom-left',
+      'Resize signature, bottom-right',
+    ]);
+  });
+
+  it('dragging a corner resizes with the aspect kept, commits once on pointerup, against the opposite corner', () => {
+    seed(sig);
+    useTool.setState({selected: 's1'});
+    setup();
+    const update = vi.spyOn(store.getState(), 'updateMarkup');
+    const handle = screen.getByRole('button', {name: 'Resize signature, bottom-right'});
+    // the box is left 100, top 150, 150 × 50
+    fireEvent.pointerDown(handle, {clientX: 250, clientY: 200, pointerId: 1});
+    fireEvent.pointerMove(handle, {clientX: 300, clientY: 200, pointerId: 1});
+    expect(screen.getByRole('button', {name: 'Signature'})).toHaveStyle({width: '200px'});
+    fireEvent.pointerMove(handle, {clientX: 325, clientY: 210, pointerId: 1});
+    expect(update).not.toHaveBeenCalled();
+    fireEvent.pointerUp(handle, {clientX: 325, clientY: 210, pointerId: 1});
+    expect(update).toHaveBeenCalledOnce();
+    expect(markup()[0]?.rect).toEqual(near({x: 100, y: 575, w: 225, h: 75}));
+    act(() => store.getState().undo());
+    expect(markup()[0]?.rect).toEqual(sig.rect);
+  });
+
+  it('a corner drag stops at 24 pt wide; a click on a handle changes nothing', () => {
+    seed(sig);
+    useTool.setState({selected: 's1'});
+    setup();
+    const handle = screen.getByRole('button', {name: 'Resize signature, top-left'});
+    const update = vi.spyOn(store.getState(), 'updateMarkup');
+    fireEvent.pointerDown(handle, {clientX: 100, clientY: 150, pointerId: 1});
+    fireEvent.pointerUp(handle, {clientX: 100, clientY: 150, pointerId: 1});
+    expect(update, 'a click on a handle is not an edit').not.toHaveBeenCalled();
+    fireEvent.pointerDown(handle, {clientX: 100, clientY: 150, pointerId: 1});
+    fireEvent.pointerMove(handle, {clientX: 249, clientY: 199, pointerId: 1});
+    fireEvent.pointerUp(handle, {clientX: 249, clientY: 199, pointerId: 1});
+    // the bottom-right corner (250, 600) stays put
+    expect(markup()[0]?.rect).toEqual(near({x: 226, y: 600, w: 24, h: 8}));
+  });
+
+  it('Delete removes a selected signature', async () => {
+    seed(sig);
+    setup();
+    screen.getByRole('button', {name: 'Signature'}).focus();
+    await userEvent.keyboard('{Delete}');
+    expect(markup()).toEqual([]);
   });
 });
 
