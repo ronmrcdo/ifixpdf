@@ -154,3 +154,13 @@ test('text, check and redaction: placed, rotated, duplicated, undone, restored, 
   await expect(page.getByRole('toolbar', {name: 'Fill and sign tools'})).toHaveCount(0);
   await expect(page.getByRole('button', {name: 'Redaction'})).toHaveCount(0);
 });
+
+test('a PDF without form fields gets no field controls', async ({app, page}) => {
+  await app.goto('view=home');
+  await app.openPdf(await pdfFile('Report.pdf', 1));
+  await app.view('Edit PDF');
+  await app.tab('Document').click();
+  await expect(page.locator('.markup-layer')).toBeVisible();
+  await expect(page.locator('.field-layer')).toBeAttached();
+  await expect(page.locator('.field-layer .field')).toHaveCount(0);
+});

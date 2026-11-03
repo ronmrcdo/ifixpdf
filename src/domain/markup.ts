@@ -37,6 +37,26 @@ export function unsupportedChars(text: string): string[] {
   return [...new Set(bad)];
 }
 
+/** Typed text before the WinAnsi check: CRLF/CR to LF, tabs to spaces. */
+export const cleanText = (s: string): string => s.replace(/\r\n?/g, '\n').replace(/\t/g, ' ');
+
+export const unsupportedMessage = (bad: readonly string[]): string =>
+  bad.length ? `This character isn't supported: ${bad.join(', ')}` : '';
+
+/** CSS box of a PDF rect [x1, y1, x2, y2]; the converted corners can come back flipped under rotation. */
+export function viewportBox(
+  viewport: {convertToViewportRectangle(rect: number[]): number[]},
+  rect: readonly number[],
+): {left: number; top: number; width: number; height: number} {
+  const [x1 = 0, y1 = 0, x2 = 0, y2 = 0] = viewport.convertToViewportRectangle([...rect]);
+  return {
+    left: Math.min(x1, x2),
+    top: Math.min(y1, y2),
+    width: Math.abs(x2 - x1),
+    height: Math.abs(y2 - y1),
+  };
+}
+
 // Display "right" and "down" unit vectors in unrotated PDF space, for a page shown at `angle`.
 export function axes(angle: Rotation): {right: [number, number]; down: [number, number]} {
   const rad = (angle * Math.PI) / 180;
