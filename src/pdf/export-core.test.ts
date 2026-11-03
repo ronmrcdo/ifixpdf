@@ -2,13 +2,13 @@ import {describe, expect, it, vi} from 'vitest';
 import {PDFDict, PDFDocument, PDFName, degrees} from 'pdf-lib';
 import {unzipSync, strFromU8} from 'fflate';
 import {buildPdf, protectPdf, splitZip, type ExportSpec} from './export-core';
-import {drawMarkup} from './markup-draw';
-import {makePdf} from './fixtures';
+import {applyFills, drawMarkup} from './markup-draw';
+import {makeFormPdf, makePdf} from './fixtures';
 import type {Markup} from '../domain/markup';
 
 vi.mock('./markup-draw', async (actual) => {
   const mod = await actual<typeof import('./markup-draw')>();
-  return {...mod, drawMarkup: vi.fn(mod.drawMarkup)};
+  return {...mod, drawMarkup: vi.fn(mod.drawMarkup), applyFills: vi.fn(mod.applyFills)};
 });
 
 const PNG =
@@ -227,5 +227,65 @@ describe('export-core', () => {
     vi.mocked(drawMarkup).mockClear();
     await buildPdf(await spec());
     expect(drawMarkup).not.toHaveBeenCalled();
+  });
+
+  describe('fills', () => {
+    const fills = {name: 'Ann', agree: true, pay: 'net60', city: 'Rome'};
+    const formSpec = async (f: ExportSpec['fills'], pages = 1): Promise<ExportSpec> => ({
+      title: 't',
+      sources: {F: await makeFormPdf(), G: await makeFormPdf()},
+      pages: Array.from({length: pages}, () => ({fileId: 'F', local: 0, rotation: 0 as const})),
+      fills: f,
+    });
+    // copyPages drops /AcroForm, so this is 0 flattened or not; text content is the real check
+    const fieldCount = async (b: Uint8Array) =>
+      (await PDFDocument.load(b)).getForm().getFields().length;
+
+    it('flattens a filled form and draws the values', async () => {
+      const out = await buildPdf(await formSpec({F: fills}));
+      expect(await fieldCount(out)).toBe(0);
+      const strs = (await textItems(out))[0]!.map((i) => i.str);
+      expect(strs).toContain('Ann');
+      expect(strs).toContain('Rome');
+    });
+
+    it('leaves other files, empty fills and stale ids alone', async () => {
+      const s = await formSpec({F: {}, Z: fills});
+      s.pages.push({fileId: 'G', local: 0, rotation: 0});
+      vi.mocked(applyFills).mockClear();
+      const out = await buildPdf(s);
+      expect(applyFills).not.toHaveBeenCalled();
+      expect((await textItems(out)).flat()).toEqual([]);
+      s.fills = {G: fills};
+      const filled = await textItems(await buildPdf(s));
+      expect(filled[0]).toEqual([]);
+      expect(filled[1]!.map((i) => i.str)).toContain('Ann');
+      expect(applyFills).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips unknown fields, wrong types and missing options but still flattens', async () => {
+      const out = await buildPdf(
+        await formSpec({F: {missing: 'x', agree: 'yes', pay: 'net90', city: 'Oslo', name: true}}),
+      );
+      expect(await fieldCount(out)).toBe(0);
+    });
+
+    it('flattens a source page used twice once', async () => {
+      const out = await buildPdf(await formSpec({F: fills}, 2));
+      const pages = await textItems(out);
+      expect(pages.map((p) => p.some((i) => i.str === 'Ann'))).toEqual([true, true]);
+    });
+
+    it('flattens in Split too', async () => {
+      const zip = unzipSync(await splitZip(await formSpec({F: fills}, 2), [[0], [1]], 'x'));
+      for (const part of Object.values(zip)) expect(await fieldCount(part)).toBe(0);
+    });
+
+    it('takes the old path with no fills', async () => {
+      vi.mocked(applyFills).mockClear();
+      const out = await buildPdf(await formSpec({}));
+      expect(applyFills).not.toHaveBeenCalled();
+      expect(await fieldCount(out)).toBe(0); // copyPages already drops /AcroForm
+    });
   });
 });

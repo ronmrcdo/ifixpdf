@@ -1,5 +1,16 @@
-import {type PDFDocument, type PDFFont, type PDFPage, StandardFonts, degrees, rgb} from 'pdf-lib';
-import type {Markup, Rect} from '../domain/markup';
+import {
+  PDFCheckBox,
+  PDFDropdown,
+  type PDFDocument,
+  type PDFFont,
+  type PDFPage,
+  PDFRadioGroup,
+  PDFTextField,
+  StandardFonts,
+  degrees,
+  rgb,
+} from 'pdf-lib';
+import type {FieldValue, Markup, Rect} from '../domain/markup';
 import type {Rotation} from '../domain/types';
 
 const BLACK = rgb(0, 0, 0);
@@ -82,4 +93,29 @@ export async function drawMarkup(
         break;
     }
   }
+}
+
+// Fills what it can, then flattens. A bad value (unknown field, wrong type, missing option,
+// non-WinAnsi text) skips only that field.
+export function applyFills(doc: PDFDocument, values: Readonly<Record<string, FieldValue>>): void {
+  const form = doc.getForm();
+  for (const [name, value] of Object.entries(values)) {
+    const field = form.getFieldMaybe(name);
+    try {
+      if (field instanceof PDFTextField && typeof value === 'string') field.setText(value);
+      else if (field instanceof PDFCheckBox && typeof value === 'boolean') {
+        if (value) field.check();
+        else field.uncheck();
+      } else if (field instanceof PDFRadioGroup && typeof value === 'string') field.select(value);
+      else if (
+        field instanceof PDFDropdown &&
+        typeof value === 'string' &&
+        field.getOptions().includes(value)
+      )
+        field.select(value);
+    } catch {
+      // skip this value
+    }
+  }
+  form.flatten();
 }
