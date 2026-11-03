@@ -5,6 +5,7 @@ import {zipSync} from 'fflate';
 import type {Fills, Markup} from '../domain/markup';
 import type {FileId, Rotation} from '../domain/types';
 import {splitPartName} from '../domain/naming';
+import {drawMarkup} from './markup-draw';
 
 export interface ExportSpec {
   pages: Array<{fileId: FileId; local: number; rotation: Rotation; markup?: readonly Markup[]}>;
@@ -51,6 +52,7 @@ export async function buildFrom(
     const page = slots[i];
     if (!page) throw new Error('Missing source page.');
     page.setRotation(degrees((page.getRotation().angle + item.rotation) % 360));
+    if (item.markup?.length) await drawMarkup(page, item.markup, out);
     out.addPage(page);
     onProgress?.(i + 1, pages.length);
   }

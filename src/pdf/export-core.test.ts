@@ -1,7 +1,48 @@
 import {describe, expect, it, vi} from 'vitest';
-import {PDFDocument, PDFName, degrees} from 'pdf-lib';
+import {PDFDict, PDFDocument, PDFName, degrees} from 'pdf-lib';
 import {unzipSync, strFromU8} from 'fflate';
 import {buildPdf, protectPdf, splitZip, type ExportSpec} from './export-core';
+import {drawMarkup} from './markup-draw';
+import {makePdf} from './fixtures';
+import type {Markup} from '../domain/markup';
+
+vi.mock('./markup-draw', async (actual) => {
+  const mod = await actual<typeof import('./markup-draw')>();
+  return {...mod, drawMarkup: vi.fn(mod.drawMarkup)};
+});
+
+const PNG =
+  'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+const hello = (angle: Markup['angle'] = 0): Markup => ({
+  id: 't1',
+  kind: 'text',
+  text: 'Hello',
+  size: 12,
+  rect: {x: 50, y: 40, w: 100, h: 20}, // pdf.js drops text outside the page box
+  angle,
+});
+
+async function textItems(bytes: Uint8Array) {
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  const doc = await pdfjs.getDocument({
+    data: bytes.slice(),
+    isEvalSupported: false,
+    standardFontDataUrl: `${process.cwd()}/node_modules/pdfjs-dist/standard_fonts/`,
+  }).promise;
+  const pages = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    const page = await doc.getPage(n);
+    const {items} = await page.getTextContent();
+    const vt = page.getViewport({scale: 1, rotation: page.rotate}).transform;
+    pages.push(
+      items.flatMap((it) =>
+        'str' in it && it.str ? [{str: it.str, m: pdfjs.Util.transform(vt, it.transform)}] : [],
+      ),
+    );
+  }
+  await doc.destroy();
+  return pages;
+}
 
 async function source(widths: number[], rotate0 = 0): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
@@ -124,5 +165,67 @@ describe('export-core', () => {
     await expect(
       buildPdf({title: 't', sources: {}, pages: [{fileId: 'X', local: 0, rotation: 0}]}),
     ).rejects.toThrow();
+  });
+
+  it('draws a text item on its page only', async () => {
+    const out = await buildPdf({
+      title: 't',
+      sources: {a: await makePdf(2)},
+      pages: [
+        {fileId: 'a', local: 0, rotation: 0, markup: [hello()]},
+        {fileId: 'a', local: 1, rotation: 0},
+      ],
+    });
+    const pages = await textItems(out);
+    expect(pages.map((p) => p.map((i) => i.str))).toEqual([['Hello'], []]);
+  });
+
+  it('draws text upright at the final rotation (intrinsic 90 + user 90, placed at 180)', async () => {
+    const out = await buildPdf({
+      title: 't',
+      sources: {a: await source([200], 90)},
+      pages: [{fileId: 'a', local: 0, rotation: 90, markup: [hello(180)]}],
+    });
+    const [item] = (await textItems(out))[0]!;
+    const [a, b] = item!.m;
+    expect(Math.abs(b!)).toBeLessThan(1e-6);
+    expect(a).toBeGreaterThan(0);
+  });
+
+  it('draws markup on each copy of a duplicated page', async () => {
+    const out = await buildPdf({
+      title: 't',
+      sources: {a: await makePdf(1)},
+      pages: [
+        {fileId: 'a', local: 0, rotation: 0, markup: [hello()]},
+        {fileId: 'a', local: 0, rotation: 0, markup: [hello()]},
+      ],
+    });
+    const pages = await textItems(out);
+    expect(pages.map((p) => p.map((i) => i.str))).toEqual([['Hello'], ['Hello']]);
+  });
+
+  it('draws marks, a signature and a redaction at every angle', async () => {
+    const rect = {x: 20, y: 20, w: 60, h: 30};
+    const kinds = ['cross', 'check', 'dot', 'redact'] as const;
+    const markup = ([0, 90, 180, 270] as const).flatMap((angle): Markup[] => [
+      ...kinds.map((kind) => ({id: kind, kind, rect, angle})),
+      {id: 's', kind: 'signature', image: PNG, rect, angle},
+    ]);
+    const out = await PDFDocument.load(
+      await buildPdf({
+        title: 't',
+        sources: {a: await makePdf(1)},
+        pages: [{fileId: 'a', local: 0, rotation: 0, markup}],
+      }),
+    );
+    const xobjects = out.getPage(0).node.Resources()?.lookup(PDFName.of('XObject'), PDFDict);
+    expect(xobjects?.keys()).toHaveLength(4);
+  });
+
+  it('takes the old path when there is no markup', async () => {
+    vi.mocked(drawMarkup).mockClear();
+    await buildPdf(await spec());
+    expect(drawMarkup).not.toHaveBeenCalled();
   });
 });
