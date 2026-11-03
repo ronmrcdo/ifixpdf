@@ -72,3 +72,85 @@ test('below 760px the Output panel is behind an Output button', async ({app, pag
   await page.getByRole('button', {name: 'Output'}).click();
   await expect(output).toBeHidden();
 });
+
+test('text, check and redaction: placed, rotated, duplicated, undone, restored, and read-only in Preview', async ({
+  app,
+  page,
+}) => {
+  await app.goto('view=home');
+  await app.openPdf(await pdfFile('Report.pdf', 2));
+  await app.view('Edit PDF');
+  await app.tab('Document').click();
+  const layer = page.locator('.markup-layer');
+  await expect(layer).toBeVisible();
+  const tool = (name: string) =>
+    page.getByRole('toolbar', {name: 'Fill and sign tools'}).getByRole('button', {name});
+
+  await tool('Add text').click();
+  await layer.click({position: {x: 60, y: 60}});
+  await page.getByRole('textbox', {name: 'Text'}).fill('Hello');
+  await page.keyboard.press('Enter');
+  await tool('Add check').click();
+  await layer.click({position: {x: 200, y: 200}});
+  await tool('Redact').click();
+  const at = (await layer.boundingBox())!;
+  await page.mouse.move(at.x + 60, at.y + 300);
+  await page.mouse.down();
+  await page.mouse.move(at.x + 160, at.y + 330);
+  await page.mouse.move(at.x + 260, at.y + 350);
+  await page.mouse.up();
+  const items = ['Text: Hello', 'Check mark', 'Redaction'];
+  for (const name of items) await expect(page.getByRole('button', {name})).toBeVisible();
+  const redaction = page.getByRole('button', {name: 'Redaction'});
+  const before = (await redaction.boundingBox())!;
+  expect(before.width).toBeGreaterThan(before.height);
+
+  // The items turn with the page.
+  await page.getByRole('button', {name: 'Rotate current page clockwise'}).click();
+  await expect
+    .poll(async () => {
+      const b = (await redaction.boundingBox())!;
+      return b.height > b.width;
+    })
+    .toBe(true);
+
+  // A duplicate carries the items.
+  await app.tab('Pages').click();
+  await page.getByRole('checkbox', {name: 'Select page 1'}).check();
+  await page.getByRole('button', {name: 'Duplicate selected pages'}).click();
+  await expect(page.locator('.page-card')).toHaveCount(3);
+  await page.getByRole('button', {name: 'Preview page 2'}).dblclick();
+  for (const name of items) await expect(page.getByRole('button', {name})).toBeVisible();
+
+  // Undo and redo the duplicate; undo the rotation.
+  await page.getByRole('button', {name: 'Undo'}).click();
+  await expect(page.getByRole('spinbutton', {name: 'Go to page'})).toHaveValue('1');
+  await page.getByRole('button', {name: 'Redo'}).click();
+  await page.getByRole('button', {name: 'Undo'}).click();
+  await page.getByRole('button', {name: 'Undo'}).click();
+  await expect
+    .poll(async () => {
+      const b = (await redaction.boundingBox())!;
+      return b.width > b.height;
+    })
+    .toBe(true);
+  for (const name of items) await expect(page.getByRole('button', {name})).toBeVisible();
+
+  // The draft keeps them across a restart.
+  await expect
+    .poll(async () => {
+      const draft = (await app.readDraft()) as {pages?: {markup?: unknown[]}[]} | undefined;
+      return draft?.pages?.[0]?.markup?.length;
+    })
+    .toBe(3);
+  await app.goto();
+  await expect(app.title).toHaveText('Edit PDF');
+  await app.tab('Document').click();
+  for (const name of items) await expect(page.getByRole('button', {name})).toBeVisible();
+
+  // Preview draws them read-only, with no tool strip.
+  await app.view('Preview PDF');
+  for (const name of items) await expect(page.getByRole('img', {name})).toBeVisible();
+  await expect(page.getByRole('toolbar', {name: 'Fill and sign tools'})).toHaveCount(0);
+  await expect(page.getByRole('button', {name: 'Redaction'})).toHaveCount(0);
+});
