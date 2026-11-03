@@ -125,7 +125,7 @@ function usedNames(streams: PDFStream[]): Map<string, Set<string>> {
     })
     .join('\n');
   let stack: Array<string | null> = []; // names, or null for any other operand
-  let depth = 0; // inside an array or dict operand, where operator tokens are only data
+  const nest: string[] = []; // open '[' / '<<' operands, where every bare token is only data
   let i = 0;
   while (i < text.length) {
     const c = text[i]!;
@@ -149,8 +149,9 @@ function usedNames(streams: PDFStream[]): Map<string, Set<string>> {
       // A stray ')' lands here too, so every branch moves `i` forward.
       const double = (c === '<' || c === '>') && text[i + 1] === c;
       i += double ? 2 : 1;
-      if (c === '[' || (c === '<' && double)) depth++;
-      if (c === ']' || (c === '>' && double)) depth = Math.max(0, depth - 1);
+      if (c === '[' || (c === '<' && double)) nest.push(c);
+      else if (c === ']' && nest.at(-1) === '[') nest.pop();
+      else if (c === '>' && double && nest.at(-1) === '<') nest.pop();
       stack.push(null);
     } else {
       const start = c === '/' ? i + 1 : i;
@@ -158,8 +159,7 @@ function usedNames(streams: PDFStream[]): Map<string, Set<string>> {
       while (end < text.length && !isDelimiter(text[end]!)) end++;
       const token = text.slice(start, end);
       i = end;
-      if (c === '/') stack.push(decodeName(token));
-      else if (isOperand(token) || depth > 0) stack.push(null);
+      if (c === '/') stack.push(nest.length ? null : decodeName(token));
       else if (token === 'ID') {
         // Inline image: its dict may name a colour space; its data runs to whitespace + EI.
         stack.forEach((k, n) => {
@@ -169,7 +169,8 @@ function usedNames(streams: PDFStream[]): Map<string, Set<string>> {
         ei.lastIndex = i + 1;
         i = ei.exec(text) ? ei.lastIndex : text.length;
         stack = [];
-      } else {
+      } else if (isOperand(token) || nest.length) stack.push(null);
+      else {
         const category = OPERAND_CATEGORY[token];
         if (category) use(category, token === 'Tf' ? stack.at(-2) : stack.at(-1));
         stack = [];

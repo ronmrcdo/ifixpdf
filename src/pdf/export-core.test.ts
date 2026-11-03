@@ -610,6 +610,23 @@ describe('export-core', () => {
       expect(await leakCheck(await sharing(['(open', '/X0 Do']))).toEqual([]);
     });
 
+    it('skips inline image data that opens inside an array operand', async () => {
+      const src = await sharing('[ BI /W 1 /H 1 /BPC 8 /CS /G ID ] /X0 Do\nEI ]');
+      expect(await leakCheck(src)).toEqual([]);
+    });
+
+    it('ignores a font name inside an array or dict operand of Tf', async () => {
+      const src = await sharing('[/X0] Tf <</A /X0>> Tf', 'X0');
+      const out = await replaceWithImages(await pass1(src), jpeg);
+      const doc = await PDFDocument.load(out);
+      const fonts = doc.getPage(1).node.Resources()!.lookup(PDFName.of('Font'), PDFDict);
+      expect(fonts.keys()).toEqual([]);
+    });
+
+    it('stays nested after a closer that does not match its opener', async () => {
+      expect(await leakCheck(await sharing('[ <</A ]>> /X0 Do ]'))).toEqual([]);
+    });
+
     it.each([
       '(abc',
       '<abc',
