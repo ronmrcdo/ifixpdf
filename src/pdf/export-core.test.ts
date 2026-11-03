@@ -1,5 +1,5 @@
 import {describe, expect, it, vi} from 'vitest';
-import {PDFDict, PDFDocument, PDFName, degrees} from 'pdf-lib';
+import {PDFDict, PDFDocument, PDFHexString, PDFName, degrees} from 'pdf-lib';
 import {unzipSync, strFromU8} from 'fflate';
 import {buildPdf, protectPdf, splitZip, type ExportSpec} from './export-core';
 import {applyFills, drawMarkup} from './markup-draw';
@@ -237,17 +237,15 @@ describe('export-core', () => {
       pages: Array.from({length: pages}, () => ({fileId: 'F', local: 0, rotation: 0 as const})),
       fills: f,
     });
-    // copyPages drops /AcroForm, so this is 0 flattened or not; text content is the real check
-    const fieldCount = async (b: Uint8Array) =>
-      (await PDFDocument.load(b)).getForm().getFields().length;
 
     it('flattens a filled form and draws the values', async () => {
       const out = await buildPdf(await formSpec({F: fills}));
-      expect(await fieldCount(out)).toBe(0);
       const strs = (await textItems(out))[0]!.map((i) => i.str);
       expect(strs).toContain('Ann');
       expect(strs).toContain('Rome');
     });
+
+    const strsOf = async (b: Uint8Array) => (await textItems(b))[0]!.map((i) => i.str);
 
     it('leaves other files, empty fills and stale ids alone', async () => {
       const s = await formSpec({F: {}, Z: fills});
@@ -265,9 +263,20 @@ describe('export-core', () => {
 
     it('skips unknown fields, wrong types and missing options but still flattens', async () => {
       const out = await buildPdf(
-        await formSpec({F: {missing: 'x', agree: 'yes', pay: 'net90', city: 'Oslo', name: true}}),
+        await formSpec({
+          F: {missing: 'x', agree: 'yes', pay: 'net90', city: 'Oslo', name: true},
+        }),
       );
-      expect(await fieldCount(out)).toBe(0);
+      expect(await strsOf(out)).toEqual([]);
+      const ok = await buildPdf(await formSpec({F: {missing: 'x', agree: 'yes', name: 'Ann'}}));
+      expect(await strsOf(ok)).toContain('Ann');
+    });
+
+    it('skips text Helvetica cannot encode and flattens the rest', async () => {
+      const out = await buildPdf(await formSpec({F: {name: '漢字', city: 'Rome', agree: true}}));
+      const strs = await strsOf(out);
+      expect(strs).toContain('Rome');
+      expect(strs.join('')).not.toContain('漢');
     });
 
     it('flattens a source page used twice once', async () => {
@@ -278,14 +287,26 @@ describe('export-core', () => {
 
     it('flattens in Split too', async () => {
       const zip = unzipSync(await splitZip(await formSpec({F: fills}, 2), [[0], [1]], 'x'));
-      for (const part of Object.values(zip)) expect(await fieldCount(part)).toBe(0);
+      const parts = Object.values(zip);
+      expect(parts).toHaveLength(2);
+      for (const part of parts) expect(await strsOf(part)).toContain('Ann');
     });
 
     it('takes the old path with no fills', async () => {
       vi.mocked(applyFills).mockClear();
       const out = await buildPdf(await formSpec({}));
       expect(applyFills).not.toHaveBeenCalled();
-      expect(await fieldCount(out)).toBe(0); // copyPages already drops /AcroForm
+      expect(await strsOf(out)).toEqual([]);
+    });
+
+    it('does not throw on an untouched field already holding non-WinAnsi text', async () => {
+      const doc = await PDFDocument.load(await makeFormPdf());
+      doc.getForm().getTextField('name').acroField.setValue(PDFHexString.fromText('漢字'));
+      const out = await buildPdf({
+        ...(await formSpec({F: {city: 'Rome'}})),
+        sources: {F: await doc.save()},
+      });
+      expect(await strsOf(out)).toContain('Rome');
     });
   });
 });
