@@ -4,9 +4,13 @@ import {
   PDFDocument,
   PDFHexString,
   PDFName,
+  type PDFPage,
+  type PDFRef,
+  PDFString,
   StandardFonts,
   degrees,
   drawObject,
+  setGraphicsState,
 } from 'pdf-lib';
 import {unzipSync, strFromU8} from 'fflate';
 import {buildPdf, protectPdf, replaceWithImages, splitZip, type ExportSpec} from './export-core';
@@ -413,6 +417,87 @@ describe('export-core', () => {
       const out = await replaceWithImages(first, jpeg);
       expect(await findSecret(out, SECRET)).toEqual([]);
       expect((await textItems(out))[1]!.map((i) => i.str)).toEqual(['KEEP-1']);
+    });
+
+    // Pass 1 then pass 2 on page 0, asserting the positive control on pass 1.
+    async function leakCheck(src: Uint8Array) {
+      const first = await pass1(src);
+      expect(await findSecret(first, SECRET)).not.toEqual([]);
+      const out = await replaceWithImages(first, jpeg);
+      expect((await textItems(out))[1]!.map((i) => i.str)).toContain('KEEP-1');
+      return findSecret(out, SECRET);
+    }
+    const comment = (doc: PDFDocument, extra: Record<string, unknown> = {}) =>
+      doc.context.register(
+        doc.context.obj({Type: 'Annot', Subtype: 'Text', Rect: [0, 0, 10, 10], ...extra}),
+      );
+    const annotate = (page: PDFPage, ...refs: PDFRef[]) =>
+      page.node.set(PDFName.of('Annots'), page.doc.context.obj(refs));
+
+    it('does not carry a sibling field of a hierarchical form from the redacted page', async () => {
+      const doc = await PDFDocument.load(await secretSource());
+      const [p0, p1] = doc.getPages();
+      const form = doc.getForm();
+      const ssn = form.createTextField('form1.ssn');
+      ssn.setText(SECRET);
+      ssn.addToPage(p0!, {x: 20, y: 100, width: 150, height: 20});
+      form.createTextField('form1.name').addToPage(p1!, {x: 20, y: 50, width: 150, height: 20});
+      expect(await leakCheck(await doc.save())).toEqual([]);
+    });
+
+    it('does not carry a comment from the redacted page through an /IRT reply', async () => {
+      const doc = await PDFDocument.load(await secretSource());
+      const [p0, p1] = doc.getPages();
+      const note = comment(doc, {Contents: PDFString.of(SECRET)});
+      annotate(p0!, note);
+      annotate(p1!, comment(doc, {IRT: note, Contents: PDFString.of('reply')}));
+      expect(await leakCheck(await doc.save())).toEqual([]);
+    });
+
+    it('does not carry a popup listed on the redacted page', async () => {
+      const doc = await PDFDocument.load(await secretSource());
+      const [p0, p1] = doc.getPages();
+      const note = comment(doc, {Contents: PDFString.of(SECRET)});
+      const popup = doc.context.register(
+        doc.context.obj({Type: 'Annot', Subtype: 'Popup', Rect: [0, 0, 10, 10], Parent: note}),
+      );
+      annotate(p0!, note, popup);
+      annotate(p1!, comment(doc, {Popup: popup}));
+      expect(await leakCheck(await doc.save())).toEqual([]);
+    });
+
+    it('empties redacted-page objects reached through an unknown key', async () => {
+      const doc = await PDFDocument.load(await secretSource());
+      const [p0, p1] = doc.getPages();
+      const note = comment(doc, {Contents: PDFString.of(SECRET)});
+      annotate(p0!, note);
+      annotate(p1!, comment(doc, {XVendorData: note}));
+      expect(await leakCheck(await doc.save())).toEqual([]);
+    });
+
+    it('prunes the resources of a soft-mask group shared with the redacted page', async () => {
+      const helper = await PDFDocument.load(await secretSource());
+      const doc = await PDFDocument.create();
+      const [f0] = await doc.embedPdf(helper, [0]);
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const p0 = doc.addPage([300, 200]);
+      const p1 = doc.addPage([300, 200]);
+      const shared = doc.context.register(doc.context.obj({XObject: {X0: f0!.ref}}));
+      p0.node.set(PDFName.of('Resources'), shared);
+      p0.pushOperators(drawObject('X0'));
+      const group = doc.context.register(
+        doc.context.stream('', {
+          Type: 'XObject',
+          Subtype: 'Form',
+          BBox: [0, 0, 300, 200],
+          Resources: shared,
+        }),
+      );
+      const gs = doc.context.obj({Type: 'ExtGState', SMask: {S: 'Luminosity', G: group}});
+      p1.drawText('KEEP-1', {x: 20, y: 20, size: 12, font});
+      p1.node.Resources()!.set(PDFName.of('ExtGState'), doc.context.obj({GS0: gs}));
+      p1.pushOperators(setGraphicsState('GS0'));
+      expect(await leakCheck(await doc.save())).toEqual([]);
     });
 
     it('keeps the secret on an unredacted duplicate of the page', async () => {

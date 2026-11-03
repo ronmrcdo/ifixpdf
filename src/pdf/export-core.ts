@@ -1,6 +1,7 @@
 import * as pdfLib from 'pdf-lib';
 import {
   PDFArray,
+  type PDFContext,
   PDFDict,
   PDFDocument,
   PDFName,
@@ -8,6 +9,7 @@ import {
   type PDFPage,
   PDFPageLeaf,
   PDFRawStream,
+  PDFRef,
   PDFStream,
   decodePDFRawStream,
   degrees,
@@ -86,6 +88,7 @@ export async function buildPdf(spec: ExportSpec, onProgress?: Progress): Promise
 }
 
 const RESOURCES = PDFName.of('Resources');
+const PARENT = PDFName.of('Parent');
 const decodeName = (n: string): string =>
   n.replace(/#([0-9a-fA-F]{2})/g, (_, h: string) => String.fromCharCode(Number.parseInt(h, 16)));
 
@@ -100,7 +103,7 @@ function namesIn(streams: PDFStream[]): Set<string> {
   return names;
 }
 
-// Keeps only the resources `owner`'s content names, recursing into the streams it keeps, so a
+// Keeps only the resources `owner`'s content names, recursing into what it keeps, so a
 // resource dict shared with a redacted page cannot drag that page's content along on copy.
 function prune(owner: PDFDict, content: PDFStream[], seen: Set<PDFDict>): void {
   if (seen.has(owner)) return;
@@ -119,39 +122,93 @@ function prune(owner: PDFDict, content: PDFStream[], seen: Set<PDFDict>): void {
     for (const [name, ref] of sub.entries()) {
       if (!names.has(name.decodeText())) continue;
       keptSub.set(name, ref);
-      const obj = owner.context.lookup(ref);
-      if (obj instanceof PDFStream) prune(obj.dict, [obj], seen);
+      pruneWithin(owner.context, ref, seen);
     }
     kept.set(category, keptSub);
   }
   owner.set(RESOURCES, kept);
 }
 
-const streamsOf = (doc: PDFDocument, value: PDFObject | undefined): PDFStream[] => {
-  const obj = doc.context.lookup(value);
+// A kept resource with resources of its own: form or tiling pattern, Type3 font, soft-mask group.
+function pruneWithin(ctx: PDFContext, value: PDFObject | undefined, seen: Set<PDFDict>): void {
+  const obj = ctx.lookup(value);
+  if (obj instanceof PDFStream) return prune(obj.dict, [obj], seen);
+  if (!(obj instanceof PDFDict)) return;
+  const procs = obj.get(PDFName.of('CharProcs'));
+  if (procs) prune(obj, streamsOf(ctx, procs), seen);
+  const smask = ctx.lookup(obj.get(PDFName.of('SMask')));
+  if (smask instanceof PDFDict) pruneWithin(ctx, smask.get(PDFName.of('G')), seen);
+}
+
+const streamsOf = (ctx: PDFContext, value: PDFObject | undefined): PDFStream[] => {
+  const obj = ctx.lookup(value);
   if (obj instanceof PDFStream) return [obj];
-  if (obj instanceof PDFArray) return obj.asArray().flatMap((v) => streamsOf(doc, v));
-  if (obj instanceof PDFDict) return obj.values().flatMap((v) => streamsOf(doc, v)); // AP states
+  if (obj instanceof PDFArray) return obj.asArray().flatMap((v) => streamsOf(ctx, v));
+  if (obj instanceof PDFDict) return obj.values().flatMap((v) => streamsOf(ctx, v)); // AP states
   return [];
 };
 
-// Cuts every path from the kept pages to a dropped page: dropped page dicts (and orphan copies
-// reached through link /Dest) become empty, and kept pages keep only resources they draw.
-function isolate(doc: PDFDocument, kept: PDFPage[]): void {
-  const keep = new Set(kept.map((p) => p.ref));
-  for (const [ref, obj] of doc.context.enumerateIndirectObjects()) {
-    if (obj instanceof PDFPageLeaf && !keep.has(ref)) doc.context.assign(ref, doc.context.obj({}));
+// Refs reachable from `roots`. Page dicts are not entered: each is kept or emptied on its own.
+function reach(ctx: PDFContext, roots: Array<PDFObject | undefined>): Set<PDFRef> {
+  const refs = new Set<PDFRef>();
+  const seen = new Set<PDFObject>();
+  const stack = roots.filter((r): r is PDFObject => r !== undefined);
+  for (let obj = stack.pop(); obj; obj = stack.pop()) {
+    if (seen.has(obj)) continue;
+    seen.add(obj);
+    if (obj instanceof PDFRef) {
+      const target = ctx.lookup(obj);
+      if (target instanceof PDFPageLeaf) continue;
+      refs.add(obj);
+      if (target) stack.push(target);
+    } else if (obj instanceof PDFStream) stack.push(...obj.dict.values());
+    else if (obj instanceof PDFDict) stack.push(...obj.values());
+    else if (obj instanceof PDFArray) stack.push(...obj.asArray());
   }
+  return refs;
+}
+
+const CONTENTS = PDFName.of('Contents');
+const ANNOTS = PDFName.of('Annots');
+// Links from an annotation back into the form tree, a thread or another page.
+const BACK_CHAIN = ['Parent', 'IRT', 'Popup', 'P'].map((n) => PDFName.of(n));
+
+// Cuts every path from the kept pages to a dropped page (redacted, or an orphan copy reached
+// through a link /Dest). Kept pages keep only the resources they draw and lose annotation
+// back-links; then anything a dropped page reaches that kept content does not is emptied, so an
+// unforeseen reference from a kept page can only ever copy an empty dict.
+function isolate(doc: PDFDocument, kept: PDFPage[]): void {
+  const ctx = doc.context;
+  const keep = new Set(kept.map((p) => p.ref));
+  const dropped = ctx
+    .enumerateIndirectObjects()
+    .flatMap(([ref, obj]) => (obj instanceof PDFPageLeaf && !keep.has(ref) ? [{ref, obj}] : []));
+  const tainted = reach(
+    ctx,
+    dropped.flatMap(({obj}) => obj.entries().flatMap(([k, v]) => (k === PARENT ? [] : [v]))),
+  );
   const seen = new Set<PDFDict>();
+  const drawn: Array<PDFObject | undefined> = [];
+  const allowed = new Set<PDFRef>(); // copied as-is, not followed
   for (const page of kept) {
-    prune(page.node, streamsOf(doc, page.node.get(PDFName.of('Contents'))), seen);
-    const annots = page.node.lookupMaybe(PDFName.of('Annots'), PDFArray)?.asArray() ?? [];
-    for (const annot of annots) {
-      const ap = doc.context.lookup(annot);
-      if (!(ap instanceof PDFDict)) continue;
-      for (const form of streamsOf(doc, ap.get(PDFName.of('AP')))) prune(form.dict, [form], seen);
+    const contents = page.node.get(CONTENTS);
+    prune(page.node, streamsOf(ctx, contents), seen);
+    drawn.push(contents, page.node.get(RESOURCES));
+    const list = page.node.get(ANNOTS);
+    if (list instanceof PDFRef) allowed.add(list);
+    for (const annot of page.node.lookupMaybe(ANNOTS, PDFArray)?.asArray() ?? []) {
+      if (annot instanceof PDFRef) allowed.add(annot);
+      const dict = ctx.lookup(annot);
+      if (!(dict instanceof PDFDict)) continue;
+      for (const key of BACK_CHAIN) dict.delete(key); // pdf-lib drops /AcroForm on copy anyway
+      const ap = dict.get(PDFName.of('AP'));
+      for (const form of streamsOf(ctx, ap)) prune(form.dict, [form], seen);
+      drawn.push(ap);
     }
   }
+  for (const ref of reach(ctx, drawn)) allowed.add(ref);
+  for (const {ref} of dropped) ctx.assign(ref, ctx.obj({}));
+  for (const ref of tainted) if (!allowed.has(ref)) ctx.assign(ref, ctx.obj({}));
 }
 
 /** Swaps each listed page for a full-bleed JPEG and copies everything into a fresh document. */
