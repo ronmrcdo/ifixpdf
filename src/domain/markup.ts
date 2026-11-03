@@ -103,12 +103,19 @@ export const markStroke = (w: number, h: number): number => Math.max(1, Math.min
 export const hasRedaction = (p: {markup?: readonly Markup[]}): boolean =>
   !!p.markup?.some((m) => m.kind === 'redact');
 
+/** Filled values of the files that still have pages; a removed file's fills don't count. */
+export function filledCount(pages: ReadonlyArray<{fileId: FileId}>, fills: Fills = {}): number {
+  const live = new Set(pages.map((p) => p.fileId));
+  return Object.entries(fills).reduce(
+    (n, [id, f]) => n + (live.has(id) ? Object.keys(f).length : 0),
+    0,
+  );
+}
+
 export const hasMarkup = (
-  pages: ReadonlyArray<{markup?: readonly Markup[]}>,
+  pages: ReadonlyArray<{fileId: FileId; markup?: readonly Markup[]}>,
   fills?: Fills,
-): boolean =>
-  pages.some((p) => p.markup?.length) ||
-  Object.values(fills ?? {}).some((f) => Object.keys(f).length > 0);
+): boolean => pages.some((p) => p.markup?.length) || filledCount(pages, fills) > 0;
 
 /** Width and height from a PNG data URL's IHDR; 3:1 (the draw pad) if it can't be read. */
 export function pngSize(dataUrl: string): [number, number] {

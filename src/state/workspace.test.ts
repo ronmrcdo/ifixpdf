@@ -800,6 +800,17 @@ describe('markup and fills', () => {
     expect(store.getState().fills).toEqual({});
   });
 
+  it('removeFile drops its fills too, and undo brings them back', async () => {
+    const store = await make();
+    const [a, b] = store.getState().files;
+    store.getState().setField(a!.id, 'name', 'Ann');
+    store.getState().setField(b!.id, 'name', 'Bo');
+    store.getState().removeFile(a!.id);
+    expect(store.getState().fills).toEqual({[b!.id]: {name: 'Bo'}});
+    store.getState().undo();
+    expect(store.getState().fills[a!.id]).toEqual({name: 'Ann'});
+  });
+
   it('every mutator is ignored while exporting', async () => {
     const store = await make();
     const uid = first(store);

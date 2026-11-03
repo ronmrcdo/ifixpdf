@@ -332,10 +332,14 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         edit((s) => moveFileGroup(s.files, s.pages, fileId, direction)),
       moveFileTo: (fileId, to) => edit((s) => moveFileGroupTo(s.files, s.pages, fileId, to)),
       removeFile: (fileId) =>
-        edit((s) => ({
-          files: s.files.filter((f) => f.id !== fileId),
-          pages: removeFilePages(s.pages, fileId),
-        })),
+        edit((s) => {
+          const {[fileId]: _, ...rest} = s.fills;
+          return {
+            files: s.files.filter((f) => f.id !== fileId),
+            pages: removeFilePages(s.pages, fileId),
+            fills: fileId in s.fills ? rest : s.fills, // same object: an unknown id stays a no-op
+          };
+        }),
 
       undo: () => step(history.undo),
       redo: () => step(history.redo),

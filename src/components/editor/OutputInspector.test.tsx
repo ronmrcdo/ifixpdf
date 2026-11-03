@@ -160,7 +160,7 @@ describe('OutputInspector', () => {
     act(() =>
       store.setState({
         pages: [{...pages[0]!, markup: [m('1', 'text')]}, pages[1]!, pages[2]!],
-        fills: {f: {a: 'x', b: true}},
+        fills: {f: {a: 'x', b: true}, gone: {c: 'y'}}, // a file with no pages left isn't counted
       }),
     );
     expect(document.getElementById('markup-summary')).toHaveTextContent(
