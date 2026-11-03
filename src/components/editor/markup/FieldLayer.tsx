@@ -45,7 +45,10 @@ const widgetsOf = (pdfPage: PDFPageProxy): Promise<Widget[]> => {
 const fillable = (a: Widget) =>
   a.subtype === 'Widget' &&
   !a.hidden &&
-  (a.fieldType === 'Tx' || a.fieldType === 'Ch' || !!a.checkBox || !!a.radioButton);
+  (a.fieldType === 'Tx' ||
+    a.fieldType === 'Ch' ||
+    !!a.checkBox ||
+    (!!a.radioButton && !!a.buttonValue));
 
 const NONE: Readonly<Record<string, FieldValue>> = {};
 const asText = (v: Widget['fieldValue']) => (Array.isArray(v) ? (v[0] ?? '') : (v ?? ''));
@@ -154,7 +157,7 @@ export function FieldLayer({
               type="radio"
               className="field"
               name={w.fieldName}
-              value={w.buttonValue ?? ''}
+              value={w.buttonValue ?? undefined}
               aria-label={label}
               style={style}
               disabled={disabled}

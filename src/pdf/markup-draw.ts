@@ -1,6 +1,7 @@
 import {
   PDFCheckBox,
   PDFDropdown,
+  PDFOptionList,
   type PDFDocument,
   type PDFFont,
   type PDFPage,
@@ -107,15 +108,20 @@ export function applyFills(doc: PDFDocument, values: Readonly<Record<string, Fie
         if (value) field.check();
         else field.uncheck();
       } else if (field instanceof PDFRadioGroup && typeof value === 'string') {
-        // With /Opt, appearance states (what pdf.js calls buttonValue) are indexes into it.
-        const options = field.getOptions();
-        field.select(options.includes(value) ? value : (options[Number(value)] ?? value));
+        // The value is a widget's appearance state (pdf.js buttonValue); with /Opt, the option
+        // at that widget's position is what select() takes. Without /Opt the two lists match.
+        const states = field.acroField.getOnValues().map((v) => v.decodeText());
+        const option = field.getOptions()[states.indexOf(value)];
+        if (option !== undefined) field.select(option);
       } else if (
-        field instanceof PDFDropdown &&
-        typeof value === 'string' &&
-        field.getOptions().includes(value)
-      )
-        field.select(value);
+        (field instanceof PDFDropdown || field instanceof PDFOptionList) &&
+        typeof value === 'string'
+      ) {
+        // The value is an /Opt export value (pdf.js exportValue); select() takes the display text.
+        const i = field.acroField.getOptions().findIndex((o) => o.value.decodeText() === value);
+        const option = field.getOptions()[i];
+        if (option !== undefined) field.select(option);
+      }
     } catch {
       // skip this value
     }
