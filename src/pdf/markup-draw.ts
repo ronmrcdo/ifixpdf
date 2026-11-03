@@ -96,12 +96,15 @@ export async function drawMarkup(
 }
 
 // Fills what it can, then flattens. A bad value (unknown field, wrong type, missing option,
-// non-WinAnsi text) skips only that field.
+// non-WinAnsi text) skips only that value.
 export function applyFills(doc: PDFDocument, values: Readonly<Record<string, FieldValue>>): void {
   const form = doc.getForm();
+  const font = form.getDefaultFont();
   for (const [name, value] of Object.entries(values)) {
     const field = form.getFieldMaybe(name);
     try {
+      // flatten() redraws dirty fields in Helvetica and throws on anything it can't encode.
+      if (typeof value === 'string') font.encodeText(value);
       if (field instanceof PDFTextField && typeof value === 'string') field.setText(value);
       else if (field instanceof PDFCheckBox && typeof value === 'boolean') {
         if (value) field.check();
