@@ -1,0 +1,45 @@
+.tool-strip {
+  height: 48px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--line);
+}
+.tool-slot {
+  display: contents;
+}
+.tool-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 6px;
+  background: var(--line);
+}
+.tool-btn {
+  height: 34px;
+  min-width: 36px;
+  padding: 0 9px;
+  gap: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: none;
+  color: var(--ink);
+  font-size: var(--text-body);
+}
+.tool-btn svg {
+  width: 16px;
+  height: 16px;
+}
+.tool-btn:hover {
+  background: var(--hover);
+}
+.tool-btn[aria-pressed='true'] {
+  background: var(--page-selected);
+  border-color: var(--page-selected-line);
+  color: var(--accent);
+}
