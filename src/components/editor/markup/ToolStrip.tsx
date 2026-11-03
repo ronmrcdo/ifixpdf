@@ -8,8 +8,9 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react';
-import type {KeyboardEvent} from 'react';
+import {type KeyboardEvent, useRef, useState} from 'react';
 import '../../../styles/editor-markup.css';
+import {SignMenu} from './SignMenu';
 import {type Tool, useTool} from './tool';
 
 const TOOLS: {tool: Tool; label: string; Icon: LucideIcon; text?: string; chevron?: boolean}[] = [
@@ -32,15 +33,17 @@ const MOVES: Record<string, (i: number, n: number) => number> = {
 export function ToolStrip() {
   const active = useTool((s) => s.tool);
   const setTool = useTool((s) => s.setTool);
+  const [stop, setStop] = useState(0); // roving tabindex: the one strip button in the Tab order
+  const [menu, setMenu] = useState(false);
+  const sign = useRef<HTMLButtonElement>(null);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const move = MOVES[e.key];
-    if (!move) return;
+    const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('.tool-btn')];
+    const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+    if (!move || i < 0) return; // keys inside the Sign menu are its own
     e.preventDefault();
-    const buttons = [...e.currentTarget.querySelectorAll<HTMLButtonElement>('button')];
-    buttons[
-      move(buttons.indexOf(document.activeElement as HTMLButtonElement), buttons.length)
-    ]?.focus();
+    buttons[move(i, buttons.length)]?.focus(); // its onFocus moves the tab stop
   };
 
   return (
@@ -50,21 +53,35 @@ export function ToolStrip() {
       aria-label="Fill and sign tools"
       onKeyDown={onKeyDown}
     >
-      {TOOLS.map(({tool, label, Icon, text, chevron}) => (
-        <span key={tool} className="tool-slot">
+      {TOOLS.map(({tool, label, Icon, text, chevron}, i) => (
+        <span key={tool} className={tool === 'sign' ? 'tool-slot sign-anchor' : 'tool-slot'}>
           {DIVIDE_BEFORE.includes(tool) && <span className="tool-divider" aria-hidden="true" />}
           <button
+            ref={tool === 'sign' ? sign : undefined}
             type="button"
             className="tool-btn"
             aria-label={label}
             title={label}
             aria-pressed={active === tool}
-            onClick={() => setTool(active === tool ? null : tool)}
+            aria-haspopup={chevron ? 'menu' : undefined}
+            aria-expanded={chevron ? menu : undefined}
+            tabIndex={i === stop ? 0 : -1}
+            onFocus={() => setStop(i)}
+            onClick={() => (chevron ? setMenu(!menu) : setTool(active === tool ? null : tool))}
           >
             <Icon aria-hidden="true" fill={tool === 'dot' ? 'currentColor' : 'none'} />
             {text}
             {chevron && <ChevronDown aria-hidden="true" />}
           </button>
+          {chevron && (
+            <SignMenu
+              open={menu}
+              onClose={() => {
+                setMenu(false);
+                sign.current?.focus();
+              }}
+            />
+          )}
         </span>
       ))}
     </div>
