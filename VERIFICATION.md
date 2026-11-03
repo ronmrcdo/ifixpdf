@@ -1,5 +1,16 @@
 # Verification
 
+## Fill, Sign and Redact (4 November 2026, Linux, feat/fill-redact-sign branch)
+
+Browser only, against the mocked Tauri bridge in Chrome; nothing here ran on Windows.
+
+- `pnpm test` (Vitest, jsdom): 1026 tests in 62 files passed.
+- `pnpm exec playwright test --workers=1`: 118/118 passed.
+- Redaction extraction checks passed for Save as and for Print from Preview: the covered text is gone from page 1 by pdf.js text extraction and by a raw scan of the saved bytes, and page 2 keeps its text.
+- Signature: drawn, remembered, placed and saved; the saved page has an image XObject, and the reopened Sign menu lists the remembered signature. The same signature on two pages is embedded once.
+- Startup JS budget: 123,230 B gzipped against the 120,511 B baseline (+2.7 KB, under the 5 KB limit). The tool strip, Sign menu, signature dialog, signature storage and the markup and field layers load as lazy chunks.
+- Pending Windows evidence: drawing with pen and touch input, importing images from the native picker, remembered signatures surviving an app restart and upgrade, and printing a redacted copy through the Windows spooler.
+
 ## Current results (31 October 2026, Linux, audit-fixes branch)
 
 - `pnpm test` (Vitest, jsdom): 784 tests passed.
