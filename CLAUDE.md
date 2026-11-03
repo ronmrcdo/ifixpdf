@@ -56,7 +56,7 @@ Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` i
 
 ## Invariants
 
-- Pages are `{uid, fileId, local, rotation}`; rotation (0/90/180/270) is per uid, duplicates get a new uid and inherit it. Export follows displayed order and adds rotation to the page's intrinsic `/Rotate`.
+- Pages are `{uid, fileId, local, rotation, markup?}`; `fills` (fileId → field → value) lives beside `pages`; a file's form is flattened only if one of its fields was filled, and pages with a redaction are replaced by an image (ADR `flattened-output-and-raster-redaction`). Rotation (0/90/180/270) is per uid, duplicates get a new uid and inherit it. Export follows displayed order and adds rotation to the page's intrinsic `/Rotate`.
 - Reorder patches keyed cards and cached thumbnails in place; remounting cards causes the flicker the user reported.
 - Undo/redo keeps 40 in-memory snapshots per workspace, separate from the draft.
 - Merge is never persisted. Only the Preview/Edit `document` draft is, and it keeps its own byte copy.
@@ -77,4 +77,4 @@ Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` i
 ## Verification
 
 - Treat planned milestones as pending until implemented and verified. Record browser and Windows results separately; native installer/updater success requires Windows evidence.
-- After export changes, verify the generated PDFs: page count, order, rotation, password enforcement, ZIP contents.
+- After export changes, verify the generated PDFs: page count, order, rotation, password enforcement, ZIP contents, and that redacted text is not extractable from any part.

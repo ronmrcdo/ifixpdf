@@ -1,4 +1,4 @@
-import {hasRedaction} from '../domain/markup';
+import {hasMarkup, hasRedaction} from '../domain/markup';
 import type {ExportSpec, Progress} from './export-core';
 import type {ExportRequest} from './export.worker';
 import type {RasterImage} from './rasterize';
@@ -140,12 +140,38 @@ export async function countPages(bytes: Uint8Array): Promise<number> {
   return (await import('./export-core')).countPages(copy);
 }
 
+/** With markup or fills, builds (and rasterizes redactions) first, then splits that finished output so no part
+ *  skips the redaction pass. Progress covers both stages. */
 export async function splitZip(
   spec: ExportSpec,
   groups: number[][],
   baseName: string,
   onProgress?: Progress,
+  raster?: Raster,
 ): Promise<Uint8Array> {
+  if (hasMarkup(spec.pages, spec.fills)) {
+    const built = spec.pages.length + spec.pages.filter(hasRedaction).length; // buildPdf's progress total
+    const out = await buildPdf(
+      spec,
+      onProgress && ((d) => onProgress(d, built + groups.length)),
+      raster,
+    );
+    const flat: ExportSpec = {
+      title: spec.title,
+      sources: {out},
+      pages: Array.from({length: spec.pages.length}, (_, local) => ({
+        fileId: 'out',
+        local,
+        rotation: 0 as const,
+      })),
+    };
+    return splitZip(
+      flat,
+      groups,
+      baseName,
+      onProgress && ((d) => onProgress(built + d, built + groups.length)),
+    );
+  }
   const w = getWorker();
   const snap = snapshot(spec, !!w);
   const parts = groups.map((g) => [...g]);

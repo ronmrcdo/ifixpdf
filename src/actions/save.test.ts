@@ -438,3 +438,31 @@ describe('printDocument', () => {
     documentStore.getState().endExport();
   });
 });
+
+describe('markup and fills reach every export path', () => {
+  const mark = {id: 'm', kind: 'cross', rect: {x: 1, y: 1, w: 5, h: 5}, angle: 0} as const;
+  const specSeen = async (run: () => Promise<void>) => {
+    URL.createObjectURL = vi.fn(() => 'blob:x');
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(window, 'open').mockReturnValue(null);
+    await open(documentStore);
+    const s = documentStore.getState();
+    s.addMarkup(s.pages[1]!.uid, mark);
+    s.setField(s.files[0]!.id, 'F', 'v');
+    s.selectAll();
+    vi.mocked(buildPdf).mockClear();
+    await run();
+    return vi.mocked(buildPdf).mock.calls[0]![0];
+  };
+
+  it.each([
+    ['saveOutput', () => saveOutput(documentStore)],
+    ['saveCopy', () => saveCopy(documentStore)],
+    ['extractSelection', () => extractSelection(documentStore)],
+    ['printDocument', () => printDocument(documentStore)],
+  ])('%s', async (_n, run) => {
+    const spec = await specSeen(run);
+    expect(spec.pages[1]!.markup).toEqual([mark]);
+    expect(Object.values(spec.fills ?? {})).toEqual([{F: 'v'}]);
+  });
+});
