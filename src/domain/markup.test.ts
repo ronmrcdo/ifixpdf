@@ -3,12 +3,14 @@ import {
   hasMarkup,
   hasRedaction,
   type Markup,
+  pngSize,
   rectAt,
   shift,
   stepSize,
   topLeft,
   unsupportedChars,
 } from './markup';
+import {pngOf} from '../test/png';
 
 const base = {id: 'a', rect: {x: 0, y: 0, w: 1, h: 1}, angle: 0 as const};
 const textItem: Markup = {...base, kind: 'text', text: 'hi', size: 12};
@@ -72,5 +74,17 @@ describe('rectAt and topLeft', () => {
     expect(shift(r, 90, 12)).toEqual({x: 12, y: 12, w: 1, h: 1});
     expect(shift(r, 180, 12)).toEqual({x: -12, y: 12, w: 1, h: 1});
     expect(shift(r, 270, 12)).toEqual({x: -12, y: -12, w: 1, h: 1});
+  });
+});
+
+describe('pngSize', () => {
+  it('reads the IHDR width and height', () => {
+    expect(pngSize(pngOf(480, 160))).toEqual([480, 160]);
+    expect(pngSize(pngOf(70000, 3))).toEqual([70000, 3]);
+  });
+
+  it('falls back to 3:1 for a header it cannot read', () => {
+    expect(pngSize('data:image/png;base64,')).toEqual([3, 1]);
+    expect(pngSize(pngOf(0, 10))).toEqual([3, 1]);
   });
 });

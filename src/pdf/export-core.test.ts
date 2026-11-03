@@ -8,6 +8,7 @@ import {
   PDFOperator,
   PDFOperatorNames,
   PDFOptionList,
+  PDFRawStream,
   PDFRadioGroup,
   type PDFPage,
   PDFRef,
@@ -238,6 +239,33 @@ describe('export-core', () => {
     );
     const xobjects = out.getPage(0).node.Resources()?.lookup(PDFName.of('XObject'), PDFDict);
     expect(xobjects?.keys()).toHaveLength(4);
+  });
+
+  it('embeds the same signature image once for every page it is on', async () => {
+    const sig: Markup = {
+      id: 's',
+      kind: 'signature',
+      image: PNG,
+      rect: {x: 0, y: 0, w: 9, h: 9},
+      angle: 0,
+    };
+    const out = await PDFDocument.load(
+      await buildPdf({
+        title: 't',
+        sources: {a: await makePdf(1)},
+        pages: [
+          {fileId: 'a', local: 0, rotation: 0, markup: [sig]},
+          {fileId: 'a', local: 0, rotation: 0, markup: [{...sig, id: 's2'}]},
+        ],
+      }),
+    );
+    const images = out.context
+      .enumerateIndirectObjects()
+      .filter(
+        ([, o]) =>
+          o instanceof PDFRawStream && o.dict.get(PDFName.of('Subtype')) === PDFName.of('Image'),
+      );
+    expect(images, 'one image and its alpha mask').toHaveLength(2);
   });
 
   it('takes the old path when there is no markup', async () => {

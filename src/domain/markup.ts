@@ -109,3 +109,18 @@ export const hasMarkup = (
 ): boolean =>
   pages.some((p) => p.markup?.length) ||
   Object.values(fills ?? {}).some((f) => Object.keys(f).length > 0);
+
+/** Width and height from a PNG data URL's IHDR; 3:1 (the draw pad) if it can't be read. */
+export function pngSize(dataUrl: string): [number, number] {
+  try {
+    // The first 32 base64 characters decode to the 8-byte signature and the IHDR up to its height.
+    const at = dataUrl.indexOf(',') + 1;
+    const head = atob(dataUrl.slice(at, at + 32));
+    const u32 = (at: number) => [0, 1, 2, 3].reduce((n, i) => n * 256 + head.charCodeAt(at + i), 0);
+    const [w, h] = [u32(16), u32(20)];
+    if (head.length === 24 && w > 0 && h > 0) return [w, h];
+  } catch {
+    // not base64
+  }
+  return [3, 1];
+}

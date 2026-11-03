@@ -4,6 +4,7 @@ import {
   PDFOptionList,
   type PDFDocument,
   type PDFFont,
+  type PDFImage,
   type PDFPage,
   PDFRadioGroup,
   PDFTextField,
@@ -32,6 +33,16 @@ function helvetica(doc: PDFDocument): Promise<PDFFont> {
     fonts.set(doc, font);
   }
   return font;
+}
+
+// The same signature on many pages is embedded once per document.
+const images = new WeakMap<PDFDocument, Map<string, Promise<PDFImage>>>();
+function png(doc: PDFDocument, url: string): Promise<PDFImage> {
+  const byUrl = images.get(doc) ?? new Map<string, Promise<PDFImage>>();
+  images.set(doc, byUrl);
+  const image = byUrl.get(url) ?? doc.embedPng(url);
+  byUrl.set(url, image);
+  return image;
 }
 
 // Display-space frame of the rect: top-left origin, "down" unit vector, display size.
@@ -80,7 +91,7 @@ export async function drawMarkup(
         });
         break;
       case 'signature':
-        page.drawImage(await doc.embedPng(m.image), {...at(h), width: w, height: h, rotate});
+        page.drawImage(await png(doc, m.image), {...at(h), width: w, height: h, rotate});
         break;
       case 'redact':
         page.drawRectangle({...m.rect, width: m.rect.w, height: m.rect.h, color: BLACK});
