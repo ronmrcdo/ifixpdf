@@ -66,6 +66,15 @@ describe('EditView', () => {
     expect(editor).not.toHaveClass('show-output');
   });
 
+  it('shows the fill and sign tools on the Document tab only', async () => {
+    open();
+    const {rerender} = render(<EditView />);
+    expect(screen.queryByRole('toolbar', {name: 'Fill and sign tools'})).not.toBeInTheDocument();
+    act(() => documentStore.getState().setTab('document'));
+    rerender(<EditView />);
+    expect(await screen.findByRole('toolbar', {name: 'Fill and sign tools'})).toBeInTheDocument();
+  });
+
   it('Split PDF calls onSplit', async () => {
     open();
     const onSplit = vi.fn();
