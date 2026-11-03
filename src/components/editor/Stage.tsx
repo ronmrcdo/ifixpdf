@@ -79,6 +79,10 @@ export function Stage({store, caption, readOnly = false, children, overlay}: Pro
         const next = s.currentPage + dir;
         if (next < 0 || next >= s.pages.length) return;
         landOnBottom.current = bottom;
+        // The page's fields unmount without a blur event; blurring first commits typed text.
+        const focused = document.activeElement;
+        if (focused instanceof HTMLElement && focused !== stage && stage.contains(focused))
+          focused.blur();
         s.goTo(next);
       },
     });

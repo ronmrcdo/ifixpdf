@@ -163,7 +163,7 @@ test('a PDF without form fields gets no field controls', async ({app, page}) => 
   await app.tab('Document').click();
   await expect(page.locator('.markup-layer')).toBeVisible();
   await expect(page.locator('.field-layer')).toBeAttached();
-  await expect(page.locator('.field-layer .field')).toHaveCount(0);
+  await expect(page.locator('.field-layer .form-field')).toHaveCount(0);
 });
 
 test.describe('native', () => {
