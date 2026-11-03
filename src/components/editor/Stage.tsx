@@ -1,6 +1,8 @@
 import {ChevronLeft, ChevronRight, FileText, Minus, Plus, RotateCw, Scan} from 'lucide-react';
+import type {PDFPageProxy, PageViewport} from 'pdfjs-dist';
 import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {useStore} from 'zustand';
+import type {PageInstance} from '../../domain/types';
 import {acquire} from '../../pdf/registry';
 import {renderPage} from '../../pdf/render';
 import {useApp} from '../../state/app';
@@ -9,6 +11,14 @@ import {TAB_PANEL_ID, tabId} from './Toolbar';
 import {createWheelFlip} from './useWheelFlip';
 import {fitScale, stepZoom} from './zoom';
 
+/** What an overlay needs to place things on the displayed page. */
+export interface PageView {
+  page: PageInstance;
+  /** pdf.js viewport at the display factor, total rotation applied. */
+  viewport: PageViewport;
+  pdfPage: PDFPageProxy;
+}
+
 interface Props {
   store: WorkspaceStore;
   /** Preview: the file name. Edit/Merge: 'Document preview' / 'Merged preview'. */
@@ -16,6 +26,8 @@ interface Props {
   readOnly?: boolean;
   /** The Pages-tab content (a page grid), shown in the stage instead of the canvas. */
   children?: ReactNode;
+  /** Drawn over the canvas on the Document tab. */
+  overlay?: (view: PageView) => ReactNode;
 }
 
 const stepFrom = (store: WorkspaceStore, actual: number, dir: 1 | -1) => {
@@ -24,7 +36,7 @@ const stepFrom = (store: WorkspaceStore, actual: number, dir: 1 | -1) => {
 };
 
 /** The page view: zoom tools, the canvas stage with wheel flipping, and page navigation. */
-export function Stage({store, caption, readOnly = false, children}: Props) {
+export function Stage({store, caption, readOnly = false, children, overlay}: Props) {
   const pages = useStore(store, (s) => s.pages);
   const files = useStore(store, (s) => s.files);
   const current = useStore(store, (s) => s.currentPage);
@@ -37,6 +49,7 @@ export function Stage({store, caption, readOnly = false, children}: Props) {
   const actual = useRef(100); // the zoom Fit last rendered at, in percent
   const landOnBottom = useRef(false);
   const [resized, setResized] = useState(0);
+  const [view, setView] = useState<PageView>();
 
   const page = pages[current];
   const file = files.find((f) => f.id === page?.fileId);
@@ -119,6 +132,14 @@ export function Stage({store, caption, readOnly = false, children}: Props) {
               )
             : zoom / 100;
         actual.current = Math.round(factor * 100);
+        setView({
+          page,
+          pdfPage,
+          viewport: pdfPage.getViewport({
+            scale: factor,
+            rotation: (pdfPage.rotate + page.rotation) % 360,
+          }),
+        });
         wrap.style.width = `${Math.max(1, base.width * factor)}px`;
         // renderPage sizes the canvas only after its own await; give it the new page's shape now so scrollHeight is right.
         canvas.style.aspectRatio = `${base.width} / ${base.height}`;
@@ -217,6 +238,7 @@ export function Stage({store, caption, readOnly = false, children}: Props) {
               role="img"
               aria-label={`Page ${current + 1} of ${total}, ${file?.name ?? ''}`}
             ></canvas>
+            {overlay && tab === 'document' && view && view.page.uid === page?.uid && overlay(view)}
           </div>
         </div>
       )}
