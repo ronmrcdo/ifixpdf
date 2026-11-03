@@ -92,30 +92,100 @@ const PARENT = PDFName.of('Parent');
 const decodeName = (n: string): string =>
   n.replace(/#([0-9a-fA-F]{2})/g, (_, h: string) => String.fromCharCode(Number.parseInt(h, 16)));
 
-// Every /Name token in the content: a superset of the resource names it uses.
-function namesIn(streams: PDFStream[]): Set<string> {
-  const names = new Set<string>();
-  for (const s of streams) {
-    if (!(s instanceof PDFRawStream)) throw new Error('Unreadable page content.');
-    const text = strFromU8(decodePDFRawStream(s).decode(), true);
-    for (const [, n] of text.matchAll(/\/([^\s/[\]()<>{}%]+)/g)) names.add(decodeName(n!));
+// Resource category each name-taking content operator draws from; Tf's name is second to last.
+const OPERAND_CATEGORY: Record<string, string> = {
+  Do: 'XObject',
+  Tf: 'Font',
+  gs: 'ExtGState',
+  cs: 'ColorSpace',
+  CS: 'ColorSpace',
+  scn: 'Pattern',
+  SCN: 'Pattern',
+  sh: 'Shading',
+  BDC: 'Properties',
+  DP: 'Properties',
+};
+const WHITESPACE = ' \t\r\n\f\0';
+const isDelimiter = (c: string): boolean => WHITESPACE.includes(c) || '()<>[]{}/%'.includes(c);
+const isOperand = (t: string): boolean =>
+  /^[+-.\d]/.test(t) || ['true', 'false', 'null'].includes(t);
+
+// Resource names per category, taken only from the operators that use them (PDF 32000 §7.8.2).
+// Skips strings, comments and inline image data, which may hold anything.
+function usedNames(streams: PDFStream[]): Map<string, Set<string>> {
+  const used = new Map<string, Set<string>>();
+  const use = (category: string, name: string | null | undefined): void => {
+    if (name) used.set(category, (used.get(category) ?? new Set()).add(name));
+  };
+  for (const stream of streams) {
+    if (!(stream instanceof PDFRawStream)) throw new Error('Unreadable page content.');
+    const text = strFromU8(decodePDFRawStream(stream).decode(), true);
+    let stack: Array<string | null> = []; // names, or null for any other operand
+    let i = 0;
+    while (i < text.length) {
+      const c = text[i]!;
+      if (WHITESPACE.includes(c)) {
+        i++;
+      } else if (c === '%') {
+        while (i < text.length && text[i] !== '\n' && text[i] !== '\r') i++;
+      } else if (c === '(') {
+        for (let depth = 0; i < text.length; i++) {
+          if (text[i] === '\\') i++;
+          else if (text[i] === '(') depth++;
+          else if (text[i] === ')' && --depth === 0) break;
+        }
+        i++;
+        stack.push(null);
+      } else if (c === '<' && text[i + 1] !== '<') {
+        const end = text.indexOf('>', i);
+        i = end < 0 ? text.length : end + 1;
+        stack.push(null);
+      } else if ('<>[]{})'.includes(c)) {
+        // A stray ')' lands here too, so every branch moves `i` forward.
+        i += c === '<' || c === '>' ? 2 : 1;
+        stack.push(null);
+      } else {
+        const start = c === '/' ? i + 1 : i;
+        let end = start;
+        while (end < text.length && !isDelimiter(text[end]!)) end++;
+        const token = text.slice(start, end);
+        i = end;
+        if (c === '/') stack.push(decodeName(token));
+        else if (isOperand(token)) stack.push(null);
+        else if (token === 'ID') {
+          // Inline image: its dict may name a colour space; its data runs to whitespace + EI.
+          stack.forEach((k, n) => {
+            if (k === 'CS' || k === 'ColorSpace') use('ColorSpace', stack[n + 1]);
+          });
+          const ei = /\sEI(?=\s|$)/g;
+          ei.lastIndex = i + 1;
+          i = ei.exec(text) ? ei.lastIndex : text.length;
+          stack = [];
+        } else {
+          const category = OPERAND_CATEGORY[token];
+          if (category) use(category, token === 'Tf' ? stack.at(-2) : stack.at(-1));
+          stack = [];
+        }
+      }
+    }
   }
-  return names;
+  return used;
 }
 
-// Keeps only the resources `owner`'s content names, in a fresh dict so a resource dict shared
-// with a redacted page is left alone.
+// Keeps only the resources `owner`'s content uses, in a fresh dict so a resource dict shared
+// with a redacted page is left alone. A broken /Resources counts as none.
 function prune(owner: PDFDict, content: PDFStream[]): void {
-  const res = owner.lookupMaybe(RESOURCES, PDFDict);
-  if (!res) return;
-  const names = namesIn(content);
+  const res = owner.context.lookup(owner.get(RESOURCES));
+  if (!(res instanceof PDFDict)) return void owner.delete(RESOURCES);
+  const used = usedNames(content);
   const kept = owner.context.obj({});
   for (const [category, value] of res.entries()) {
     const sub = owner.context.lookup(value);
     if (!(sub instanceof PDFDict)) continue; // /ProcSet is obsolete
+    const names = used.get(category.decodeText());
     const keptSub = owner.context.obj({});
     for (const [name, ref] of sub.entries())
-      if (names.has(name.decodeText())) keptSub.set(name, ref);
+      if (names?.has(name.decodeText())) keptSub.set(name, ref);
     kept.set(category, keptSub);
   }
   owner.set(RESOURCES, kept);
@@ -191,6 +261,10 @@ const DRAW_KEYS = new Set(
     'Function',
     'Functions',
     'Background',
+    'CS',
+    'W2',
+    'FD',
+    'UseCMap',
   ].map((k) => PDFName.of(k)),
 );
 // Dicts whose entries are all names chosen by the file: resource categories and Type3 glyphs.
@@ -236,9 +310,9 @@ function drawn(ctx: PDFContext, roots: PDFObject[]): Set<PDFRef> {
       if (DRAW_KEYS.has(key)) visit(v);
       else if (key === CHARPROCS) visitNames(v);
       else if (key === RESOURCES) {
-        for (const [category, sub] of ctx.lookup(v, PDFDict).entries()) {
-          if (NAME_MAPS.has(category)) visitNames(sub);
-        }
+        const res = ctx.lookup(v);
+        if (!(res instanceof PDFDict)) continue;
+        for (const [category, sub] of res.entries()) if (NAME_MAPS.has(category)) visitNames(sub);
       }
     }
   };
