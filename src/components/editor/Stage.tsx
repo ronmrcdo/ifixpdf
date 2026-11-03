@@ -2,6 +2,7 @@ import {ChevronLeft, ChevronRight, FileText, Minus, Plus, RotateCw, Scan} from '
 import type {PDFPageProxy, PageViewport} from 'pdfjs-dist';
 import {useEffect, useRef, useState, type ReactNode} from 'react';
 import {useStore} from 'zustand';
+import {useShallow} from 'zustand/react/shallow';
 import type {PageInstance} from '../../domain/types';
 import {acquire} from '../../pdf/registry';
 import {renderPage} from '../../pdf/render';
@@ -37,7 +38,7 @@ const stepFrom = (store: WorkspaceStore, actual: number, dir: 1 | -1) => {
 
 /** The page view: zoom tools, the canvas stage with wheel flipping, and page navigation. */
 export function Stage({store, caption, readOnly = false, children, overlay}: Props) {
-  const pages = useStore(store, (s) => s.pages);
+  const total = useStore(store, (s) => s.pages.length);
   const files = useStore(store, (s) => s.files);
   const current = useStore(store, (s) => s.currentPage);
   const zoom = useStore(store, (s) => s.zoom);
@@ -51,9 +52,15 @@ export function Stage({store, caption, readOnly = false, children, overlay}: Pro
   const [resized, setResized] = useState(0);
   const [view, setView] = useState<PageView>();
 
-  const page = pages[current];
+  // Only what the canvas shows: a markup edit replaces the page object, and must not re-render (and blank) the canvas.
+  const page = useStore(
+    store,
+    useShallow((s): PageInstance | undefined => {
+      const p = s.pages[s.currentPage];
+      return p && {uid: p.uid, fileId: p.fileId, local: p.local, rotation: p.rotation};
+    }),
+  );
   const file = files.find((f) => f.id === page?.fileId);
-  const total = pages.length;
   const zoomBy = (dir: 1 | -1) => stepFrom(store, actual.current, dir);
 
   useEffect(() => {

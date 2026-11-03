@@ -228,4 +228,21 @@ describe('Stage overlay', () => {
     act(() => store.getState().setTab('pages'));
     expect(screen.queryByTestId('ov')).toBeNull();
   });
+
+  it('a markup edit does not re-render the canvas; a rotation does', async () => {
+    mockPdf();
+    render(<Stage store={store} caption="A.pdf" overlay={() => <i data-testid="ov" />} />);
+    sizeStage();
+    act(() => store.getState().setZoom(100));
+    await waitFor(() => expect(renderPage).toHaveBeenCalledOnce());
+    act(() =>
+      store
+        .getState()
+        .addMarkup('u0', {id: 'm', kind: 'dot', angle: 0, rect: {x: 0, y: 0, w: 1, h: 1}}),
+    );
+    await new Promise((r) => setTimeout(r, 20));
+    expect(renderPage).toHaveBeenCalledOnce();
+    act(() => store.getState().rotate(90, new Set(['u0'])));
+    await waitFor(() => expect(renderPage).toHaveBeenCalledTimes(2));
+  });
 });

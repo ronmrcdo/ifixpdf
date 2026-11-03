@@ -6,6 +6,7 @@ import {AppShell} from '../../shell/AppShell';
 import {pickAndImport} from '../../shell/useFileImport';
 import {useApp} from '../../state/app';
 import {documentStore} from '../../state/workspaces';
+import {useTool} from '../../components/editor/markup/tool';
 import {EditView} from './EditView';
 
 vi.mock('../../pdf/registry', () => ({
@@ -73,6 +74,19 @@ describe('EditView', () => {
     act(() => documentStore.getState().setTab('document'));
     rerender(<EditView />);
     expect(await screen.findByRole('toolbar', {name: 'Fill and sign tools'})).toBeInTheDocument();
+  });
+
+  it('drops the active tool and selection when the tab leaves Document or the document changes', () => {
+    open();
+    act(() => documentStore.getState().setTab('document'));
+    render(<EditView />);
+    act(() => useTool.setState({tool: 'check', selected: 'x'}));
+    act(() => documentStore.getState().setTab('pages'));
+    expect(useTool.getState()).toMatchObject({tool: null, selected: null});
+    act(() => documentStore.getState().setTab('document'));
+    act(() => useTool.setState({tool: 'redact', selected: 'x'}));
+    act(() => documentStore.setState({files: [{id: 'g', name: 'B.pdf', pages: 3, size: 1}]}));
+    expect(useTool.getState()).toMatchObject({tool: null, selected: null});
   });
 
   it('Split PDF calls onSplit', async () => {
