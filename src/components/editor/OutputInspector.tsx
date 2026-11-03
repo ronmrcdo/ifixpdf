@@ -1,7 +1,7 @@
 import {Download, Files, ShieldCheck} from 'lucide-react';
 import {useStore} from 'zustand';
 import {outputIndices, saveOrContinue} from '../../actions/save';
-import type {Fills, Markup} from '../../domain/markup';
+import {type Fills, filledCount, type Markup} from '../../domain/markup';
 import type {ExportSettings, PageInstance} from '../../domain/types';
 import {useApp} from '../../state/app';
 import type {WorkspaceKind, WorkspaceStore} from '../../state/workspace';
@@ -36,7 +36,7 @@ const NOUNS = ['text item', 'mark', 'signature', 'redaction', 'filled field'];
 function markupSummary(pages: readonly PageInstance[], fills: Fills): string {
   const counts = [0, 0, 0, 0, 0];
   for (const m of pages.flatMap((p) => p.markup ?? [])) counts[KINDS[m.kind]]! += 1;
-  counts[4] = Object.values(fills).reduce((n, f) => n + Object.keys(f).length, 0);
+  counts[4] = filledCount(pages, fills);
   const parts = counts.flatMap((n, i) => (n ? [`${n} ${NOUNS[i]}${n === 1 ? '' : 's'}`] : []));
   if (!parts.length) return '';
   return `${parts.join(', ')}.${counts[3] ? ' Redacted pages are saved as images.' : ''}`;

@@ -50,11 +50,13 @@ describe('hasRedaction', () => {
 
 describe('hasMarkup', () => {
   it('checks pages and fills', () => {
-    expect(hasMarkup([{}], {})).toBe(false);
-    expect(hasMarkup([{}], {f: {}})).toBe(false);
-    expect(hasMarkup([{}], {f: {a: ''}})).toBe(true);
-    expect(hasMarkup([{markup: []}])).toBe(false);
-    expect(hasMarkup([{markup: [textItem]}])).toBe(true);
+    const f = {fileId: 'f'};
+    expect(hasMarkup([f], {})).toBe(false);
+    expect(hasMarkup([f], {f: {}})).toBe(false);
+    expect(hasMarkup([f], {f: {a: ''}})).toBe(true);
+    expect(hasMarkup([f], {gone: {a: 'x'}}), 'fills of a file with no pages').toBe(false);
+    expect(hasMarkup([{...f, markup: []}])).toBe(false);
+    expect(hasMarkup([{...f, markup: [textItem]}])).toBe(true);
   });
 });
 
