@@ -5,6 +5,7 @@ import {
   MARK_PATHS,
   type Markup,
   markStroke,
+  pngSize,
   type Rect,
   rectAt,
   shift,
@@ -34,6 +35,23 @@ const NONE: readonly Markup[] = [];
 const MARK = 14;
 const MIN_REDACT = 4;
 const LINE = 1.2; // line height per point of size, as markup-draw
+const SIGN_WIDTH = 150;
+const MIN_SIGN = 24;
+// Corner name and its position in the box (0 = left/top, 1 = right/bottom).
+const CORNERS = [
+  ['top-left', 0, 0],
+  ['top-right', 1, 0],
+  ['bottom-left', 0, 1],
+  ['bottom-right', 1, 1],
+] as const;
+// A corner drag: scale about `fixed` (PDF), the corner opposite the handle (`opposite` on screen).
+type Resize = {id: string; opposite: Point; size: Point; fixed: Point; min: number};
+const scaled = (r: Rect, [fx, fy]: Point, k: number): Rect => ({
+  x: fx + (r.x - fx) * k,
+  y: fy + (r.y - fy) * k,
+  w: r.w * k,
+  h: r.h * k,
+});
 
 const LABELS: Record<Markup['kind'], string> = {
   text: 'Text',
@@ -58,7 +76,8 @@ function textRect(at: Point, angle: Rotation, text: string, size: number): Rect 
 /** Item drawing in its own display frame (w × h, y down), like markup-draw. */
 function Shape({m}: {m: Markup}) {
   const [w, h] = m.angle % 180 ? [m.rect.h, m.rect.w] : [m.rect.w, m.rect.h];
-  if (m.kind === 'redact' || m.kind === 'signature') return null; // a box style, and Task 5.2
+  if (m.kind === 'redact') return null; // a box style
+  if (m.kind === 'signature') return <img src={m.image} alt="" draggable={false} />;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" aria-hidden="true">
       {m.kind === 'text' &&
@@ -82,6 +101,7 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
   const uid = page.uid;
   const items = useStore(store, (s) => s.pages.find((p) => p.uid === uid)?.markup) ?? NONE;
   const tool = useTool((s) => s.tool);
+  const signature = useTool((s) => s.signature);
   const selected = useTool((s) => s.selected);
   const select = useTool((s) => s.select);
   const [editing, setEditingState] = useState<Editing | null>(null);
@@ -95,6 +115,8 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
   const [moving, setMoving] = useState<{id: string; d: Point} | null>(null);
   const start = useRef<Point | null>(null);
   const grab = useRef<{id: string; from: Point} | null>(null);
+  const resize = useRef<Resize | null>(null);
+  const [sizing, setSizing] = useState<{id: string; rect: Rect} | null>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const angle = ((pdfPage.rotate + page.rotation) % 360) as Rotation;
@@ -133,6 +155,21 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
         h: Math.max(MIN_REDACT, Math.abs(by - ay)),
       };
       return add({id, kind: 'redact', angle, rect});
+    }
+    if (tool === 'sign') {
+      if (!signature) return;
+      const [iw, ih] = pngSize(signature);
+      const [w, h] = [SIGN_WIDTH, (SIGN_WIDTH * ih) / iw];
+      const [rw, rh] = angle % 180 ? [h, w] : [w, h]; // display width runs along y at 90/270
+      const [x, y] = toPdf(from);
+      add({
+        id,
+        kind: 'signature',
+        image: signature,
+        angle,
+        rect: {x: x - rw / 2, y: y - rh / 2, w: rw, h: rh},
+      });
+      return useTool.getState().setTool(null);
     }
     if (tool === 'check' || tool === 'cross' || tool === 'dot') {
       const [x, y] = toPdf(from);
@@ -202,6 +239,40 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
     const [bx, by] = toPdf(d);
     s().updateMarkup(uid, m.id, {rect: {...m.rect, x: m.rect.x + bx - ax, y: m.rect.y + by - ay}});
   };
+  const onHandleDown = (e: PointerEvent<HTMLElement>, m: Markup, cx: number, cy: number) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+    const b = box(m.rect);
+    const opposite: Point = [b.left + (1 - cx) * b.width, b.top + (1 - cy) * b.height];
+    const width = m.angle % 180 ? m.rect.h : m.rect.w; // along the item's own display x-axis
+    resize.current = {
+      id: m.id,
+      opposite,
+      size: [b.width, b.height],
+      fixed: toPdf(opposite),
+      min: MIN_SIGN / width,
+    };
+  };
+  // The new rect for the pointer: the larger of the two axis scales keeps the aspect.
+  const resized = (e: PointerEvent, m: Markup, r: Resize): Rect => {
+    const [x, y] = local(e);
+    const k = Math.max(
+      r.min,
+      Math.abs(x - r.opposite[0]) / r.size[0],
+      Math.abs(y - r.opposite[1]) / r.size[1],
+    );
+    return scaled(m.rect, r.fixed, k);
+  };
+  const onHandleMove = (e: PointerEvent, m: Markup) => {
+    const r = resize.current;
+    if (r) setSizing({id: r.id, rect: resized(e, m, r)});
+  };
+  const onHandleUp = (e: PointerEvent, m: Markup) => {
+    const r = resize.current;
+    resize.current = null;
+    setSizing(null);
+    if (r && sizing) s().updateMarkup(uid, m.id, {rect: resized(e, m, r)}); // a click without a drag changes nothing
+  };
   const retype = (m: Markup) => {
     if (m.kind !== 'text') return;
     const b = box(m.rect);
@@ -217,7 +288,7 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
   };
 
   const placed = (m: Markup) => {
-    const b = box(m.rect);
+    const b = box(sizing?.id === m.id ? sizing.rect : m.rect);
     const d: Point = moving?.id === m.id ? moving.d : [0, 0];
     // Turn the drawing from the item's own display frame to how the page shows now.
     const turn = (display - m.angle + 360) % 360;
@@ -249,8 +320,10 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
       onPointerCancel={() => {
         start.current = null;
         grab.current = null;
+        resize.current = null;
         setBand(null);
         setMoving(null);
+        setSizing(null);
       }}
     >
       {items.map((m) => {
@@ -293,6 +366,25 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
           </button>
         );
       })}
+      {chosen?.kind === 'signature' &&
+        !moving &&
+        CORNERS.map(([corner, cx, cy]) => {
+          const b = placed(chosen).box;
+          return (
+            <button
+              key={corner}
+              type="button"
+              tabIndex={-1}
+              className="markup-handle"
+              data-corner={corner}
+              aria-label={`Resize signature, ${corner}`}
+              style={{left: b.left + cx * b.width, top: b.top + cy * b.height}}
+              onPointerDown={(e) => onHandleDown(e, chosen, cx, cy)}
+              onPointerMove={(e) => onHandleMove(e, chosen)}
+              onPointerUp={(e) => onHandleUp(e, chosen)}
+            />
+          );
+        })}
       {band && (
         <div
           className="markup-band"
