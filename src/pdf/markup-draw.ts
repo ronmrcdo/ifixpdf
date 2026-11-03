@@ -18,6 +18,7 @@ import {
 } from 'pdf-lib';
 import {
   axes,
+  displaySize,
   type FieldValue,
   MARK_PATHS,
   type Markup,
@@ -51,7 +52,7 @@ function png(doc: PDFDocument, url: string): Promise<PDFImage> {
 
 // Display-space frame of the rect: top-left origin, "down" unit vector, display size.
 function frame(rect: Rect, angle: Rotation) {
-  const [w, h] = angle % 180 ? [rect.h, rect.w] : [rect.w, rect.h];
+  const [w, h] = displaySize(rect, angle);
   return {origin: topLeft(rect, angle), down: axes(angle).down, w, h};
 }
 

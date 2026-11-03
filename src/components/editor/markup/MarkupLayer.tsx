@@ -2,6 +2,7 @@ import {type KeyboardEvent, type PointerEvent, useRef, useState} from 'react';
 import {useStore} from 'zustand';
 import {
   cleanText,
+  displaySize,
   MARK_PATHS,
   type Markup,
   markStroke,
@@ -75,7 +76,7 @@ function textRect(at: Point, angle: Rotation, text: string, size: number): Rect 
 
 /** Item drawing in its own display frame (w × h, y down), like markup-draw. */
 function Shape({m}: {m: Markup}) {
-  const [w, h] = m.angle % 180 ? [m.rect.h, m.rect.w] : [m.rect.w, m.rect.h];
+  const [w, h] = displaySize(m.rect, m.angle);
   if (m.kind === 'redact') return null; // a box style
   if (m.kind === 'signature') return <img src={m.image} alt="" draggable={false} />;
   return (
@@ -160,7 +161,7 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
       if (!signature) return;
       const [iw, ih] = pngSize(signature);
       const [w, h] = [SIGN_WIDTH, (SIGN_WIDTH * ih) / iw];
-      const [rw, rh] = angle % 180 ? [h, w] : [w, h]; // display width runs along y at 90/270
+      const [rw, rh] = displaySize({w, h}, angle); // display width runs along y at 90/270
       const [x, y] = toPdf(from);
       add({
         id,
@@ -244,7 +245,7 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
     e.currentTarget.setPointerCapture?.(e.pointerId);
     const b = box(m.rect);
     const opposite: Point = [b.left + (1 - cx) * b.width, b.top + (1 - cy) * b.height];
-    const width = m.angle % 180 ? m.rect.h : m.rect.w; // along the item's own display x-axis
+    const [width] = displaySize(m.rect, m.angle); // along the item's own display x-axis
     resize.current = {
       id: m.id,
       opposite,
