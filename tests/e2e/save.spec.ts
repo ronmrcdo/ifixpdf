@@ -1,6 +1,7 @@
 // Every export goes through one "Save as" (native dialog + fs in Tauri, picker or download in the browser).
 import type {Download, Page} from '@playwright/test';
-import {PDFDocument} from 'pdf-lib';
+import {PDFDocument, StandardFonts} from 'pdf-lib';
+import {findSecret} from '../../src/pdf/fixtures';
 import {test, expect, pdfFile, type App} from './fixtures';
 
 type Written = {bytes: number[]; path: string};
@@ -21,6 +22,60 @@ function merge(page: Page) {
     continue: page.getByRole('button', {name: 'Continue to save'}).first(),
     save: saveButton(page),
   };
+}
+
+// Page 1 holds a secret, page 2 text that must survive.
+async function secretPdf() {
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  doc.addPage([400, 400]).drawText('SECRET-ONE', {x: 50, y: 300, size: 24, font});
+  doc.addPage([400, 400]).drawText('KEEP-TWO', {x: 50, y: 300, size: 24, font});
+  return {name: 'Secret.pdf', mimeType: 'application/pdf', buffer: Buffer.from(await doc.save())};
+}
+
+// Opens the secret PDF in Edit and covers page 1 with the Redact tool.
+async function redactPageOne(app: App) {
+  const {page} = app;
+  await app.openPdf(await secretPdf());
+  await app.view('Edit PDF');
+  await app.tab('Document').click();
+  await page.getByRole('button', {name: 'Redact'}).click();
+  const box = (await page.locator('.markup-layer').boundingBox())!;
+  await page.mouse.move(box.x + 2, box.y + 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.move(box.x + box.width - 2, box.y + box.height - 2);
+  await page.mouse.up();
+  await expect(page.getByRole('button', {name: 'Redaction'})).toBeVisible();
+}
+
+// Each page's text through the app's own pdf.js; a string, so tsc does not resolve the dev server's paths.
+const pageTexts = (page: Page, bytes: number[]): Promise<string[]> =>
+  page.evaluate(`(async (bytes) => {
+    const {putBytes} = await import('/src/pdf/bytes.ts');
+    const {acquire, retain, release} = await import('/src/pdf/registry.ts');
+    putBytes('e2e-text', new Uint8Array(bytes));
+    retain('e2e-text', 'export');
+    const doc = await acquire('e2e-text');
+    const out = [];
+    for (let i = 1; i <= doc.numPages; i++)
+      out.push((await (await doc.getPage(i)).getTextContent()).items.map((t) => t.str).join(''));
+    await release('e2e-text', 'export');
+    return out;
+  })(${JSON.stringify(bytes)})`);
+
+// Nothing of page 1 survives anywhere in the file; page 2 keeps its text.
+async function expectRedacted(page: Page, bytes: number[]) {
+  const original = (await secretPdf()).buffer;
+  expect(await pageTexts(page, [...original]), 'the checks see the secret before').toEqual([
+    'SECRET-ONE',
+    'KEEP-TWO',
+  ]);
+  expect(await findSecret(new Uint8Array(original), 'SECRET-ONE')).not.toEqual([]);
+  expect(await pageTexts(page, bytes)).toEqual(['', 'KEEP-TWO']);
+  const file = new Uint8Array(bytes);
+  expect(await findSecret(file, 'SECRET-ONE')).toEqual([]);
+  expect(await findSecret(file, 'KEEP-TWO'), 'the scan finds text that is there').not.toEqual([]);
 }
 
 async function mergeToSave(app: App, files: Awaited<ReturnType<typeof pdfFile>>[], status: string) {
@@ -458,6 +513,15 @@ test.describe('native', () => {
     ).toHaveLength(1);
     await expect(app.status).toContainText('1 files · 3 pages · Ready');
   });
+
+  test('Save as after a Redact drag leaves no trace of the covered text', async ({app, page}) => {
+    test.setTimeout(60000);
+    await redactPageOne(app);
+    await app.title.click();
+    await page.keyboard.press('Control+s');
+    await expect.poll(() => writes(page), {timeout: 30000}).toBe(1);
+    await expectRedacted(page, (await written(page)).bytes);
+  });
 });
 
 test.describe('browser', () => {
@@ -561,5 +625,31 @@ test.describe('browser', () => {
     await app.title.click();
     await page.keyboard.press('Control+p');
     await expect.poll(() => page.evaluate(() => window.__opened.length)).toBe(2);
+  });
+
+  test('Print from Preview after redacting in Edit leaves no trace of the covered text', async ({
+    app,
+    page,
+  }) => {
+    test.setTimeout(60000);
+    await app.goto('view=home');
+    await redactPageOne(app);
+    await app.view('Preview PDF');
+    await expect(page.getByRole('img', {name: 'Redaction'})).toBeVisible();
+    await page.evaluate(() => {
+      window.__opened = [];
+      window.open = ((url: string) => {
+        window.__opened.push(url);
+        return null;
+      }) as typeof window.open;
+    });
+    await page.getByRole('button', {name: 'Print PDF'}).click();
+    await expect.poll(() => page.evaluate(() => window.__opened.length), {timeout: 30000}).toBe(1);
+    const [url] = await page.evaluate(() => window.__opened as string[]);
+    const bytes = await page.evaluate(
+      async (u) => [...new Uint8Array(await (await fetch(u)).arrayBuffer())],
+      url!,
+    );
+    await expectRedacted(page, bytes);
   });
 });
