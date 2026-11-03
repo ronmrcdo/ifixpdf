@@ -101,14 +101,15 @@ describe('export.ts with a Worker', () => {
       },
     };
   };
-  const timeout = new Promise((r) => setTimeout(() => r('hung'), 200));
+  // A fresh timer per race: one made at collection can fire before a slow run reaches the test.
+  const timeout = () => new Promise((r) => setTimeout(() => r('hung'), 200));
 
   it('rejects pending calls when the worker errors and recovers on the next call', async () => {
     const {workers} = fake();
     const {protectPdf} = await import('./export');
     const p = protectPdf(new Uint8Array([1]), 'secret-pass');
     workers[0]!.onerror!();
-    await expect(Promise.race([p.catch(() => 'rejected'), timeout])).resolves.toBe('rejected');
+    await expect(Promise.race([p.catch(() => 'rejected'), timeout()])).resolves.toBe('rejected');
     protectPdf(new Uint8Array([1]), 'secret-pass').catch(() => undefined);
     expect(workers.length).toBe(2);
   });
@@ -118,7 +119,7 @@ describe('export.ts with a Worker', () => {
     const {protectPdf} = await import('./export');
     const p = protectPdf(new Uint8Array([1]), 'secret-pass');
     workers[0]!.onmessageerror!();
-    await expect(Promise.race([p.catch(() => 'rejected'), timeout])).resolves.toBe('rejected');
+    await expect(Promise.race([p.catch(() => 'rejected'), timeout()])).resolves.toBe('rejected');
   });
 
   it('does not leak a pending entry when postMessage throws', async () => {
