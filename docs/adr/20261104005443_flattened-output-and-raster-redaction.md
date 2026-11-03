@@ -19,4 +19,4 @@ Fill, Sign and Redact add form values, text, marks, signatures and redaction box
 
 - Redacted pages lose selectable text and cost more time and size (one JPEG per page).
 - Redaction cannot be undone in saved files; the originals stay untouched.
-- New object keys that must survive on kept pages have to be added to the drawing-key allowlist in `src/pdf/export-core.ts`.
+- New object keys that must survive on kept pages have to be added to the drawing-key allowlist in `src/pdf/redact.ts`.
