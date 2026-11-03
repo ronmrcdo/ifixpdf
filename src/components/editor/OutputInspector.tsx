@@ -1,7 +1,8 @@
 import {Download, Files, ShieldCheck} from 'lucide-react';
 import {useStore} from 'zustand';
 import {outputIndices, saveOrContinue} from '../../actions/save';
-import type {ExportSettings} from '../../domain/types';
+import type {Fills, Markup} from '../../domain/markup';
+import type {ExportSettings, PageInstance} from '../../domain/types';
 import {useApp} from '../../state/app';
 import type {WorkspaceKind, WorkspaceStore} from '../../state/workspace';
 
@@ -21,12 +22,33 @@ function summarize(state: Parameters<typeof outputIndices>[0]): {text: string; e
   }
 }
 
+const KINDS: Record<Markup['kind'], 0 | 1 | 2 | 3> = {
+  text: 0,
+  cross: 1,
+  check: 1,
+  dot: 1,
+  signature: 2,
+  redact: 3,
+};
+const NOUNS = ['text item', 'mark', 'signature', 'redaction', 'filled field'];
+
+/** What the copy includes besides pages, e.g. "2 marks, 1 redaction. Redacted pages are saved as images." */
+function markupSummary(pages: readonly PageInstance[], fills: Fills): string {
+  const counts = [0, 0, 0, 0, 0];
+  for (const m of pages.flatMap((p) => p.markup ?? [])) counts[KINDS[m.kind]]! += 1;
+  counts[4] = Object.values(fills).reduce((n, f) => n + Object.keys(f).length, 0);
+  const parts = counts.flatMap((n, i) => (n ? [`${n} ${NOUNS[i]}${n === 1 ? '' : 's'}`] : []));
+  if (!parts.length) return '';
+  return `${parts.join(', ')}.${counts[3] ? ' Redacted pages are saved as images.' : ''}`;
+}
+
 /** The output pane of Edit and Merge: name, pages, options, summary and Save. */
 export function OutputInspector({store, kind}: {store: WorkspaceStore; kind: WorkspaceKind}) {
   const pages = useStore(store, (s) => s.pages);
   const currentPage = useStore(store, (s) => s.currentPage);
   const settings = useStore(store, (s) => s.exportSettings);
   const exporting = useStore(store, (s) => s.exporting);
+  const fills = useStore(store, (s) => s.fills);
   const workflow = useStore(store, (s) => s.workflow);
   const openAfter = useApp((s) => s.openAfter);
   const set = (partial: Partial<ExportSettings>) => store.getState().setExportSettings(partial);
@@ -38,6 +60,7 @@ export function OutputInspector({store, kind}: {store: WorkspaceStore; kind: Wor
   let action = 'Save edited PDF';
   if (merge) action = workflow === 'review' ? 'Continue to save' : 'Save merged PDF';
   const {text, error} = summarize({pages, currentPage, exportSettings: settings});
+  const includes = markupSummary(pages, fills);
 
   const chooseRange = (rangeMode: ExportSettings['rangeMode']) => {
     set({rangeMode});
@@ -120,6 +143,7 @@ export function OutputInspector({store, kind}: {store: WorkspaceStore; kind: Wor
             <Files aria-hidden="true" /> {merge ? 'Merged document' : 'Edited document'}
           </span>
           <strong id="export-summary">{text}</strong>
+          {includes && <small id="markup-summary">{includes}</small>}
         </div>
         <button
           type="button"
