@@ -4,7 +4,7 @@ import type {WorkspaceKind, WorkspaceStore} from '../../state/workspace';
 import {PageGrid} from '../pages/PageGrid';
 import {ReadOnlyPages as ReadOnlyGrid} from '../pages/ReadOnlyPages';
 import {OutputInspector} from './OutputInspector';
-import {Stage as PageStage} from './Stage';
+import {Stage as PageStage, type PageView} from './Stage';
 import {Toolbar as TabsToolbar} from './Toolbar';
 
 const StoreContext = createContext<WorkspaceStore | null>(null);
@@ -43,13 +43,15 @@ function Stage({
   caption,
   readOnly,
   children,
+  overlay,
 }: {
   caption: string;
   readOnly?: boolean;
   children?: ReactNode;
+  overlay?: (view: PageView) => ReactNode;
 }) {
   return (
-    <PageStage store={useEditorStore()} caption={caption} readOnly={readOnly}>
+    <PageStage store={useEditorStore()} caption={caption} readOnly={readOnly} overlay={overlay}>
       {children}
     </PageStage>
   );

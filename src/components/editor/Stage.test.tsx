@@ -6,7 +6,7 @@ import {acquire} from '../../pdf/registry';
 import {renderPage} from '../../pdf/render';
 import {useApp} from '../../state/app';
 import {createWorkspaceStore} from '../../state/workspace';
-import {Stage} from './Stage';
+import {Stage, type PageView} from './Stage';
 
 vi.mock('../../pdf/registry', () => ({
   retain: vi.fn(),
@@ -173,5 +173,59 @@ describe('Stage landing', () => {
     act(() => store.getState().setZoom(150));
     await waitFor(() => expect(renderPage).toHaveBeenCalled());
     expect(scrolls).toEqual([0]);
+  });
+});
+
+describe('Stage overlay', () => {
+  const sizeStage = () =>
+    Object.defineProperties(stageEl(), {
+      clientHeight: {get: () => 500},
+      clientWidth: {get: () => 600},
+    });
+  const mockPdf = () => {
+    const getViewport = vi.fn(({scale}: {scale: number}) => ({
+      width: 612 * scale,
+      height: 792 * scale,
+    }));
+    const pdfPage = {rotate: 90, getViewport};
+    vi.mocked(acquire).mockResolvedValue({getPage: async () => pdfPage} as unknown as Awaited<
+      ReturnType<typeof acquire>
+    >);
+    return {pdfPage, getViewport};
+  };
+
+  it('gives the overlay the current page and re-renders it after goTo', async () => {
+    const {pdfPage, getViewport} = mockPdf();
+    store.setState({pages: pages.map((p, i) => (i === 1 ? {...p, rotation: 90} : p))});
+    const overlay = vi.fn((v: PageView) => <i data-testid="ov">{v.page.uid}</i>);
+    render(<Stage store={store} caption="A.pdf" overlay={overlay} />);
+    sizeStage();
+    act(() => store.getState().setZoom(100));
+    expect(await screen.findByTestId('ov')).toHaveTextContent('u0');
+    expect(overlay.mock.calls.at(-1)![0]).toMatchObject({pdfPage});
+    expect(screen.getByTestId('ov').parentElement).toHaveClass('paper-wrap');
+    act(() => store.getState().goTo(1));
+    await waitFor(() => expect(screen.getByTestId('ov')).toHaveTextContent('u1'));
+    // total rotation (intrinsic + page), at the display factor
+    expect(getViewport).toHaveBeenLastCalledWith({scale: 1, rotation: 180});
+  });
+
+  it('adds nothing to the paper wrap without an overlay', async () => {
+    mockPdf();
+    render(<Stage store={store} caption="A.pdf" />);
+    sizeStage();
+    act(() => store.getState().setZoom(100));
+    await waitFor(() => expect(renderPage).toHaveBeenCalled());
+    expect(document.querySelector('.paper-wrap')!.children).toHaveLength(1);
+  });
+
+  it('renders no overlay on the Pages tab', async () => {
+    mockPdf();
+    render(<Stage store={store} caption="A.pdf" overlay={() => <i data-testid="ov" />} />);
+    sizeStage();
+    act(() => store.getState().setZoom(100));
+    await screen.findByTestId('ov');
+    act(() => store.getState().setTab('pages'));
+    expect(screen.queryByTestId('ov')).toBeNull();
   });
 });
