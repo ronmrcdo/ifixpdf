@@ -279,6 +279,20 @@ describe('export-core', () => {
       expect(strs.join('')).not.toContain('漢');
     });
 
+    it('keeps newlines in multiline fields and still skips unencodable text', async () => {
+      const doc = await PDFDocument.load(await makeFormPdf());
+      const notes = doc.getForm().createTextField('notes');
+      notes.enableMultiline();
+      notes.addToPage(doc.getPage(0), {x: 20, y: 100, width: 150, height: 40});
+      const sources = {F: await doc.save()};
+      const run = async (v: Record<string, string>) =>
+        strsOf(await buildPdf({...(await formSpec({F: v})), sources}));
+      expect(await run({notes: 'line one\nline two'})).toEqual(
+        expect.arrayContaining(['line one', 'line two']),
+      );
+      expect((await run({notes: '漢字\nx', name: 'Ann'})).join('')).not.toContain('x');
+    });
+
     it('flattens a source page used twice once', async () => {
       const out = await buildPdf(await formSpec({F: fills}, 2));
       const pages = await textItems(out);
