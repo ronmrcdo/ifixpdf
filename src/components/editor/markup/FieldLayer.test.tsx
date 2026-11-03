@@ -51,6 +51,8 @@ const ANNOTATIONS = [
   }),
   widget({fieldType: 'Btn', fieldName: 'submit', pushButton: true}),
   widget({fieldType: 'Sig', fieldName: 'sig'}),
+  // A radio widget without an on-state has no value to store.
+  widget({fieldType: 'Btn', fieldName: 'pay', radioButton: true, buttonValue: null}),
   {subtype: 'Link', rect: [0, 0, 10, 10]},
 ];
 
@@ -150,11 +152,12 @@ describe('FieldLayer', () => {
     expect(setField).toHaveBeenCalledWith('f', 'city', 'Rome');
   });
 
-  it('push buttons, signature fields and non-widgets render nothing', async () => {
+  it('push buttons, signature fields, stateless radios and non-widgets render nothing', async () => {
     const {container} = setup();
     await screen.findByRole('combobox', {name: 'city'});
     expect(container.querySelectorAll('input, textarea, select')).toHaveLength(6);
     expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.getAllByRole('radio')).toHaveLength(2);
   });
 
   it('readOnly controls are disabled', async () => {

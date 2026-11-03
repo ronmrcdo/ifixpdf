@@ -7,6 +7,7 @@ import {
   PDFName,
   PDFOperator,
   PDFOperatorNames,
+  PDFOptionList,
   PDFRadioGroup,
   type PDFPage,
   PDFRef,
@@ -309,10 +310,69 @@ describe('export-core', () => {
       expect((await run({notes: '漢字\nx', name: 'Ann'})).join('')).not.toContain('x');
     });
 
-    it('maps a radio value pdf.js reports as an /Opt index to its option', async () => {
+    // A form with radio group `r` whose widgets have the given /Opt texts and appearance states.
+    const radioPdf = async (opts: string[], states?: string[]) => {
+      const doc = await PDFDocument.create();
+      const page = doc.addPage([300, 300]);
+      const r = doc.getForm().createRadioGroup('r');
+      opts.forEach((o, i) => {
+        r.addOptionToPage(o, page, {x: 20 + 40 * i, y: 200, width: 15, height: 15});
+      });
+      r.acroField.getWidgets().forEach((w, i) => {
+        const n = w.getAppearances()?.normal;
+        const on = w.getOnValue();
+        const to = states?.[i];
+        if (!(n instanceof PDFDict) || !on || !to) return;
+        n.set(PDFName.of(to), n.get(on)!);
+        n.delete(on);
+      });
+      return doc.save();
+    };
+    const selected = async (sources: ExportSpec['sources'], value: string) => {
       const select = vi.spyOn(PDFRadioGroup.prototype, 'select');
-      await buildPdf(await formSpec({F: {pay: '1'}}));
-      expect(select).toHaveBeenLastCalledWith('net60');
+      try {
+        await buildPdf({...(await formSpec({F: {r: value}})), sources});
+        return select.mock.calls.at(-1)?.[0];
+      } finally {
+        select.mockRestore();
+      }
+    };
+
+    it('maps a radio value pdf.js reports as an appearance state to its /Opt option', async () => {
+      expect(await selected({F: await radioPdf(['net30', 'net60'])}, '1')).toBe('net60');
+      const named = await radioPdf(['A', 'B'], ['Choice1', 'Choice2']);
+      expect(await selected({F: named}, 'Choice2')).toBe('B');
+    });
+
+    it('maps by state position even when /Opt texts look like state names', async () => {
+      // Opt ["1","0"], states "0","1": state "1" is the second widget, option "0".
+      expect(await selected({F: await radioPdf(['1', '0'])}, '1')).toBe('0');
+    });
+
+    it('fills a choice whose /Opt entry is an [export, display] pair by its export value', async () => {
+      const doc = await PDFDocument.load(await makeFormPdf());
+      doc
+        .getForm()
+        .getDropdown('city')
+        .acroField.setOptions([
+          {value: PDFHexString.fromText('PAR'), display: PDFHexString.fromText('Paris')},
+          {value: PDFHexString.fromText('ROM'), display: PDFHexString.fromText('Rome')},
+        ]);
+      const out = await buildPdf({
+        ...(await formSpec({F: {city: 'ROM'}})),
+        sources: {F: await doc.save()},
+      });
+      expect(await strsOf(out)).toContain('Rome');
+    });
+
+    it('fills a list box', async () => {
+      const doc = await PDFDocument.load(await makeFormPdf());
+      const list = doc.getForm().createOptionList('size');
+      list.addOptions(['S', 'M']);
+      list.addToPage(doc.getPage(0), {x: 150, y: 20, width: 60, height: 40});
+      const select = vi.spyOn(PDFOptionList.prototype, 'select');
+      await buildPdf({...(await formSpec({F: {size: 'M'}})), sources: {F: await doc.save()}});
+      expect(select).toHaveBeenCalledWith('M');
       select.mockRestore();
     });
 
