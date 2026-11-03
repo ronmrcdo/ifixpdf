@@ -421,7 +421,7 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
             rows={editing.text.split('\n').length}
             value={editing.text}
             aria-invalid={error.length > 0}
-            aria-describedby="markup-text-error"
+            aria-describedby={error.length ? 'markup-text-error' : undefined}
             style={{fontSize: editing.size * scale, lineHeight: LINE}}
             ref={(el) => el?.focus()}
             onChange={(e) => setEditing({...editing, text: cleanText(e.target.value)})}

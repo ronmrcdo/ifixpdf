@@ -169,9 +169,11 @@ describe('MarkupLayer text', () => {
     setup();
     click(100, 100);
     const input = screen.getByRole('textbox', {name: 'Text'});
+    expect(input).not.toHaveAttribute('aria-describedby');
     await userEvent.type(input, '日本');
     expect(screen.getByRole('alert')).toHaveTextContent("This character isn't supported: 日, 本");
     expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription("This character isn't supported: 日, 本");
     await userEvent.keyboard('{Enter}');
     fireEvent.blur(input);
     expect(markup()).toEqual([]);
