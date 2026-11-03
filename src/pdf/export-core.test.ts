@@ -3,6 +3,7 @@ import {
   PDFArray,
   PDFDict,
   PDFDocument,
+  PDFDropdown,
   PDFHexString,
   PDFName,
   PDFOperator,
@@ -393,6 +394,36 @@ describe('export-core', () => {
       expect(await strsOf(out)).toContain('Rome');
     });
 
+    it('selects a radio whose state names are not Latin', async () => {
+      // Names hold bytes; pdf.js reports UTF-8 "Да"/"Нет" byte for byte, and 0x9D isn't WinAnsi.
+      const [da, net] = ['Да', 'Нет'].map((t) =>
+        String.fromCharCode(...new TextEncoder().encode(t)),
+      );
+      const named = await radioPdf(['A', 'B'], [da!, net!]);
+      expect(await selected({F: named}, net!)).toBe('B');
+    });
+
+    it('skips a choice whose display text Helvetica cannot encode', async () => {
+      const doc = await PDFDocument.load(await makeFormPdf());
+      doc
+        .getForm()
+        .getDropdown('city')
+        .acroField.setOptions([
+          {value: PDFHexString.fromText('JP'), display: PDFHexString.fromText('日本')},
+        ]);
+      const select = vi.spyOn(PDFDropdown.prototype, 'select');
+      try {
+        const out = await buildPdf({
+          ...(await formSpec({F: {city: 'JP', name: 'Ann'}})),
+          sources: {F: await doc.save()},
+        });
+        expect(select).not.toHaveBeenCalled();
+        expect(await strsOf(out)).toContain('Ann');
+      } finally {
+        select.mockRestore();
+      }
+    });
+
     it('fills a list box', async () => {
       const doc = await PDFDocument.load(await makeFormPdf());
       const list = doc.getForm().createOptionList('size');
@@ -432,6 +463,42 @@ describe('export-core', () => {
         sources: {F: await doc.save()},
       });
       expect(await strsOf(out)).toContain('Rome');
+    });
+
+    it('flattens a form holding a signature field with no appearance', async () => {
+      const doc = await PDFDocument.load(await makeFormPdf());
+      const ctx = doc.context;
+      const page = doc.getPage(0);
+      const sig = ctx.register(
+        ctx.obj({
+          FT: 'Sig',
+          T: PDFString.of('sig'),
+          Type: 'Annot',
+          Subtype: 'Widget',
+          Rect: [20, 20, 120, 50],
+          P: page.ref,
+        }),
+      );
+      page.node.addAnnot(sig);
+      doc.getForm().acroForm.addField(sig);
+      const out = await buildPdf({
+        ...(await formSpec({F: {name: 'Ann'}})),
+        sources: {F: await doc.save({updateFieldAppearances: false})},
+      });
+      expect(await strsOf(out)).toContain('Ann');
+    });
+
+    it('flattens an untouched non-WinAnsi text field that has no appearance', async () => {
+      const doc = await PDFDocument.load(await makeFormPdf());
+      const notes = doc.getForm().createTextField('notes');
+      notes.addToPage(doc.getPage(0), {x: 20, y: 100, width: 150, height: 20});
+      notes.acroField.setValue(PDFHexString.fromText('Привет'));
+      for (const w of notes.acroField.getWidgets()) w.dict.delete(PDFName.of('AP'));
+      const out = await buildPdf({
+        ...(await formSpec({F: {name: 'Ann'}})),
+        sources: {F: await doc.save({updateFieldAppearances: false})},
+      });
+      expect(await strsOf(out)).toContain('Ann');
     });
   });
 

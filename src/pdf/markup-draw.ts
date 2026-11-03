@@ -1,12 +1,16 @@
 import {
   PDFCheckBox,
-  PDFDropdown,
-  PDFOptionList,
+  PDFDict,
   type PDFDocument,
+  PDFDropdown,
+  type PDFField,
+  PDFName,
+  PDFOptionList,
   type PDFFont,
   type PDFImage,
   type PDFPage,
   PDFRadioGroup,
+  PDFRef,
   PDFTextField,
   StandardFonts,
   degrees,
@@ -108,14 +112,13 @@ export function applyFills(doc: PDFDocument, values: Readonly<Record<string, Fie
   for (const [name, value] of Object.entries(values)) {
     const field = form.getFieldMaybe(name);
     try {
-      // flatten() redraws dirty fields in Helvetica and throws on anything it can't encode.
-      if (typeof value === 'string') {
-        const multiline = field instanceof PDFTextField && field.isMultiline();
+      // Dirty fields are redrawn in Helvetica, so drawn text must encode; radio states never are.
+      if (field instanceof PDFTextField && typeof value === 'string') {
         // multiline layout splits lines before encoding, so newlines are fine there
-        for (const line of multiline ? value.split(/\r\n|\r|\n/) : [value]) font.encodeText(line);
-      }
-      if (field instanceof PDFTextField && typeof value === 'string') field.setText(value);
-      else if (field instanceof PDFCheckBox && typeof value === 'boolean') {
+        const lines = field.isMultiline() ? value.split(/\r\n|\r|\n/) : [value];
+        for (const line of lines) font.encodeText(line);
+        field.setText(value);
+      } else if (field instanceof PDFCheckBox && typeof value === 'boolean') {
         if (value) field.check();
         else field.uncheck();
       } else if (field instanceof PDFRadioGroup && typeof value === 'string') {
@@ -131,11 +134,35 @@ export function applyFills(doc: PDFDocument, values: Readonly<Record<string, Fie
         // The value is an /Opt export value (pdf.js exportValue); select() takes the display text.
         const i = field.acroField.getOptions().findIndex((o) => o.value.decodeText() === value);
         const option = field.getOptions()[i];
-        if (option !== undefined) field.select(option);
+        if (option === undefined) continue;
+        font.encodeText(option);
+        field.select(option);
       }
     } catch {
       // skip this value
     }
   }
-  form.flatten();
+  const blank = doc.context.register(doc.context.formXObject([], {BBox: [0, 0, 0, 0]}));
+  for (const field of form.getFields()) {
+    try {
+      if (field.needsAppearancesUpdate()) field.defaultUpdateAppearances(font);
+    } catch {
+      // can't be redrawn in Helvetica: keeps its stored appearance, or is blanked below
+    }
+    for (const widget of field.acroField.getWidgets()) {
+      if (!hasAppearance(field, widget.dict)) widget.setNormalAppearance(blank);
+    }
+  }
+  // Every widget now has an appearance pdf-lib can draw, so flatten cannot throw on one.
+  form.flatten({updateFieldAppearances: false});
+}
+
+// Mirrors pdf-lib's private findWidgetAppearanceRef, which flatten() throws from.
+function hasAppearance(field: PDFField, widget: PDFDict): boolean {
+  const n = widget.lookupMaybe(PDFName.of('AP'), PDFDict)?.get(PDFName.of('N'));
+  if (n instanceof PDFRef) return true;
+  if (!(n instanceof PDFDict)) return false;
+  if (!(field instanceof PDFCheckBox || field instanceof PDFRadioGroup)) return false;
+  const state = field.acroField.getValue();
+  return (n.get(state) ?? n.get(PDFName.of('Off'))) instanceof PDFRef;
 }
