@@ -5,7 +5,7 @@ import {zipSync} from 'fflate';
 import type {Fills, Markup} from '../domain/markup';
 import type {FileId, Rotation} from '../domain/types';
 import {splitPartName} from '../domain/naming';
-import {drawMarkup} from './markup-draw';
+import {applyFills, drawMarkup} from './markup-draw';
 
 export interface ExportSpec {
   pages: Array<{fileId: FileId; local: number; rotation: Rotation; markup?: readonly Markup[]}>;
@@ -32,6 +32,7 @@ export async function buildFrom(
   loaded: Map<FileId, PDFDocument>,
   pages: ExportSpec['pages'],
   title: string,
+  fills: Fills = {},
   onProgress?: Progress,
 ): Promise<Uint8Array> {
   const out = await PDFDocument.create();
@@ -39,6 +40,9 @@ export async function buildFrom(
   // One copyPages per source shares resources across its pages; pdf-lib clones the page
   // dict per index, so a repeated page still gets its own /Rotate.
   for (const [fileId, doc] of loaded) {
+    const values = fills[fileId];
+    // Flatten before copyPages: pdf-lib drops /AcroForm on copy, leaving dead widgets.
+    if (values && Object.keys(values).length) applyFills(doc, values);
     const at = pages.flatMap((p, i) => (p.fileId === fileId ? [i] : []));
     const copied = await out.copyPages(
       doc,
@@ -66,7 +70,7 @@ export async function buildPdf(spec: ExportSpec, onProgress?: Progress): Promise
     spec.sources,
     spec.pages.map((p) => p.fileId),
   );
-  return buildFrom(loaded, spec.pages, spec.title, onProgress);
+  return buildFrom(loaded, spec.pages, spec.title, spec.fills, onProgress);
 }
 
 export async function countPages(bytes: Uint8Array): Promise<number> {
@@ -93,7 +97,12 @@ export async function splitZip(
   );
   const entries: Record<string, Uint8Array> = {};
   for (const [i, pages] of parts.entries()) {
-    entries[splitPartName(baseName, i + 1)] = await buildFrom(loaded, pages, spec.title);
+    entries[splitPartName(baseName, i + 1)] = await buildFrom(
+      loaded,
+      pages,
+      spec.title,
+      spec.fills,
+    );
     onProgress?.(i + 1, groups.length);
   }
   return zipSync(entries);
