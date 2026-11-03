@@ -1,7 +1,7 @@
 // Every export goes through one "Save as" (native dialog + fs in Tauri, picker or download in the browser).
 import type {Download, Page} from '@playwright/test';
 import {PDFDocument, StandardFonts} from 'pdf-lib';
-import {findSecret} from '../../src/pdf/fixtures';
+import {findSecret, makeFormPdf} from '../../src/pdf/fixtures';
 import {test, expect, pdfFile, type App} from './fixtures';
 
 type Written = {bytes: number[]; path: string};
@@ -521,6 +521,31 @@ test.describe('native', () => {
     await page.keyboard.press('Control+s');
     await expect.poll(() => writes(page), {timeout: 30000}).toBe(1);
     await expectRedacted(page, (await written(page)).bytes);
+  });
+
+  test('Save as after filling every form field flattens it with the values', async ({
+    app,
+    page,
+  }) => {
+    test.setTimeout(60000);
+    const buffer = Buffer.from(await makeFormPdf());
+    await app.openPdf({name: 'Form.pdf', mimeType: 'application/pdf', buffer});
+    await app.view('Edit PDF');
+    await app.tab('Document').click();
+    const name = page.getByRole('textbox', {name: 'name', exact: true});
+    await name.fill('Ann');
+    await name.press('Enter');
+    await page.getByRole('checkbox', {name: 'agree'}).check();
+    await page.getByRole('radio', {name: 'pay'}).nth(1).check();
+    await page.getByRole('combobox', {name: 'city'}).selectOption('Rome');
+    await app.title.click();
+    await page.keyboard.press('Control+s');
+    await expect.poll(() => writes(page), {timeout: 30000}).toBe(1);
+    const {bytes} = await written(page);
+    expect((await PDFDocument.load(new Uint8Array(bytes))).getForm().getFields()).toEqual([]);
+    const [text] = await pageTexts(page, bytes);
+    expect(text).toContain('Ann');
+    expect(text).toContain('Rome');
   });
 });
 

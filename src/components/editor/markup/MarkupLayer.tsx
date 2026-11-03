@@ -1,6 +1,7 @@
 import {type KeyboardEvent, type PointerEvent, useRef, useState} from 'react';
 import {useStore} from 'zustand';
 import {
+  cleanText,
   MARK_PATHS,
   type Markup,
   markStroke,
@@ -9,6 +10,8 @@ import {
   shift,
   topLeft,
   unsupportedChars,
+  unsupportedMessage,
+  viewportBox,
 } from '../../../domain/markup';
 import type {Rotation} from '../../../domain/types';
 import type {WorkspaceStore} from '../../../state/workspace';
@@ -41,8 +44,6 @@ const LABELS: Record<Markup['kind'], string> = {
   redact: 'Redaction',
 };
 const label = (m: Markup) => (m.kind === 'text' ? `Text: ${m.text}` : LABELS[m.kind]);
-
-const clean = (s: string) => s.replace(/\r\n?/g, '\n').replace(/\t/g, ' ');
 
 let measurer: CanvasRenderingContext2D | null | undefined;
 /** Text rect from its display top-left (PDF point), measured at Helvetica metrics like the export. */
@@ -103,15 +104,7 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
     const [px, py] = viewport.convertToPdfPoint(x, y);
     return [px, py];
   };
-  const box = (r: Rect) => {
-    const [x1, y1, x2, y2] = viewport.convertToViewportRectangle([r.x, r.y, r.x + r.w, r.y + r.h]);
-    return {
-      left: Math.min(x1, x2),
-      top: Math.min(y1, y2),
-      width: Math.abs(x2 - x1),
-      height: Math.abs(y2 - y1),
-    };
-  };
+  const box = (r: Rect) => viewportBox(viewport, [r.x, r.y, r.x + r.w, r.y + r.h]);
   const local = (e: PointerEvent): Point => {
     const r = rootRef.current?.getBoundingClientRect();
     return [e.clientX - (r?.left ?? 0), e.clientY - (r?.top ?? 0)];
@@ -338,7 +331,7 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
             aria-describedby="markup-text-error"
             style={{fontSize: editing.size * scale, lineHeight: LINE}}
             ref={(el) => el?.focus()}
-            onChange={(e) => setEditing({...editing, text: clean(e.target.value)})}
+            onChange={(e) => setEditing({...editing, text: cleanText(e.target.value)})}
             onBlur={commit}
             onKeyDown={(e) => {
               if (e.key === 'Escape') setEditing(null);
@@ -349,7 +342,7 @@ export function MarkupLayer({store, view, readOnly = false}: Props) {
             }}
           />
           <small id="markup-text-error" role="alert">
-            {error.length ? `This character isn't supported: ${error.join(', ')}` : ''}
+            {unsupportedMessage(error)}
           </small>
         </div>
       )}

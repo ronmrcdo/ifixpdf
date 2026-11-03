@@ -2,6 +2,7 @@ import {Pencil} from 'lucide-react';
 import {lazy, Suspense, useEffect} from 'react';
 import {useStore} from 'zustand';
 import {Editor} from '../../components/editor/Editor';
+import {Overlay} from '../../components/editor/markup/Overlay';
 import {useTool} from '../../components/editor/markup/tool';
 import {documentStore, useDocument} from '../../state/workspaces';
 import {EmptyState} from '../EmptyState';
@@ -9,9 +10,6 @@ import {EmptyState} from '../EmptyState';
 // Loaded on first Document-tab visit so the tool UI stays out of startup.
 const ToolStrip = lazy(() =>
   import('../../components/editor/markup/ToolStrip').then((m) => ({default: m.ToolStrip})),
-);
-const MarkupLayer = lazy(() =>
-  import('../../components/editor/markup/MarkupLayer').then((m) => ({default: m.MarkupLayer})),
 );
 
 export function EditView({onSplit}: {onSplit?: () => void}) {
@@ -45,11 +43,7 @@ export function EditView({onSplit}: {onSplit?: () => void}) {
       <Editor.Row>
         <Editor.Stage
           caption="Document preview"
-          overlay={(view) => (
-            <Suspense fallback={null}>
-              <MarkupLayer store={documentStore} view={view} />
-            </Suspense>
-          )}
+          overlay={(view) => <Overlay store={documentStore} view={view} />}
         >
           <Editor.Pages onSplit={onSplit} />
         </Editor.Stage>

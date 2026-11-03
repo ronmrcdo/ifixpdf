@@ -7,6 +7,7 @@ import {
   PDFName,
   PDFOperator,
   PDFOperatorNames,
+  PDFRadioGroup,
   type PDFPage,
   PDFRef,
   PDFString,
@@ -306,6 +307,13 @@ describe('export-core', () => {
         expect.arrayContaining(['line one', 'line two']),
       );
       expect((await run({notes: '漢字\nx', name: 'Ann'})).join('')).not.toContain('x');
+    });
+
+    it('maps a radio value pdf.js reports as an /Opt index to its option', async () => {
+      const select = vi.spyOn(PDFRadioGroup.prototype, 'select');
+      await buildPdf(await formSpec({F: {pay: '1'}}));
+      expect(select).toHaveBeenLastCalledWith('net60');
+      select.mockRestore();
     });
 
     it('flattens a source page used twice once', async () => {

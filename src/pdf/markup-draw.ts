@@ -106,8 +106,11 @@ export function applyFills(doc: PDFDocument, values: Readonly<Record<string, Fie
       else if (field instanceof PDFCheckBox && typeof value === 'boolean') {
         if (value) field.check();
         else field.uncheck();
-      } else if (field instanceof PDFRadioGroup && typeof value === 'string') field.select(value);
-      else if (
+      } else if (field instanceof PDFRadioGroup && typeof value === 'string') {
+        // With /Opt, appearance states (what pdf.js calls buttonValue) are indexes into it.
+        const options = field.getOptions();
+        field.select(options.includes(value) ? value : (options[Number(value)] ?? value));
+      } else if (
         field instanceof PDFDropdown &&
         typeof value === 'string' &&
         field.getOptions().includes(value)
