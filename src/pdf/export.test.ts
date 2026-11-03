@@ -325,9 +325,8 @@ describe('export.ts redaction pass', () => {
     }
     vi.stubGlobal('Worker', FakeWorker);
     const {buildPdf} = await import('./export');
-    const jpeg = TINY_JPEG.slice();
     const raster = vi.fn(async () => [
-      {index: 1, jpeg},
+      {index: 1, jpeg: TINY_JPEG.slice()},
       {index: 3, jpeg: TINY_JPEG.slice()},
     ]);
     const p = buildPdf(await spec(), undefined, raster);
@@ -336,7 +335,6 @@ describe('export.ts redaction pass', () => {
     await vi.waitFor(() => expect(posted).toHaveLength(2));
     expect(posted[1]!.msg.op).toBe('raster');
     expect(posted[1]!.transfer).toHaveLength(3);
-    expect(jpeg.byteLength).toBe(TINY_JPEG.byteLength); // caller's array survives the transfer
     reply({id: posted[1]!.msg.id, error: 'bad'});
     await expect(p).rejects.toThrow('bad');
   });

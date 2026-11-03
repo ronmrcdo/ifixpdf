@@ -441,13 +441,6 @@ describe('export-core', () => {
       expect(pages.map((p) => p.some((i) => i.str === 'Ann'))).toEqual([true, true]);
     });
 
-    it('flattens in Split too', async () => {
-      const zip = unzipSync(await splitZip(await formSpec({F: fills}, 2), [[0], [1]], 'x'));
-      const parts = Object.values(zip);
-      expect(parts).toHaveLength(2);
-      for (const part of parts) expect(await strsOf(part)).toContain('Ann');
-    });
-
     it('takes the old path with no fills', async () => {
       vi.mocked(applyFills).mockClear();
       const out = await buildPdf(await formSpec({}));

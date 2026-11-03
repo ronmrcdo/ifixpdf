@@ -124,10 +124,9 @@ export async function buildPdf(
     throw new Error('A redacted page was not rendered.');
   }
   const w = getWorker();
-  // Copies, so whatever raster or its caller still holds survives the transfer.
-  const copies = images.map((i) => ({index: i.index, jpeg: i.jpeg.slice()}));
-  if (w) return inWorker(w, {op: 'raster', bytes: bytes.slice(), images: copies});
-  return (await import('./export-core')).replaceWithImages(bytes, copies);
+  // Transferred as-is: nothing reads the pass-1 bytes or the JPEGs after this.
+  if (w) return inWorker(w, {op: 'raster', bytes, images});
+  return (await import('./export-core')).replaceWithImages(bytes, images);
 }
 
 export async function protectPdf(bytes: Uint8Array, password: string): Promise<Uint8Array> {
@@ -154,10 +153,14 @@ export async function splitZip(
   raster?: Raster,
 ): Promise<Uint8Array> {
   if (hasMarkup(spec.pages, spec.fills)) {
-    const built = spec.pages.length + spec.pages.filter(hasRedaction).length; // buildPdf's progress total
+    let built = 0; // buildPdf's progress total, from its own reports
     const out = await buildPdf(
       spec,
-      onProgress && ((d) => onProgress(d, built + groups.length)),
+      onProgress &&
+        ((d, t) => {
+          built = t;
+          onProgress(d, t + groups.length);
+        }),
       raster,
     );
     const flat: ExportSpec = {
