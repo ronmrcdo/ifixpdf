@@ -35,6 +35,22 @@ describe('draft', () => {
     expect(d?.record).toEqual(record('a', 'b'));
     expect([...(d?.bytes.get('b') ?? [])]).toEqual([2]);
   });
+  it('accepts a record without fills or markup and round-trips fills and markup', async () => {
+    await writeDraft(record('a'), bytesOf('a'));
+    expect((await readDraft())?.record.fills).toBeUndefined();
+    const withMarks: DraftRecord = {
+      ...record('a'),
+      pages: [
+        {
+          ...page('a'),
+          markup: [{id: 'm', kind: 'redact', rect: {x: 0, y: 0, w: 1, h: 1}, angle: 0}],
+        },
+      ],
+      fills: {a: {n: true}},
+    };
+    await writeDraft(withMarks, bytesOf('a'));
+    expect((await readDraft())?.record).toEqual(withMarks);
+  });
   it('is null when nothing is stored', async () => {
     expect(await readDraft()).toBeNull();
   });

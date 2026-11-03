@@ -2,11 +2,13 @@ import * as pdfLib from 'pdf-lib';
 import {PDFDocument, type PDFPage, degrees} from 'pdf-lib';
 import {configure, lock} from 'pdf-lib-encrypt';
 import {zipSync} from 'fflate';
+import type {Fills, Markup} from '../domain/markup';
 import type {FileId, Rotation} from '../domain/types';
 import {splitPartName} from '../domain/naming';
 
 export interface ExportSpec {
-  pages: Array<{fileId: FileId; local: number; rotation: Rotation}>;
+  pages: Array<{fileId: FileId; local: number; rotation: Rotation; markup?: readonly Markup[]}>;
+  fills?: Fills;
   sources: Record<FileId, Uint8Array>;
   title: string;
 }

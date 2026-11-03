@@ -1,3 +1,4 @@
+import type {Fills} from '../domain/markup';
 import type {ExportSettings, FileId, PageInstance, PageUid, SourceFile} from '../domain/types';
 import {ensureStores, openDb, req, withDb} from './idb';
 
@@ -9,6 +10,8 @@ export interface DraftRecord {
   selection: PageUid[];
   anchor: PageUid | null;
   exportSettings: ExportSettings;
+  /** Absent in drafts saved before form fill. */
+  fills?: Fills;
   savedAt: number;
 }
 

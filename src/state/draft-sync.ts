@@ -12,6 +12,7 @@ let store: StoreApi<WorkspaceState> | null = null;
 const toRecord = (s: WorkspaceState): DraftRecord => ({
   files: s.files,
   pages: s.pages,
+  fills: s.fills,
   currentPage: s.currentPage,
   view: useApp.getState().documentView,
   selection: [...s.selection.uids],
@@ -62,6 +63,7 @@ export function startDraftSync(target: StoreApi<WorkspaceState>): () => void {
     const same =
       s.files === p.files &&
       s.pages === p.pages &&
+      s.fills === p.fills &&
       s.currentPage === p.currentPage &&
       s.selection === p.selection &&
       s.exportSettings === p.exportSettings;
