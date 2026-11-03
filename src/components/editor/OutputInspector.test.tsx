@@ -132,4 +132,44 @@ describe('OutputInspector', () => {
     });
     expect(screen.getByRole('button', {name: 'Save edited PDF'})).toBeDisabled();
   });
+
+  it('summarizes the markup and fills the copy includes', () => {
+    setup();
+    const m = (id: string, kind: 'check' | 'cross' | 'signature' | 'redact' | 'text') =>
+      ({
+        id,
+        kind,
+        angle: 0,
+        rect: {x: 0, y: 0, w: 1, h: 1},
+        text: 'a',
+        size: 12,
+        image: '',
+      }) as never;
+    act(() =>
+      store.setState({
+        pages: [
+          {...pages[0]!, markup: [m('1', 'text'), m('2', 'text'), m('3', 'check')]},
+          {...pages[1]!, markup: [m('4', 'text'), m('5', 'cross'), m('6', 'signature')]},
+          {...pages[2]!, markup: [m('7', 'redact')]},
+        ],
+      }),
+    );
+    expect(document.getElementById('markup-summary')).toHaveTextContent(
+      /^3 text items, 2 marks, 1 signature, 1 redaction\. Redacted pages are saved as images\.$/,
+    );
+    act(() =>
+      store.setState({
+        pages: [{...pages[0]!, markup: [m('1', 'text')]}, pages[1]!, pages[2]!],
+        fills: {f: {a: 'x', b: true}},
+      }),
+    );
+    expect(document.getElementById('markup-summary')).toHaveTextContent(
+      /^1 text item, 2 filled fields\.$/,
+    );
+  });
+
+  it('shows no markup summary without markup or fills', () => {
+    setup();
+    expect(document.getElementById('markup-summary')).toBeNull();
+  });
 });

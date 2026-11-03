@@ -79,7 +79,8 @@
   width: 14px;
   height: 14px;
 }
-.export-summary strong {
+.export-summary strong,
+.export-summary small {
   font-size: var(--text-label);
   color: var(--muted);
   font-weight: 400;
