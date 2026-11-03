@@ -1,3 +1,5 @@
+import type {Markup} from './markup';
+
 export type FileId = string;
 export type PageUid = string;
 export type Rotation = 0 | 90 | 180 | 270;
@@ -14,6 +16,7 @@ export interface PageInstance {
   fileId: FileId;
   local: number;
   rotation: Rotation;
+  markup?: readonly Markup[];
 }
 export interface Selection {
   uids: ReadonlySet<PageUid>;
