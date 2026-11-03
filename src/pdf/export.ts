@@ -1,7 +1,7 @@
 import {hasMarkup, hasRedaction} from '../domain/markup';
 import type {ExportSpec, Progress} from './export-core';
 import type {ExportRequest} from './export.worker';
-import type {RasterImage} from './rasterize';
+import type {RasterImage, RasterPage} from './rasterize';
 
 export type {ExportSpec} from './export-core';
 
@@ -90,7 +90,7 @@ function inWorker<T extends Uint8Array | number>(
 
 export type Raster = (
   bytes: Uint8Array,
-  indices: number[],
+  pages: RasterPage[],
   onProgress?: Progress,
 ) => Promise<RasterImage[]>;
 // Lazy: pdf.js rendering for redaction loads only when a redaction is exported.
@@ -115,7 +115,11 @@ export async function buildPdf(
   const done = spec.pages.length;
   const total = done + redacted.length;
   const bytes = await build(spec, onProgress && ((d) => onProgress(d, total)));
-  const images = await raster(bytes, redacted, onProgress && ((d) => onProgress(done + d, total)));
+  const pages = redacted.map((index) => ({
+    index,
+    rects: (spec.pages[index]?.markup ?? []).flatMap((m) => (m.kind === 'redact' ? [m.rect] : [])),
+  }));
+  const images = await raster(bytes, pages, onProgress && ((d) => onProgress(done + d, total)));
   if (images.map((i) => i.index).join() !== redacted.join()) {
     throw new Error('A redacted page was not rendered.');
   }

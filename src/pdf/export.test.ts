@@ -249,8 +249,8 @@ describe('export.ts redaction pass', () => {
       {fileId: 'a', local: 1, rotation: 0 as const, markup: [redact]}, // duplicate of page 1
     ],
   });
-  const images = (_b: Uint8Array, indices: number[]) =>
-    Promise.resolve(indices.map((index) => ({index, jpeg: TINY_JPEG})));
+  const images = (_b: Uint8Array, pages: {index: number}[]) =>
+    Promise.resolve(pages.map(({index}) => ({index, jpeg: TINY_JPEG})));
 
   it('does not rasterize when nothing is redacted', async () => {
     vi.stubGlobal('Worker', undefined);
@@ -270,16 +270,23 @@ describe('export.ts redaction pass', () => {
     vi.stubGlobal('Worker', undefined);
     const {buildPdf} = await import('./export');
     const raster = vi.fn(
-      async (b: Uint8Array, indices: number[], onProgress?: (d: number, t: number) => void) => {
+      async (
+        b: Uint8Array,
+        pages: {index: number}[],
+        onProgress?: (d: number, t: number) => void,
+      ) => {
         expect((await PDFDocument.load(b)).getPageCount()).toBe(4); // pass-1 output
         onProgress?.(1, 2);
         onProgress?.(2, 2);
-        return images(b, indices);
+        return images(b, pages);
       },
     );
     const progress = vi.fn();
     const out = await buildPdf(await spec(), progress, raster);
-    expect(raster.mock.calls[0]![1]).toEqual([1, 3]);
+    expect(raster.mock.calls[0]![1]).toEqual([
+      {index: 1, rects: [redact.rect]},
+      {index: 3, rects: [redact.rect]},
+    ]);
     expect(progress.mock.calls.map(([d, t]) => `${d}/${t}`)).toEqual([
       '1/6',
       '2/6',
@@ -299,7 +306,9 @@ describe('export.ts redaction pass', () => {
     await expect(
       buildPdf(await spec(), undefined, () => Promise.reject(new Error('gpu'))),
     ).rejects.toThrow('gpu');
-    await expect(buildPdf(await spec(), undefined, (b) => images(b, [1]))).rejects.toThrow();
+    await expect(
+      buildPdf(await spec(), undefined, (b) => images(b, [{index: 1}])),
+    ).rejects.toThrow();
   });
 
   it('runs the raster op in the worker and fails closed on its error', async () => {
