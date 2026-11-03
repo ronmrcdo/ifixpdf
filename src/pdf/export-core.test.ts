@@ -560,15 +560,15 @@ describe('export-core', () => {
     });
 
     // Page 1 adopts page 0's resource dict (with page 1's fonts added) and appends `raw` content.
-    const sharing = (raw: string, fontKey?: string) =>
+    const sharing = (raw: string | string[], fontKey?: string) =>
       sharedSource((doc, _x0, res0, p1) => {
         const fonts = doc.context.lookup(p1.node.Resources()!.get(PDFName.of('Font')), PDFDict);
         const font = fontKey ? doc.context.obj({[fontKey]: fonts.values()[0]!}) : fonts;
         doc.context.lookup(res0, PDFDict).set(PDFName.of('Font'), font);
         p1.node.set(PDFName.of('Resources'), res0);
-        const extra = doc.context.register(doc.context.stream(raw));
+        const extra = [raw].flat().map((r) => doc.context.register(doc.context.stream(r)));
         const own = fontKey ? [] : p1.node.lookup(PDFName.of('Contents'), PDFArray).asArray();
-        p1.node.set(PDFName.of('Contents'), doc.context.obj([...own, extra]));
+        p1.node.set(PDFName.of('Contents'), doc.context.obj([...own, ...extra]));
       });
 
     it('ignores a marked-content tag named like a resource', async () => {
@@ -592,6 +592,39 @@ describe('export-core', () => {
     it('skips inline image data that looks like operators', async () => {
       const src = await sharing('q BI /W 8 /H 1 /BPC 8 /CS /G ID x /X0 Do\nEI Q');
       expect(await leakCheck(src)).toEqual([]);
+    });
+
+    it('ignores an operator inside an array operand', async () => {
+      expect(await leakCheck(await sharing('[/X0 Do] TJ'))).toEqual([]);
+    });
+
+    it('ignores an operator inside a dict operand', async () => {
+      expect(await leakCheck(await sharing('/Span <</A /X0 Do>> BDC EMC'))).toEqual([]);
+    });
+
+    it('does not let a stray > swallow the opening paren of a string', async () => {
+      expect(await leakCheck(await sharing('>(/X0 Do) Tj'))).toEqual([]);
+    });
+
+    it('tokenizes the content streams joined, as renderers do', async () => {
+      expect(await leakCheck(await sharing(['(open', '/X0 Do']))).toEqual([]);
+    });
+
+    it.each([
+      '(abc',
+      '<abc',
+      '<<',
+      'BI /W 1 ID xxxx',
+      '(abc\\',
+      '',
+      '%x',
+      '/',
+      ')))>>>]]}',
+      '<</A',
+      'BI ID',
+      ']]>>>>',
+    ])('terminates on truncated or unbalanced content %j', async (raw) => {
+      expect(await leakCheck(await sharing(raw))).toEqual([]);
     });
 
     it('treats a broken /Resources on a kept page as none', async () => {

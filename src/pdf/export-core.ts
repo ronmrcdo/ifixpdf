@@ -117,55 +117,62 @@ function usedNames(streams: PDFStream[]): Map<string, Set<string>> {
   const use = (category: string, name: string | null | undefined): void => {
     if (name) used.set(category, (used.get(category) ?? new Set()).add(name));
   };
-  for (const stream of streams) {
-    if (!(stream instanceof PDFRawStream)) throw new Error('Unreadable page content.');
-    const text = strFromU8(decodePDFRawStream(stream).decode(), true);
-    let stack: Array<string | null> = []; // names, or null for any other operand
-    let i = 0;
-    while (i < text.length) {
-      const c = text[i]!;
-      if (WHITESPACE.includes(c)) {
-        i++;
-      } else if (c === '%') {
-        while (i < text.length && text[i] !== '\n' && text[i] !== '\r') i++;
-      } else if (c === '(') {
-        for (let depth = 0; i < text.length; i++) {
-          if (text[i] === '\\') i++;
-          else if (text[i] === '(') depth++;
-          else if (text[i] === ')' && --depth === 0) break;
-        }
-        i++;
-        stack.push(null);
-      } else if (c === '<' && text[i + 1] !== '<') {
-        const end = text.indexOf('>', i);
-        i = end < 0 ? text.length : end + 1;
-        stack.push(null);
-      } else if ('<>[]{})'.includes(c)) {
-        // A stray ')' lands here too, so every branch moves `i` forward.
-        i += c === '<' || c === '>' ? 2 : 1;
-        stack.push(null);
+  // Streams are tokenized joined, as renderers concatenate them (PDF 32000 §7.7.3.3).
+  const text = streams
+    .map((stream) => {
+      if (!(stream instanceof PDFRawStream)) throw new Error('Unreadable page content.');
+      return strFromU8(decodePDFRawStream(stream).decode(), true);
+    })
+    .join('\n');
+  let stack: Array<string | null> = []; // names, or null for any other operand
+  let depth = 0; // inside an array or dict operand, where operator tokens are only data
+  let i = 0;
+  while (i < text.length) {
+    const c = text[i]!;
+    if (WHITESPACE.includes(c)) {
+      i++;
+    } else if (c === '%') {
+      while (i < text.length && text[i] !== '\n' && text[i] !== '\r') i++;
+    } else if (c === '(') {
+      for (let nest = 0; i < text.length; i++) {
+        if (text[i] === '\\') i++;
+        else if (text[i] === '(') nest++;
+        else if (text[i] === ')' && --nest === 0) break;
+      }
+      i++;
+      stack.push(null);
+    } else if (c === '<' && text[i + 1] !== '<') {
+      const end = text.indexOf('>', i);
+      i = end < 0 ? text.length : end + 1;
+      stack.push(null);
+    } else if ('<>[]{})'.includes(c)) {
+      // A stray ')' lands here too, so every branch moves `i` forward.
+      const double = (c === '<' || c === '>') && text[i + 1] === c;
+      i += double ? 2 : 1;
+      if (c === '[' || (c === '<' && double)) depth++;
+      if (c === ']' || (c === '>' && double)) depth = Math.max(0, depth - 1);
+      stack.push(null);
+    } else {
+      const start = c === '/' ? i + 1 : i;
+      let end = start;
+      while (end < text.length && !isDelimiter(text[end]!)) end++;
+      const token = text.slice(start, end);
+      i = end;
+      if (c === '/') stack.push(decodeName(token));
+      else if (isOperand(token) || depth > 0) stack.push(null);
+      else if (token === 'ID') {
+        // Inline image: its dict may name a colour space; its data runs to whitespace + EI.
+        stack.forEach((k, n) => {
+          if (k === 'CS' || k === 'ColorSpace') use('ColorSpace', stack[n + 1]);
+        });
+        const ei = /\sEI(?=\s|$)/g;
+        ei.lastIndex = i + 1;
+        i = ei.exec(text) ? ei.lastIndex : text.length;
+        stack = [];
       } else {
-        const start = c === '/' ? i + 1 : i;
-        let end = start;
-        while (end < text.length && !isDelimiter(text[end]!)) end++;
-        const token = text.slice(start, end);
-        i = end;
-        if (c === '/') stack.push(decodeName(token));
-        else if (isOperand(token)) stack.push(null);
-        else if (token === 'ID') {
-          // Inline image: its dict may name a colour space; its data runs to whitespace + EI.
-          stack.forEach((k, n) => {
-            if (k === 'CS' || k === 'ColorSpace') use('ColorSpace', stack[n + 1]);
-          });
-          const ei = /\sEI(?=\s|$)/g;
-          ei.lastIndex = i + 1;
-          i = ei.exec(text) ? ei.lastIndex : text.length;
-          stack = [];
-        } else {
-          const category = OPERAND_CATEGORY[token];
-          if (category) use(category, token === 'Tf' ? stack.at(-2) : stack.at(-1));
-          stack = [];
-        }
+        const category = OPERAND_CATEGORY[token];
+        if (category) use(category, token === 'Tf' ? stack.at(-2) : stack.at(-1));
+        stack = [];
       }
     }
   }
