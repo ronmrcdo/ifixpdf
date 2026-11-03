@@ -57,6 +57,10 @@ export function viewportBox(
   };
 }
 
+/** Width and height of `r` as shown at `angle`: swapped at 90 and 270. */
+export const displaySize = (r: {w: number; h: number}, angle: number): [number, number] =>
+  angle % 180 ? [r.h, r.w] : [r.w, r.h];
+
 // Display "right" and "down" unit vectors in unrotated PDF space, for a page shown at `angle`.
 export function axes(angle: Rotation): {right: [number, number]; down: [number, number]} {
   const rad = (angle * Math.PI) / 180;

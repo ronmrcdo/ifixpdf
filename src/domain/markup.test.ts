@@ -1,5 +1,6 @@
 import {describe, expect, it} from 'vitest';
 import {
+  displaySize,
   hasMarkup,
   hasRedaction,
   type Markup,
@@ -45,6 +46,18 @@ describe('hasRedaction', () => {
     expect(hasRedaction({})).toBe(false);
     expect(hasRedaction({markup: [textItem]})).toBe(false);
     expect(hasRedaction({markup: [textItem, redact]})).toBe(true);
+  });
+});
+
+describe('displaySize', () => {
+  it('swaps width and height at 90 and 270', () => {
+    const r = {w: 3, h: 1};
+    expect([0, 90, 180, 270].map((a) => displaySize(r, a))).toEqual([
+      [3, 1],
+      [1, 3],
+      [3, 1],
+      [1, 3],
+    ]);
   });
 });
 

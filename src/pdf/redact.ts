@@ -13,6 +13,7 @@ import {
   decodePDFRawStream,
 } from 'pdf-lib';
 import {strFromU8} from 'fflate';
+import {displaySize} from '../domain/markup';
 
 const RESOURCES = PDFName.of('Resources');
 const PARENT = PDFName.of('Parent');
@@ -343,7 +344,7 @@ export async function replaceWithImages(
       continue;
     }
     const {width, height} = page.getCropBox();
-    const [w, h] = page.getRotation().angle % 180 ? [height, width] : [width, height];
+    const [w, h] = displaySize({w: width, h: height}, page.getRotation().angle);
     const image = await out.embedJpg(jpeg);
     out.addPage([w, h]).drawImage(image, {x: 0, y: 0, width: w, height: h});
   }
