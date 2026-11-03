@@ -63,6 +63,7 @@ Routes: `/index.html?view=home|preview|edit`, `?combine=new` (Merge; `combine` i
 - Recents on desktop are path-based and store no bytes; byte copies deduped by SHA-256 exist only in browser mode.
 - Each workspace has one export lock; every export runs inside `track()` (`src/state/work.ts`) so installing an update waits for it.
 - IndexedDB `ifixpdf-prefs` holds the "Open PDF after saving" preference (`src/storage/prefs.ts`).
+- IndexedDB `ifixpdf-signatures` (store `signatures`) holds remembered signature PNGs on this device only; they are never synced (`src/storage/signatures.ts`).
 - Keep existing storage keys unless shipping a tested migration. No legacy-data migrations exist by owner decision.
 - Native identifier `com.ifixpdf.desktop` and crate `ifixpdf` are fixed; changing them orphans user data and breaks upgrades.
 - CSP stays `script-src 'self'` with workers on `worker-src 'self' blob:`; no `unsafe-eval`, no `dangerouslySetInnerHTML`.
