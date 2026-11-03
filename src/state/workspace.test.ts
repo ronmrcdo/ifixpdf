@@ -7,6 +7,7 @@ import {documentStore, mergeStore} from './workspaces';
 import {useApp} from './app';
 import type {PickedFile} from '../platform/types';
 import type {DraftRecord} from '../storage/draft';
+import type {Markup} from '../domain/markup';
 
 vi.mock('../pdf/load', async (orig) => ({
   ...(await orig<typeof import('../pdf/load')>()),
@@ -719,5 +720,125 @@ describe('page cap', () => {
     const store = await make('document', [pdf('max.pdf')]);
     store.getState().remove(new Set([store.getState().pages[0]!.uid]));
     expect(store.getState().pages).toHaveLength(1999);
+  });
+});
+
+describe('markup and fills', () => {
+  const note: Markup = {
+    id: 'm1',
+    kind: 'text',
+    rect: {x: 1, y: 2, w: 3, h: 4},
+    angle: 0,
+    text: 'hi',
+    size: 12,
+  };
+  const first = (store: Awaited<ReturnType<typeof make>>) => store.getState().pages[0]!.uid;
+
+  it('addMarkup puts the item on that page only and undo removes it', async () => {
+    const store = await make();
+    const uid = first(store);
+    store.getState().addMarkup(uid, note);
+    expect(store.getState().pages[0]!.markup).toEqual([note]);
+    expect(store.getState().pages[1]!.markup).toBeUndefined();
+    store.getState().undo();
+    expect(store.getState().pages[0]!.markup ?? []).toEqual([]);
+  });
+
+  it('updateMarkup patches the item; an unknown id or uid is a no-op without history', async () => {
+    const store = await make();
+    const uid = first(store);
+    store.getState().addMarkup(uid, note);
+    store.getState().updateMarkup(uid, 'm1', {text: 'yo'});
+    expect(store.getState().pages[0]!.markup).toEqual([{...note, text: 'yo'}]);
+    store.getState().undo();
+    store.getState().redo();
+    store.getState().updateMarkup(uid, 'nope', {angle: 90});
+    store.getState().updateMarkup('nope', 'm1', {angle: 90});
+    expect(store.getState().pages[0]!.markup).toEqual([{...note, text: 'yo'}]);
+    store.getState().undo(); // reverts the earlier update, not a phantom step
+    expect(store.getState().pages[0]!.markup).toEqual([note]);
+  });
+
+  it('removeMarkup removes one item in one step', async () => {
+    const store = await make();
+    const uid = first(store);
+    store.getState().addMarkup(uid, note);
+    store.getState().removeMarkup(uid, 'm1');
+    expect(store.getState().pages[0]!.markup).toEqual([]);
+    store.getState().undo();
+    expect(store.getState().pages[0]!.markup).toEqual([note]);
+  });
+
+  it('duplicate copies markup to a new uid; rotate and move keep it on its uid', async () => {
+    const store = await make();
+    const uid = first(store);
+    store.getState().addMarkup(uid, note);
+    store.getState().duplicate(new Set([uid]));
+    const [orig, copy] = store.getState().pages;
+    expect(copy!.uid).not.toBe(orig!.uid);
+    expect(copy!.markup).toEqual(orig!.markup);
+    store.getState().rotate(90, new Set([uid]));
+    store.getState().move(2, new Set([uid]));
+    const moved = store.getState().pages.find((p) => p.uid === uid)!;
+    expect(moved.rotation).toBe(90);
+    expect(moved.markup).toEqual([note]);
+  });
+
+  it('remove drops the markup with its page', async () => {
+    const store = await make();
+    const uid = first(store);
+    store.getState().addMarkup(uid, note);
+    store.getState().remove(new Set([uid]));
+    expect(store.getState().pages.some((p) => p.markup?.length)).toBe(false);
+  });
+
+  it('setField is one undo step', async () => {
+    const store = await make();
+    store.getState().setField('f1', 'name', 'Ann');
+    expect(store.getState().fills).toEqual({f1: {name: 'Ann'}});
+    store.getState().undo();
+    expect(store.getState().fills).toEqual({});
+  });
+
+  it('every mutator is ignored while exporting', async () => {
+    const store = await make();
+    const uid = first(store);
+    store.getState().addMarkup(uid, note);
+    store.getState().beginExport();
+    store.getState().addMarkup(uid, {...note, id: 'm2'});
+    store.getState().updateMarkup(uid, 'm1', {text: 'x'});
+    store.getState().removeMarkup(uid, 'm1');
+    store.getState().setField('f1', 'n', true);
+    expect(store.getState().pages[0]!.markup).toEqual([note]);
+    expect(store.getState().fills).toEqual({});
+  });
+
+  it('snapshotForExport carries markup only on pages that have it, and fills', async () => {
+    const store = await make();
+    store.getState().addMarkup(first(store), note);
+    store.getState().setField('f1', 'n', true);
+    const spec = store.getState().snapshotForExport();
+    expect(spec.pages[0]!.markup).toEqual([note]);
+    expect('markup' in spec.pages[1]!).toBe(false);
+    expect(spec.fills).toEqual({f1: {n: true}});
+  });
+
+  it('restore reads fills from the record and defaults to {}', async () => {
+    const store = createWorkspaceStore('document');
+    const rec: DraftRecord = {
+      files: [{id: 'f1', name: 'a.pdf', pages: 1, size: 3}],
+      pages: [{uid: 'u1', fileId: 'f1', local: 0, rotation: 0}],
+      currentPage: 0,
+      view: 'edit',
+      selection: [],
+      anchor: null,
+      exportSettings: {name: 'x', rangeMode: 'all', customRange: '', useFileNamesAsTitle: false},
+      savedAt: 1,
+    };
+    const bytes = new Map([['f1', new Uint8Array([1])]]);
+    await store.getState().restore(rec, bytes);
+    expect(store.getState().fills).toEqual({});
+    await store.getState().restore({...rec, fills: {f1: {n: 'v'}}}, bytes);
+    expect(store.getState().fills).toEqual({f1: {n: 'v'}});
   });
 });

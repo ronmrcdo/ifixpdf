@@ -1,5 +1,6 @@
 import {createStore} from 'zustand/vanilla';
 import {createHistory} from '../domain/history';
+import type {FieldValue, Fills, Markup} from '../domain/markup';
 import {editedName, exportTitle} from '../domain/naming';
 import {
   deletePages,
@@ -41,9 +42,14 @@ type Uids = ReadonlySet<PageUid>;
 
 export const MAX_PAGES = 2000;
 
+// Distributive, so a text item can be patched with `text` and a signature with `image`.
+type MarkupPatch<M = Markup> = M extends Markup ? Partial<Omit<M, 'id' | 'kind'>> : never;
+
 interface Data {
   files: SourceFile[];
   pages: PageInstance[];
+  /** Filled form fields per source file; flattened on export. */
+  fills: Fills;
   /** 0-based index into `pages`. */
   currentPage: number;
   selection: Selection;
@@ -57,7 +63,7 @@ interface Data {
   /** [done, total] of the running export's build, for the statusbar. */
   progress: [number, number] | null;
 }
-type Snapshot = Pick<Data, 'files' | 'pages' | 'currentPage' | 'selection'>;
+type Snapshot = Pick<Data, 'files' | 'pages' | 'fills' | 'currentPage' | 'selection'>;
 
 export interface WorkspaceState extends Data {
   addFiles(picked: PickedFile[]): Promise<void>;
@@ -73,6 +79,11 @@ export interface WorkspaceState extends Data {
   remove(uids?: Uids): void;
   duplicate(uids?: Uids): void;
   rotate(delta: 90 | -90, uids?: Uids): void;
+  addMarkup(uid: PageUid, item: Markup): void;
+  /** No-op (no history entry) when the page or item is unknown. */
+  updateMarkup(uid: PageUid, id: string, patch: MarkupPatch): void;
+  removeMarkup(uid: PageUid, id: string): void;
+  setField(fileId: FileId, name: string, value: FieldValue): void;
   moveFile(fileId: FileId, direction: -1 | 1): void;
   /** Moves the file to row `to` with its pages, as one undo step (the sources-pane drag). */
   moveFileTo(fileId: FileId, to: number): void;
@@ -99,6 +110,7 @@ export interface WorkspaceState extends Data {
 const blank = (kind: WorkspaceKind): Data => ({
   files: [],
   pages: [],
+  fills: {},
   currentPage: 0,
   selection: clearSelection(),
   tab: 'document',
@@ -157,9 +169,10 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
   const owned = new Set<FileId>(); // every file this workspace retained; removed files stay owned so undo can bring them back
 
   return createStore<WorkspaceState>()((set, get) => {
-    const snapshot = ({files, pages, currentPage, selection}: Data): Snapshot => ({
+    const snapshot = ({files, pages, fills, currentPage, selection}: Data): Snapshot => ({
       files,
       pages,
+      fills,
       currentPage,
       selection,
     });
@@ -188,7 +201,12 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
       const next = change(s);
       const pages = next.pages ?? s.pages;
       // Domain ops keep untouched page objects, so an edit with nothing to act on yields the same items.
-      if (sameItems(pages, s.pages) && sameItems(next.files ?? s.files, s.files)) return;
+      if (
+        sameItems(pages, s.pages) &&
+        sameItems(next.files ?? s.files, s.files) &&
+        (next.fills ?? s.fills) === s.fills
+      )
+        return;
       if (pages.length > s.pages.length && tooMany(pages.length)) return;
       history.push(snapshot(s));
       const current = s.pages[s.currentPage]?.uid;
@@ -201,6 +219,17 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         completed: null,
       });
     };
+
+    // Replaces only the target page object (and only if `change` returns new markup), so cards keep their keys.
+    const onPage = (uid: PageUid, change: (markup: readonly Markup[]) => readonly Markup[]): void =>
+      edit((s) => ({
+        pages: s.pages.map((p) => {
+          if (p.uid !== uid) return p;
+          const before = p.markup ?? [];
+          const markup = change(before);
+          return markup === before ? p : {...p, markup};
+        }),
+      }));
 
     const step = (take: (current: Snapshot) => Snapshot | null): void => {
       const s = get();
@@ -264,6 +293,7 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
           ...blank(kind),
           files: loaded.map(([f]) => f),
           pages,
+          fills: record.fills ?? {},
           currentPage: clamp(record.currentPage, pages.length),
           selection: pruneSelection(
             {uids: new Set(record.selection), anchor: record.anchor},
@@ -287,6 +317,17 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
         edit((s) => ({pages: duplicatePages(s.pages, uids)})),
       rotate: (delta, uids = get().selection.uids) =>
         edit((s) => ({pages: rotatePages(s.pages, uids, delta)})),
+      addMarkup: (uid, item) => onPage(uid, (m) => [...m, item]),
+      updateMarkup: (uid, id, patch) =>
+        onPage(uid, (m) =>
+          m.some((x) => x.id === id)
+            ? m.map((x) => (x.id === id ? ({...x, ...patch} as Markup) : x)) // patch is typed per kind; the cast only joins the union back
+            : m,
+        ),
+      removeMarkup: (uid, id) =>
+        onPage(uid, (m) => (m.some((x) => x.id === id) ? m.filter((x) => x.id !== id) : m)),
+      setField: (fileId, name, value) =>
+        edit((s) => ({fills: {...s.fills, [fileId]: {...s.fills[fileId], [name]: value}}})),
       moveFile: (fileId, direction) =>
         edit((s) => moveFileGroup(s.files, s.pages, fileId, direction)),
       moveFileTo: (fileId, to) => edit((s) => moveFileGroupTo(s.files, s.pages, fileId, to)),
@@ -323,9 +364,14 @@ export function createWorkspaceStore(kind: WorkspaceKind) {
       snapshotForExport() {
         const s = get();
         const spec: ExportSpec = {
-          pages: s.pages.map(({fileId, local, rotation}) =>
-            Object.freeze({fileId, local, rotation}),
+          pages: s.pages.map(({fileId, local, rotation, markup}) =>
+            Object.freeze(
+              markup
+                ? {fileId, local, rotation, markup: Object.freeze(markup)}
+                : {fileId, local, rotation},
+            ),
           ),
+          fills: s.fills,
           sources: Object.fromEntries(s.files.map((f) => [f.id, getBytes(f.id)])),
           title: exportTitle(s.files, s.exportSettings),
         };
