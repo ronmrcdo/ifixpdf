@@ -1,9 +1,17 @@
 import {describe, expect, it, vi} from 'vitest';
-import {PDFDict, PDFDocument, PDFHexString, PDFName, degrees} from 'pdf-lib';
+import {
+  PDFDict,
+  PDFDocument,
+  PDFHexString,
+  PDFName,
+  StandardFonts,
+  degrees,
+  drawObject,
+} from 'pdf-lib';
 import {unzipSync, strFromU8} from 'fflate';
-import {buildPdf, protectPdf, splitZip, type ExportSpec} from './export-core';
+import {buildPdf, protectPdf, replaceWithImages, splitZip, type ExportSpec} from './export-core';
 import {applyFills, drawMarkup} from './markup-draw';
-import {makeFormPdf, makePdf} from './fixtures';
+import {TINY_JPEG, findSecret, makeFormPdf, makePdf} from './fixtures';
 import type {Markup} from '../domain/markup';
 
 vi.mock('./markup-draw', async (actual) => {
@@ -321,6 +329,104 @@ describe('export-core', () => {
         sources: {F: await doc.save()},
       });
       expect(await strsOf(out)).toContain('Rome');
+    });
+  });
+
+  describe('replaceWithImages', () => {
+    const SECRET = 'SECRET-4411';
+    const redact: Markup = {id: 'r', kind: 'redact', rect: {x: 10, y: 10, w: 150, h: 40}, angle: 0};
+    const jpeg = [{index: 0, jpeg: TINY_JPEG}];
+
+    async function secretSource(rotate0 = 0): Promise<Uint8Array> {
+      const doc = await PDFDocument.create();
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const p0 = doc.addPage([300, 200]);
+      p0.drawText(SECRET, {x: 20, y: 20, size: 12, font});
+      if (rotate0) p0.setRotation(degrees(rotate0));
+      doc.addPage([200, 100]).drawText('KEEP-1', {x: 20, y: 20, size: 12, font});
+      return doc.save();
+    }
+    const pass1 = (src: Uint8Array) =>
+      buildPdf({
+        title: 'Kept title',
+        sources: {a: src},
+        pages: [
+          {fileId: 'a', local: 0, rotation: 0, markup: [redact]},
+          {fileId: 'a', local: 1, rotation: 0},
+        ],
+      });
+
+    it('replaces the page with an image and leaves no trace of the secret', async () => {
+      const first = await pass1(await secretSource());
+      expect(await findSecret(first, SECRET)).not.toEqual([]); // positive control
+      const out = await replaceWithImages(first, jpeg);
+      const doc = await PDFDocument.load(out);
+      expect(doc.getPageCount()).toBe(2);
+      expect(doc.getPage(0).getSize()).toEqual({width: 300, height: 200});
+      expect(doc.getPage(0).getRotation().angle).toBe(0);
+      expect(doc.getTitle()).toBe('Kept title');
+      expect(doc.getCreator()).toBe('iFixPDF PDF workspace');
+      expect((await textItems(out)).map((p) => p.map((i) => i.str))).toEqual([[], ['KEEP-1']]);
+      expect(await findSecret(out, SECRET)).toEqual([]);
+    });
+
+    it('swaps width and height for an intrinsic /Rotate 90 page', async () => {
+      const first = await pass1(await secretSource(90));
+      expect(await findSecret(first, SECRET)).not.toEqual([]);
+      const out = await replaceWithImages(first, jpeg);
+      const doc = await PDFDocument.load(out);
+      expect(doc.getPage(0).getSize()).toEqual({width: 200, height: 300});
+      expect(doc.getPage(0).getRotation().angle).toBe(0);
+      expect(await findSecret(out, SECRET)).toEqual([]);
+    });
+
+    it('drops a shared resource only the redacted page draws', async () => {
+      const helper = await PDFDocument.load(await secretSource());
+      const doc = await PDFDocument.create();
+      const [f0, f1] = await doc.embedPdf(helper, [0, 1]);
+      const p0 = doc.addPage([300, 200]);
+      const p1 = doc.addPage([300, 200]);
+      const shared = doc.context.register(doc.context.obj({XObject: {X0: f0!.ref, X1: f1!.ref}}));
+      p0.node.set(PDFName.of('Resources'), shared);
+      p1.node.set(PDFName.of('Resources'), shared);
+      p0.pushOperators(drawObject('X0'));
+      p1.pushOperators(drawObject('X1'));
+      const first = await pass1(await doc.save());
+      expect(await findSecret(first, SECRET)).not.toEqual([]);
+      const out = await replaceWithImages(first, jpeg);
+      expect((await textItems(out))[1]!.map((i) => i.str)).toEqual(['KEEP-1']);
+      expect(await findSecret(out, SECRET)).toEqual([]);
+    });
+
+    it('does not follow a link on a kept page back to the redacted page', async () => {
+      const doc = await PDFDocument.load(await secretSource());
+      const [p0, p1] = doc.getPages();
+      const link = doc.context.obj({
+        Type: 'Annot',
+        Subtype: 'Link',
+        Rect: [0, 0, 10, 10],
+        Dest: [p0!.ref, PDFName.of('Fit')],
+      });
+      p1!.node.set(PDFName.of('Annots'), doc.context.obj([doc.context.register(link)]));
+      const first = await pass1(await doc.save());
+      expect(await findSecret(first, SECRET)).not.toEqual([]);
+      const out = await replaceWithImages(first, jpeg);
+      expect(await findSecret(out, SECRET)).toEqual([]);
+      expect((await textItems(out))[1]!.map((i) => i.str)).toEqual(['KEEP-1']);
+    });
+
+    it('keeps the secret on an unredacted duplicate of the page', async () => {
+      const src = await secretSource();
+      const first = await buildPdf({
+        title: 't',
+        sources: {a: src},
+        pages: [
+          {fileId: 'a', local: 0, rotation: 0, markup: [redact]},
+          {fileId: 'a', local: 0, rotation: 0},
+        ],
+      });
+      const out = await replaceWithImages(first, jpeg);
+      expect((await textItems(out)).map((p) => p.map((i) => i.str))).toEqual([[], [SECRET]]);
     });
   });
 });

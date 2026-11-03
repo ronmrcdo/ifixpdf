@@ -3,6 +3,10 @@ import {acquire} from './registry';
 
 const MAX_SIDE = 8192;
 const MAX_AREA = 16_777_216;
+
+/** Factor (≤ 1) that fits a width × height canvas inside the side and area caps. */
+export const fitShrink = (width: number, height: number): number =>
+  Math.min(1, MAX_SIDE / width, MAX_SIDE / height, Math.sqrt(MAX_AREA / (width * height)));
 const generation = new WeakMap<HTMLCanvasElement, number>();
 const tasks = new WeakMap<HTMLCanvasElement, {cancel(): void}>();
 
@@ -23,12 +27,7 @@ export async function renderPage(
   const page = await (await acquire(fileId)).getPage(local + 1);
   if (generation.get(canvas) !== mine) return; // superseded while loading
   const viewport = page.getViewport({scale, rotation: (page.rotate + rotation) % 360});
-  const shrink = Math.min(
-    1,
-    MAX_SIDE / viewport.width,
-    MAX_SIDE / viewport.height,
-    Math.sqrt(MAX_AREA / (viewport.width * viewport.height)),
-  );
+  const shrink = fitShrink(viewport.width, viewport.height);
   const fitted =
     shrink < 1
       ? page.getViewport({scale: scale * shrink, rotation: (page.rotate + rotation) % 360})

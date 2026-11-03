@@ -1,10 +1,18 @@
-import {buildPdf, countPages, protectPdf, splitZip, type ExportSpec} from './export-core';
+import {
+  buildPdf,
+  countPages,
+  protectPdf,
+  replaceWithImages,
+  splitZip,
+  type ExportSpec,
+} from './export-core';
 
 export type ExportRequest =
   | {id: number; op: 'build'; spec: ExportSpec}
   | {id: number; op: 'protect'; bytes: Uint8Array; password: string}
   | {id: number; op: 'count'; bytes: Uint8Array}
-  | {id: number; op: 'split'; spec: ExportSpec; groups: number[][]; baseName: string};
+  | {id: number; op: 'split'; spec: ExportSpec; groups: number[][]; baseName: string}
+  | {id: number; op: 'raster'; bytes: Uint8Array; images: Array<{index: number; jpeg: Uint8Array}>};
 
 const run = (
   req: ExportRequest,
@@ -13,6 +21,7 @@ const run = (
   if (req.op === 'build') return buildPdf(req.spec, progress);
   if (req.op === 'count') return countPages(req.bytes);
   if (req.op === 'protect') return protectPdf(req.bytes, req.password);
+  if (req.op === 'raster') return replaceWithImages(req.bytes, req.images);
   return splitZip(req.spec, req.groups, req.baseName, progress);
 };
 
