@@ -63,6 +63,9 @@ function run(action: Action) {
   if (action === 'open') return void pickAndImport();
   if (action === 'save' || action === 'print') {
     if (ws.exporting) return; // Ctrl+S / Ctrl+P do nothing during an export
+    // Fields commit on blur, synchronously, so the export snapshot below includes typed text.
+    const focused = document.activeElement;
+    if (isEditable() && focused instanceof HTMLElement) focused.blur();
     if (action === 'print') return void printDocument(store);
     return void (app.view === 'preview' ? saveCopy(store) : saveOrContinue(store));
   }

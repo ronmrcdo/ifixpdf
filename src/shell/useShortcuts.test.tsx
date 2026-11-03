@@ -36,6 +36,10 @@ function Host() {
       </div>
       <button type="button">outside</button>
       <input aria-label="field" />
+      <input
+        aria-label="commits on blur"
+        onBlur={(e) => documentStore.getState().setField('f', 'name', e.currentTarget.value)}
+      />
     </>
   );
 }
@@ -151,6 +155,21 @@ describe('useShortcuts', () => {
     await userEvent.keyboard('{Control>}p{/Control}');
     expect(printDocument).toHaveBeenLastCalledWith(mergeStore);
     expect(saveCopy).toHaveBeenCalledOnce();
+  });
+
+  it('Ctrl+S and Ctrl+P commit the field being typed in before taking the snapshot', async () => {
+    const seen: unknown[] = [];
+    const record = (store: typeof documentStore) => {
+      seen.push(store.getState().fills.f?.name);
+    };
+    vi.mocked(saveOrContinue).mockImplementation(async (store) => record(store));
+    vi.mocked(printDocument).mockImplementation(async (store) => record(store));
+    const field = document.querySelector<HTMLInputElement>('[aria-label="commits on blur"]')!;
+    await userEvent.type(field, 'Ann');
+    await userEvent.keyboard('{Control>}s{/Control}');
+    await userEvent.type(field, 'e');
+    await userEvent.keyboard('{Control>}p{/Control}');
+    expect(seen).toEqual(['Ann', 'Anne']);
   });
 
   it('Ctrl+S and Ctrl+P do nothing while the workspace exports', async () => {

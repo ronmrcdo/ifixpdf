@@ -532,9 +532,6 @@ test.describe('native', () => {
     await app.openPdf({name: 'Form.pdf', mimeType: 'application/pdf', buffer});
     await app.view('Edit PDF');
     await app.tab('Document').click();
-    const name = page.getByRole('textbox', {name: 'name', exact: true});
-    await name.fill('Ann');
-    await name.press('Enter');
     await page.getByRole('checkbox', {name: 'agree'}).check();
     await page.getByRole('radio', {name: 'pay'}).nth(1).check();
     await page.getByRole('combobox', {name: 'city'}).selectOption('Rome');
@@ -545,7 +542,8 @@ test.describe('native', () => {
         'form CSS stays scoped',
       ).not.toBe('absolute');
     }
-    await app.title.click();
+    // Ctrl+S while still typing: the field commits before the export snapshot.
+    await page.getByRole('textbox', {name: 'name', exact: true}).fill('Ann');
     await page.keyboard.press('Control+s');
     await expect.poll(() => writes(page), {timeout: 30000}).toBe(1);
     const {bytes} = await written(page);
@@ -553,6 +551,20 @@ test.describe('native', () => {
     const [text] = await pageTexts(page, bytes);
     expect(text).toContain('Ann');
     expect(text).toContain('Rome');
+
+    // The same for a text item being typed.
+    await page
+      .getByRole('toolbar', {name: 'Fill and sign tools'})
+      .getByRole('button', {name: 'Add text'})
+      .click();
+    const layer = page.locator('.markup-layer');
+    const box = (await layer.boundingBox())!;
+    await layer.click({position: {x: 40, y: box.height * 0.6}});
+    await page.getByRole('textbox', {name: 'Text'}).fill('Typed note');
+    await page.keyboard.press('Control+s');
+    await expect.poll(() => writes(page), {timeout: 30000}).toBe(2);
+    const [second] = await pageTexts(page, (await written(page)).bytes);
+    expect(second).toContain('Typed note');
   });
 });
 

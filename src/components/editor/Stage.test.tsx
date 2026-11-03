@@ -140,6 +140,26 @@ describe('Stage navigation', () => {
     expect(store.getState().currentPage).toBe(1);
   });
 
+  it('a wheel flip commits the field being typed in first (fields commit on blur)', () => {
+    render(<Stage store={store} readOnly caption="A.pdf" />);
+    const field = document.createElement('input');
+    stageEl().append(field);
+    field.focus();
+    const onBlur = vi.fn(() => expect(store.getState().currentPage).toBe(0));
+    field.addEventListener('blur', onBlur);
+    wheel(100);
+    expect(onBlur).toHaveBeenCalledTimes(1);
+    expect(store.getState().currentPage).toBe(1);
+  });
+
+  it('a wheel flip leaves a focused stage focused, for the arrow keys', () => {
+    render(<Stage store={store} readOnly caption="A.pdf" />);
+    stageEl().focus();
+    wheel(100);
+    expect(store.getState().currentPage).toBe(1);
+    expect(document.activeElement).toBe(stageEl());
+  });
+
   it('the wheel does not flip on the Pages tab', () => {
     render(<Stage store={store} readOnly caption="A.pdf" />);
     act(() => store.getState().setTab('pages'));
