@@ -1,5 +1,6 @@
 // Preview and Edit views: empty states, the read-only grid, Preview -> Edit, and the Output panel on narrow windows.
 import {test, expect, pdfFile, chooserFrom} from './fixtures';
+import {PDFDict, PDFDocument, PDFName, PDFRawStream} from 'pdf-lib';
 
 test('Preview and Edit start empty with an Open PDF button that opens the picker', async ({
   app,
@@ -163,4 +164,71 @@ test('a PDF without form fields gets no field controls', async ({app, page}) => 
   await expect(page.locator('.markup-layer')).toBeVisible();
   await expect(page.locator('.field-layer')).toBeAttached();
   await expect(page.locator('.field-layer .field')).toHaveCount(0);
+});
+
+test.describe('native', () => {
+  test.use({tauri: true});
+
+  test('draw a signature, remember it, place it and Save as: the page gets an image', async ({
+    app,
+    page,
+  }) => {
+    test.setTimeout(60000);
+    await page.addInitScript(() => {
+      window.__tauri = {
+        save_as: (bytes: Uint8Array) => {
+          window.__written = {bytes: [...bytes], path: '/home/ron/Docs/out.pdf'};
+          return '/home/ron/Docs/out.pdf';
+        },
+        'plugin:opener|open_path': () => null,
+      };
+    });
+    await app.goto('view=home');
+    await app.openPdf(await pdfFile('Report.pdf', 1));
+    await app.view('Edit PDF');
+    await app.tab('Document').click();
+    const sign = page.getByRole('button', {name: 'Sign', exact: true});
+    await sign.click();
+    await page.getByRole('menuitem', {name: 'Add signature'}).click();
+    const use = page.getByRole('button', {name: 'Use signature'});
+    await expect(use).toBeDisabled();
+    const pad = (await page.getByLabel('Draw your signature').boundingBox())!;
+    await page.mouse.move(pad.x + 40, pad.y + 80);
+    await page.mouse.down();
+    await page.mouse.move(pad.x + 120, pad.y + 40, {steps: 5});
+    await page.mouse.move(pad.x + 220, pad.y + 110, {steps: 5});
+    await page.mouse.up();
+    await expect(
+      page.getByRole('checkbox', {name: 'Remember this signature on this device'}),
+    ).toBeChecked();
+    await use.click();
+    await expect(sign).toHaveAttribute('aria-pressed', 'true');
+
+    const layer = page.locator('.markup-layer');
+    await layer.click({position: {x: 200, y: 200}});
+    const placed = page.getByRole('button', {name: 'Signature', exact: true});
+    await expect(placed).toBeVisible();
+    await expect(page.getByRole('button', {name: 'Resize signature, bottom-right'})).toBeVisible();
+    await expect(sign).toHaveAttribute('aria-pressed', 'false');
+    // a cropped drawing: wider than tall, about 150 pt wide at the stage's scale
+    const b = (await placed.boundingBox())!;
+    expect(b.width).toBeGreaterThan(b.height);
+
+    await app.title.click();
+    await page.keyboard.press('Control+s');
+    await expect.poll(() => page.evaluate(() => !!window.__written), {timeout: 30000}).toBe(true);
+    const bytes = await page.evaluate(() => (window.__written as {bytes: number[]}).bytes);
+    const doc = await PDFDocument.load(new Uint8Array(bytes));
+    const xobjects = doc.getPage(0).node.Resources()?.lookup(PDFName.of('XObject'), PDFDict);
+    const subtypes = (xobjects?.values() ?? []).map((ref) => {
+      const o = doc.context.lookup(ref);
+      return o instanceof PDFRawStream ? o.dict.get(PDFName.of('Subtype')) : undefined;
+    });
+    expect(subtypes).toContain(PDFName.of('Image'));
+
+    // Remembered: the Sign menu lists it.
+    await sign.click();
+    await expect(page.getByRole('menuitem', {name: 'Signature 1'})).toBeVisible();
+    await expect(page.getByRole('menuitem', {name: 'Delete signature'})).toHaveCount(1);
+  });
 });
