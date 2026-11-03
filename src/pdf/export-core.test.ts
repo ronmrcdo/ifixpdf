@@ -1,5 +1,6 @@
 import {describe, expect, it, vi} from 'vitest';
 import {
+  PDFArray,
   PDFDict,
   PDFDocument,
   PDFHexString,
@@ -7,7 +8,7 @@ import {
   PDFOperator,
   PDFOperatorNames,
   type PDFPage,
-  type PDFRef,
+  PDFRef,
   PDFString,
   StandardFonts,
   degrees,
@@ -556,6 +557,48 @@ describe('export-core', () => {
         );
       });
       expect(await leakCheck(src)).toEqual([]);
+    });
+
+    // Page 1 adopts page 0's resource dict (with page 1's fonts added) and appends `raw` content.
+    const sharing = (raw: string, fontKey?: string) =>
+      sharedSource((doc, _x0, res0, p1) => {
+        const fonts = doc.context.lookup(p1.node.Resources()!.get(PDFName.of('Font')), PDFDict);
+        const font = fontKey ? doc.context.obj({[fontKey]: fonts.values()[0]!}) : fonts;
+        doc.context.lookup(res0, PDFDict).set(PDFName.of('Font'), font);
+        p1.node.set(PDFName.of('Resources'), res0);
+        const extra = doc.context.register(doc.context.stream(raw));
+        const own = fontKey ? [] : p1.node.lookup(PDFName.of('Contents'), PDFArray).asArray();
+        p1.node.set(PDFName.of('Contents'), doc.context.obj([...own, extra]));
+      });
+
+    it('ignores a marked-content tag named like a resource', async () => {
+      expect(await leakCheck(await sharing('/X0 BMC EMC'))).toEqual([]);
+    });
+
+    it('ignores a resource name inside a string', async () => {
+      const src = await sharing('/Span <</ActualText (see \\) /X0 Do)>> BDC EMC');
+      expect(await leakCheck(src)).toEqual([]);
+    });
+
+    it('survives a stray closing paren in the content', async () => {
+      expect(await leakCheck(await sharing(') /X0 BMC EMC'))).toEqual([]);
+    });
+
+    it('keeps a font named like a redacted-only XObject apart from it', async () => {
+      const src = await sharing('BT /X0 12 Tf 20 20 Td <4B4545502D31> Tj ET', 'X0');
+      expect(await leakCheck(src)).toEqual([]);
+    });
+
+    it('skips inline image data that looks like operators', async () => {
+      const src = await sharing('q BI /W 8 /H 1 /BPC 8 /CS /G ID x /X0 Do\nEI Q');
+      expect(await leakCheck(src)).toEqual([]);
+    });
+
+    it('treats a broken /Resources on a kept page as none', async () => {
+      const doc = await PDFDocument.load(await secretSource());
+      doc.getPage(1).node.set(PDFName.of('Resources'), PDFRef.of(9999));
+      const out = await replaceWithImages(await pass1(await doc.save()), jpeg);
+      expect(await findSecret(out, SECRET)).toEqual([]);
     });
 
     it('keeps the secret on an unredacted duplicate of the page', async () => {
