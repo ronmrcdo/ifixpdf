@@ -1,5 +1,14 @@
 import {describe, expect, it} from 'vitest';
-import {hasMarkup, hasRedaction, type Markup, stepSize, unsupportedChars} from './markup';
+import {
+  hasMarkup,
+  hasRedaction,
+  type Markup,
+  rectAt,
+  shift,
+  stepSize,
+  topLeft,
+  unsupportedChars,
+} from './markup';
 
 const base = {id: 'a', rect: {x: 0, y: 0, w: 1, h: 1}, angle: 0 as const};
 const textItem: Markup = {...base, kind: 'text', text: 'hi', size: 12};
@@ -44,5 +53,24 @@ describe('hasMarkup', () => {
     expect(hasMarkup([{}], {f: {a: ''}})).toBe(true);
     expect(hasMarkup([{markup: []}])).toBe(false);
     expect(hasMarkup([{markup: [textItem]}])).toBe(true);
+  });
+});
+
+describe('rectAt and topLeft', () => {
+  it('builds the rect whose display top-left is the point, at every angle', () => {
+    expect(rectAt([10, 100], 0, 50, 20)).toEqual({x: 10, y: 80, w: 50, h: 20});
+    expect(rectAt([10, 100], 90, 50, 20)).toEqual({x: 10, y: 100, w: 20, h: 50});
+    expect(rectAt([10, 100], 180, 50, 20)).toEqual({x: -40, y: 100, w: 50, h: 20});
+    expect(rectAt([10, 100], 270, 50, 20)).toEqual({x: -10, y: 50, w: 20, h: 50});
+    for (const angle of [0, 90, 180, 270] as const)
+      expect(topLeft(rectAt([10, 100], angle, 50, 20), angle)).toEqual([10, 100]);
+  });
+
+  it('shift moves along the display right and down of the angle', () => {
+    const r = {x: 0, y: 0, w: 1, h: 1};
+    expect(shift(r, 0, 12)).toEqual({x: 12, y: -12, w: 1, h: 1});
+    expect(shift(r, 90, 12)).toEqual({x: 12, y: 12, w: 1, h: 1});
+    expect(shift(r, 180, 12)).toEqual({x: -12, y: 12, w: 1, h: 1});
+    expect(shift(r, 270, 12)).toEqual({x: -12, y: -12, w: 1, h: 1});
   });
 });

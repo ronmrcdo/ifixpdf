@@ -10,7 +10,15 @@ import {
   degrees,
   rgb,
 } from 'pdf-lib';
-import type {FieldValue, Markup, Rect} from '../domain/markup';
+import {
+  axes,
+  type FieldValue,
+  MARK_PATHS,
+  type Markup,
+  markStroke,
+  type Rect,
+  topLeft,
+} from '../domain/markup';
 import type {Rotation} from '../domain/types';
 
 const BLACK = rgb(0, 0, 0);
@@ -25,26 +33,11 @@ function helvetica(doc: PDFDocument): Promise<PDFFont> {
   return font;
 }
 
-// Unrotated-space corner that shows top-left when the page is displayed at `angle`.
-const TOP_LEFT: Record<Rotation, (r: Rect) => [number, number]> = {
-  0: (r) => [r.x, r.y + r.h],
-  90: (r) => [r.x, r.y],
-  180: (r) => [r.x + r.w, r.y],
-  270: (r) => [r.x + r.w, r.y + r.h],
-};
-
 // Display-space frame of the rect: top-left origin, "down" unit vector, display size.
 function frame(rect: Rect, angle: Rotation) {
-  const rad = (angle * Math.PI) / 180;
-  const down: [number, number] = [Math.round(Math.sin(rad)), -Math.round(Math.cos(rad))];
   const [w, h] = angle % 180 ? [rect.h, rect.w] : [rect.w, rect.h];
-  return {origin: TOP_LEFT[angle](rect), down, w, h};
+  return {origin: topLeft(rect, angle), down: axes(angle).down, w, h};
 }
-
-const MARK_PATHS = {
-  cross: (w: number, h: number) => `M0 0 L${w} ${h} M${w} 0 L0 ${h}`,
-  check: (w: number, h: number) => `M0 ${h * 0.55} L${w * 0.4} ${h} L${w} 0`,
-};
 
 export async function drawMarkup(
   page: PDFPage,
@@ -73,7 +66,7 @@ export async function drawMarkup(
           y: origin[1],
           rotate,
           borderColor: BLACK,
-          borderWidth: Math.max(1, Math.min(w, h) / 8),
+          borderWidth: markStroke(w, h),
         });
         break;
       case 'dot':
