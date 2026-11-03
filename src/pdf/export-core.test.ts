@@ -4,6 +4,8 @@ import {
   PDFDocument,
   PDFHexString,
   PDFName,
+  PDFOperator,
+  PDFOperatorNames,
   type PDFPage,
   type PDFRef,
   PDFString,
@@ -498,6 +500,62 @@ describe('export-core', () => {
       p1.node.Resources()!.set(PDFName.of('ExtGState'), doc.context.obj({GS0: gs}));
       p1.pushOperators(setGraphicsState('GS0'));
       expect(await leakCheck(await doc.save())).toEqual([]);
+    });
+
+    // Page 0 draws the secret form X0 from `res0`; page 1 draws KEEP-1 and then `extra`.
+    async function sharedSource(
+      build: (doc: PDFDocument, x0: PDFRef, res0: PDFRef, p1: PDFPage) => void,
+    ) {
+      const helper = await PDFDocument.load(await secretSource());
+      const doc = await PDFDocument.create();
+      const [f0] = await doc.embedPdf(helper, [0]);
+      const font = await doc.embedFont(StandardFonts.Helvetica);
+      const p0 = doc.addPage([300, 200]);
+      const p1 = doc.addPage([300, 200]);
+      const res0 = doc.context.register(doc.context.obj({XObject: {X0: f0!.ref}}));
+      p0.node.set(PDFName.of('Resources'), res0);
+      p0.pushOperators(drawObject('X0'));
+      p1.drawText('KEEP-1', {x: 20, y: 20, size: 12, font});
+      build(doc, f0!.ref, res0, p1);
+      return doc.save();
+    }
+
+    it('does not follow an unknown key on a kept ExtGState', async () => {
+      const src = await sharedSource((doc, x0, _res0, p1) => {
+        const gs = doc.context.obj({Type: 'ExtGState', CA: 1, XVendor: x0});
+        p1.node.Resources()!.set(PDFName.of('ExtGState'), doc.context.obj({GS0: gs}));
+        p1.pushOperators(setGraphicsState('GS0'));
+      });
+      expect(await leakCheck(src)).toEqual([]);
+    });
+
+    it('prunes the soft-mask group of a shading pattern shared with the redacted page', async () => {
+      const src = await sharedSource((doc, _x0, res0, p1) => {
+        const group = doc.context.register(
+          doc.context.stream('', {
+            Type: 'XObject',
+            Subtype: 'Form',
+            BBox: [0, 0, 300, 200],
+            Resources: res0,
+          }),
+        );
+        const pattern = doc.context.obj({
+          PatternType: 2,
+          Shading: {
+            ShadingType: 2,
+            ColorSpace: 'DeviceGray',
+            Coords: [0, 0, 1, 0],
+            Function: {FunctionType: 2, Domain: [0, 1], C0: [0], C1: [1], N: 1},
+          },
+          ExtGState: {SMask: {S: 'Luminosity', G: group}},
+        });
+        p1.node.Resources()!.set(PDFName.of('Pattern'), doc.context.obj({P0: pattern}));
+        p1.pushOperators(
+          PDFOperator.of(PDFOperatorNames.NonStrokingColorspace, [PDFName.of('Pattern')]),
+          PDFOperator.of(PDFOperatorNames.NonStrokingColorN, [PDFName.of('P0')]),
+        );
+      });
+      expect(await leakCheck(src)).toEqual([]);
     });
 
     it('keeps the secret on an unredacted duplicate of the page', async () => {
