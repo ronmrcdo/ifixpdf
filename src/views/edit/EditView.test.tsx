@@ -89,6 +89,15 @@ describe('EditView', () => {
     expect(useTool.getState()).toMatchObject({tool: null, selected: null});
   });
 
+  it('drops the selection, not the tool, when the page changes (a duplicate shares item ids)', () => {
+    open();
+    act(() => documentStore.getState().setTab('document'));
+    render(<EditView />);
+    act(() => useTool.setState({tool: 'check', selected: 'x'}));
+    act(() => documentStore.getState().goTo(1));
+    expect(useTool.getState()).toMatchObject({tool: 'check', selected: null});
+  });
+
   it('Split PDF calls onSplit', async () => {
     open();
     const onSplit = vi.fn();

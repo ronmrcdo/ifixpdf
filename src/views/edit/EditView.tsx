@@ -24,6 +24,14 @@ export function EditView({onSplit}: {onSplit?: () => void}) {
     },
     [tab, files],
   );
+  // Selection is an item id, and a duplicated page's items keep theirs.
+  useEffect(
+    () =>
+      documentStore.subscribe((s, prev) => {
+        if (s.currentPage !== prev.currentPage) useTool.getState().select(null);
+      }),
+    [],
+  );
   if (!hasPages)
     return (
       <EmptyState
