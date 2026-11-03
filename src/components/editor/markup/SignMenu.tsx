@@ -1,5 +1,5 @@
 import {Plus, Trash2} from 'lucide-react';
-import {type KeyboardEvent, useEffect, useRef, useState} from 'react';
+import {type KeyboardEvent, type RefObject, useEffect, useRef, useState} from 'react';
 import {
   deleteSignature,
   listSignatures,
@@ -8,6 +8,7 @@ import {
 } from '../../../storage/signatures';
 import {SignatureDialog} from './SignatureDialog';
 import {useTool} from './tool';
+import {useDismiss} from './useDismiss';
 
 const MOVES: Record<string, (i: number, n: number) => number> = {
   ArrowDown: (i, n) => (i + 1) % n,
@@ -16,11 +17,20 @@ const MOVES: Record<string, (i: number, n: number) => number> = {
   End: (_, n) => n - 1,
 };
 
+interface Props {
+  open: boolean;
+  trigger: RefObject<HTMLElement | null>;
+  /** `focusTrigger` is false when the user dismissed the menu by pointing or tabbing elsewhere. */
+  onClose(focusTrigger: boolean): void;
+}
+
 /** The Sign menu: remembered signatures (pick or delete) and Add signature, which opens the dialog. */
-export function SignMenu({open, onClose}: {open: boolean; onClose(): void}) {
+export function SignMenu({open, trigger, onClose}: Props) {
   const [saved, setSaved] = useState<SavedSignature[]>([]);
   const [adding, setAdding] = useState(false);
   const add = useRef<HTMLButtonElement>(null);
+  const menu = useRef<HTMLDivElement>(null);
+  const onBlur = useDismiss(open, menu, trigger, () => onClose(false));
 
   useEffect(() => {
     if (open) listSignatures().then(setSaved);
@@ -43,7 +53,7 @@ export function SignMenu({open, onClose}: {open: boolean; onClose(): void}) {
     );
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     const move = MOVES[e.key];
-    if (e.key === 'Escape') onClose();
+    if (e.key === 'Escape') onClose(true);
     else if (move) {
       const items = [...e.currentTarget.querySelectorAll<HTMLElement>('[role=menuitem]')];
       items[move(items.indexOf(document.activeElement as HTMLElement), items.length)]?.focus();
@@ -55,7 +65,14 @@ export function SignMenu({open, onClose}: {open: boolean; onClose(): void}) {
   return (
     <>
       {open && (
-        <div className="markup-menu sign-menu" role="menu" aria-label="Sign" onKeyDown={onKeyDown}>
+        <div
+          ref={menu}
+          className="markup-menu sign-menu"
+          role="menu"
+          aria-label="Sign"
+          onKeyDown={onKeyDown}
+          onBlur={onBlur}
+        >
           {saved.map((s, i) => (
             <div key={s.id} className="sign-row">
               <button
@@ -64,7 +81,7 @@ export function SignMenu({open, onClose}: {open: boolean; onClose(): void}) {
                 className="sign-pick"
                 aria-label={`Signature ${i + 1}`}
                 onClick={() => {
-                  onClose();
+                  onClose(true);
                   pick(s.png);
                 }}
               >
@@ -86,7 +103,7 @@ export function SignMenu({open, onClose}: {open: boolean; onClose(): void}) {
             type="button"
             role="menuitem"
             onClick={() => {
-              onClose(); // returns focus to Sign first, so the dialog gives it back there
+              onClose(true); // returns focus to Sign first, so the dialog gives it back there
               setAdding(true);
             }}
           >

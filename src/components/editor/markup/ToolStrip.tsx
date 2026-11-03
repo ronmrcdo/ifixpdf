@@ -76,9 +76,10 @@ export function ToolStrip() {
           {chevron && (
             <SignMenu
               open={menu}
-              onClose={() => {
+              trigger={sign}
+              onClose={(focusTrigger) => {
                 setMenu(false);
-                sign.current?.focus();
+                if (focusTrigger) sign.current?.focus();
               }}
             />
           )}

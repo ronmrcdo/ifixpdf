@@ -1,4 +1,5 @@
-import {render, screen, waitFor} from '@testing-library/react';
+import {fireEvent, render, screen, waitFor} from '@testing-library/react';
+import {createRef} from 'react';
 import userEvent from '@testing-library/user-event';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import {deleteSignature, listSignatures, saveSignature} from '../../../storage/signatures';
@@ -27,7 +28,17 @@ const mockCanvas = (png: string) => {
   } as unknown as CanvasRenderingContext2D);
   vi.spyOn(HTMLCanvasElement.prototype, 'toDataURL').mockReturnValue(png);
 };
-const setup = (open = true) => render(<SignMenu open={open} onClose={onClose} />);
+const trigger = createRef<HTMLButtonElement>();
+const Host = ({open = true}: {open?: boolean}) => (
+  <>
+    <button type="button" ref={trigger}>
+      Sign
+    </button>
+    <SignMenu open={open} trigger={trigger} onClose={onClose} />
+    <button type="button">Elsewhere</button>
+  </>
+);
+const setup = (open = true) => render(<Host open={open} />);
 
 beforeEach(() => {
   vi.mocked(listSignatures).mockResolvedValue([
@@ -92,13 +103,32 @@ describe('SignMenu', () => {
     expect(screen.getAllByRole('menuitem', {name: /^Signature/})).toHaveLength(2);
   });
 
-  it('Escape closes; closed renders no menu', async () => {
+  it('Escape closes and returns focus to the trigger; closed renders no menu', async () => {
     const {rerender} = setup();
     await screen.findByRole('menuitem', {name: 'Signature 1'});
     await userEvent.keyboard('{Escape}');
-    expect(onClose).toHaveBeenCalled();
-    rerender(<SignMenu open={false} onClose={onClose} />);
+    expect(onClose).toHaveBeenCalledWith(true);
+    rerender(<Host open={false} />);
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+  });
+
+  it('a pointerdown outside closes without moving focus; on the menu or its trigger it does not', async () => {
+    setup();
+    await screen.findByRole('menuitem', {name: 'Signature 1'});
+    fireEvent.pointerDown(screen.getByRole('menuitem', {name: 'Add signature'}));
+    fireEvent.pointerDown(trigger.current!);
+    expect(onClose).not.toHaveBeenCalled();
+    fireEvent.pointerDown(screen.getByRole('button', {name: 'Elsewhere'}));
+    expect(onClose).toHaveBeenCalledWith(false);
+  });
+
+  it('focus leaving the menu closes it without moving focus; focus inside it does not', async () => {
+    setup();
+    await screen.findByRole('menuitem', {name: 'Signature 1'});
+    await userEvent.keyboard('{ArrowDown}');
+    expect(onClose).not.toHaveBeenCalled();
+    screen.getByRole('button', {name: 'Elsewhere'}).focus();
+    expect(onClose).toHaveBeenCalledWith(false);
   });
 
   it('Add signature opens the dialog; Use remembers it and picks it', async () => {
@@ -108,7 +138,7 @@ describe('SignMenu', () => {
     const {rerender} = setup();
     await userEvent.click(screen.getByRole('menuitem', {name: 'Add signature'}));
     expect(onClose).toHaveBeenCalled();
-    rerender(<SignMenu open={false} onClose={onClose} />); // the strip closes the menu
+    rerender(<Host open={false} />); // the strip closes the menu
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     const pad = screen.getByLabelText('Draw your signature');
     await userEvent.pointer({keys: '[MouseLeft]', target: pad});

@@ -1,6 +1,7 @@
 import {Ellipsis, Trash2} from 'lucide-react';
-import {type CSSProperties, useState} from 'react';
+import {type CSSProperties, useRef, useState} from 'react';
 import {stepSize} from '../../../domain/markup';
+import {useDismiss} from './useDismiss';
 
 interface Props {
   size: number;
@@ -13,6 +14,9 @@ interface Props {
 /** The dark popup above a selected text item: A−, A+, More (Duplicate) and Delete. */
 export function TextPopup({size, style, onSize, onDuplicate, onDelete}: Props) {
   const [menu, setMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const moreRef = useRef<HTMLButtonElement>(null);
+  const onBlur = useDismiss(menu, menuRef, moreRef, () => setMenu(false));
   const smaller = stepSize(size, -1);
   const larger = stepSize(size, 1);
   return (
@@ -34,6 +38,7 @@ export function TextPopup({size, style, onSize, onDuplicate, onDelete}: Props) {
         A+
       </button>
       <button
+        ref={moreRef}
         type="button"
         aria-label="More"
         aria-haspopup="menu"
@@ -47,10 +52,14 @@ export function TextPopup({size, style, onSize, onDuplicate, onDelete}: Props) {
       </button>
       {menu && (
         <div
+          ref={menuRef}
           className="markup-menu"
           role="menu"
+          onBlur={onBlur}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') setMenu(false);
+            if (e.key !== 'Escape') return;
+            setMenu(false);
+            moreRef.current?.focus();
           }}
         >
           <button
