@@ -150,15 +150,15 @@ export function FieldLayer({
               onChange={(e) => set(w.fieldName, e.target.checked)}
             />
           );
-        if (w.radioButton)
+        if (w.radioButton && w.buttonValue)
           return (
             <input
               key={key}
               type="radio"
               className="form-field"
               name={w.fieldName}
-              value={w.buttonValue ?? undefined}
-              aria-label={label}
+              value={w.buttonValue}
+              aria-label={`${label}: ${w.buttonValue}`}
               style={style}
               disabled={disabled}
               checked={(fill ?? w.fieldValue) === w.buttonValue}

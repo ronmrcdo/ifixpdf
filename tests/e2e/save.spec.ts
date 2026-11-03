@@ -650,7 +650,7 @@ test.describe('native', () => {
     await app.view('Edit PDF');
     await app.tab('Document').click();
     await page.getByRole('checkbox', {name: 'agree'}).check();
-    await page.getByRole('radio', {name: 'pay'}).nth(1).check();
+    await page.getByRole('radio', {name: 'pay: 1'}).check(); // pdf-lib names the states by index
     await page.getByRole('combobox', {name: 'city'}).selectOption('Rome');
     const labels = page.getByRole('complementary', {name: 'Output settings'}).locator('label');
     for (const label of await labels.all()) {

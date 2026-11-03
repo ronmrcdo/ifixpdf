@@ -120,7 +120,7 @@ describe('FieldLayer', () => {
     setup();
     expect(await screen.findByRole('textbox', {name: 'name'})).toHaveValue('Zed');
     expect(screen.getByRole('checkbox', {name: 'I agree'})).toBeChecked();
-    expect(screen.getAllByRole('radio', {name: 'pay'})[1]).toBeChecked();
+    expect(screen.getByRole('radio', {name: 'pay: net60'})).toBeChecked();
     expect(screen.getByRole('combobox', {name: 'city'})).toHaveValue('Rome');
   });
 
@@ -141,8 +141,8 @@ describe('FieldLayer', () => {
 
   it('radio: choosing net60 sets pay to net60', async () => {
     setup();
-    const radios = await screen.findAllByRole('radio', {name: 'pay'});
-    await userEvent.click(radios[1]!);
+    const net60 = await screen.findByRole('radio', {name: 'pay: net60'});
+    await userEvent.click(net60);
     expect(setField).toHaveBeenCalledWith('f', 'pay', 'net60');
   });
 
