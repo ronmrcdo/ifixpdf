@@ -1,4 +1,4 @@
-Your PDFs are opened, edited and saved only on this computer. iFixPDF has no account, no analytics and no tracking. iFixPDF only connects to the internet when you press Check for updates.
+Your PDFs are opened, edited and saved only on this computer. iFixPDF has no account, no analytics and no tracking. iFixPDF only connects to the internet when you press Check for updates. The Microsoft Store version never connects; the Store updates it.
 
 In plain words: iFixPDF works offline on your own files and collects no data. It is provided with no warranty, so keep a backup of any important PDF before you change it. If Microsoft WebView2 is missing on your PC, the installer downloads it from Microsoft; Windows components such as WebView2 are governed by Microsoft's own terms.
 
