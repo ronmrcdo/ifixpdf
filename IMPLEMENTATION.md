@@ -75,5 +75,6 @@ Ron Mercado holds the updater private key and its password in a backup outside t
 - [ ] Test real save errors, unavailable destinations, low disk space, large inputs, corrupted PDFs and canceled operations.
 - [ ] Add focused Rust/unit/integration checks and document real Windows evidence. Retain browser checks for the existing editing behaviors.
 - [ ] Publish installation, update and recovery instructions with accurate support boundaries.
+- [ ] Microsoft Store channel (pending, unverified): the Release run keeps an unsigned x64 MSIX as a workflow artifact, and `store.yml` submits it with the msstore CLI after `pnpm release:publish` asks. The Store build skips the updater. See RELEASE.md.
 
 Completion: installation and signed update checks pass on supported Windows targets, PDFs remain valid, and the release documentation distinguishes measured results from pending work.

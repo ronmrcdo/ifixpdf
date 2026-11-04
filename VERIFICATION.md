@@ -353,4 +353,13 @@ Windows checklist for the owner (all pending):
 - [ ] Saving over a file another app holds open (e.g. the PDF "Open PDF after saving" just opened), and an antivirus-induced rename failure, show an error toast and leave the old file intact.
 - [ ] A file saved with Save as reopens from Home recents after a restart.
 
+Microsoft Store channel (all pending; nothing here has run on Windows or against the Store):
+
+- [ ] A sideloaded MSIX opens.
+- [ ] Open, save, merge and export work in the MSIX.
+- [ ] Recents and the draft survive a restart.
+- [ ] The Settings row shows "Updates come from the Microsoft Store." and the app makes no update request.
+- [ ] The first certification passes.
+- [ ] The first `pnpm release:publish` → Yes run submits through `store.yml`.
+
 Open owner decision: dropping a folder grants a recursive fs scope that persisted-scope keeps across restarts (read only: `fs:allow-write-file` was removed when Save as moved to Rust, `docs/adr/20261031120305_rust-owned-save-as.md`). tauri-plugin-fs grants it in Rust (`allow_directory(path, true)`, tauri-plugin-fs 2.7.1 `src/lib.rs:632-647`) before JavaScript sees the drop, so ignoring folder drops in JavaScript does not remove the grant. Options: accept and document it, or a Rust-side change (forbid the directory again after the drop, or a custom drop handler).

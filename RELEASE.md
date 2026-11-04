@@ -46,17 +46,32 @@ The tag must be on `main`, or the run stops.
 
 ## 4. Try it (optional)
 
-Open the draft under Releases, download the installer for your computer, install it and open it. Settings → About shows the new version. The "unknown publisher" warning is expected; the release notes explain it.
+Open the draft under Releases, download the installer for your computer, install it and open it. Settings → About shows the new version. The "unknown publisher" warning is expected for these GitHub installers; the release notes explain it.
 
 ## 5. `pnpm release:publish`
 
 Checks that the draft exists and its `latest.json` covers the OSes chosen for that tag, asks you to confirm, publishes it as the latest release, then reads the public update feed to confirm it offers the new version. Pass a tag to publish an older draft: `pnpm release:publish v0.1.2`.
+
+If the release includes Windows, it then asks whether to also submit it to the Microsoft Store (default No). Yes starts the `Store` workflow (see "Microsoft Store" below); if that fails to start, the release stays published and the command prints the `gh workflow run` line to retry.
 
 Without the command: Releases → the draft → Edit → keep **Set as the latest release** → **Publish release**.
 
 ## 6. Test the update (next release)
 
 Keep the published version installed. After the next release is published, press **Check for updates** in it and confirm it updates. Record the result in [VERIFICATION.md](VERIFICATION.md).
+
+## Microsoft Store (pending verification)
+
+The Store gets the Windows MSIX (`iFixPDF_<X.Y.Z>.0_x64.msix`), which the Release run keeps as a workflow artifact named `msix` for 90 days. It is never attached to the GitHub release. The app assumes WebView2 is present, as on current Windows 10 and 11.
+
+One-time setup:
+
+1. In Partner Center → Account settings → User management → Microsoft Entra applications, link an Entra ID app with the Manager role.
+2. Add `MSSTORE_TENANT_ID`, `MSSTORE_SELLER_ID`, `MSSTORE_CLIENT_ID` and `MSSTORE_CLIENT_SECRET` as secrets of the `release` environment.
+3. First submission by hand: download the `msix` artifact from the tag's Release run. In Partner Center → iFixPDF → Start submission, upload it and fill in the listing, privacy policy URL, age rating and price. Set Publish options to "as soon as it passes certification". Partner Center asks for a justification for the restricted capability `runFullTrust`: "desktop app packaged as MSIX; needs full trust to run".
+4. Before the first Store release, run the Release workflow from Actions (dry run) and confirm the `msix` artifact exists and its steps are green.
+
+After that, answer Yes in step 5. The `Store` workflow (`store.yml`) finds that tag's Release run, checks the package version, then runs `msstore publish`, which commits the submission to certification. Approve the `release` environment when GitHub asks. It goes live once Microsoft certifies it; track it in Partner Center. To resubmit from Actions, pick the tag under "Use workflow from" and enter the same tag; only tags created after this change contain `store.yml`.
 
 ## Releasing for some OSes only
 
