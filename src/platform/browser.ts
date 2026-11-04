@@ -67,6 +67,9 @@ export const browserPlatform: Platform = {
       document.removeEventListener('drop', drop);
     };
   },
+  async storeInstall() {
+    return false;
+  },
   async saveAs(bytes, name, kind) {
     const {label, ext, type} = SAVE_KINDS[kind];
     const picker = (window as Window & {showSaveFilePicker?: SavePicker}).showSaveFilePicker;

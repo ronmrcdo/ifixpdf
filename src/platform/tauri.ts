@@ -56,6 +56,11 @@ export const tauriPlatform: Platform = {
   openPath: (path) => openPath(path),
   reveal: (path) => revealItemInDir(path),
   openUrl: (url) => openUrl(url),
+  storeInstall: () =>
+    invoke<boolean | null>('is_store_install').then(
+      (v) => v === true,
+      () => false,
+    ),
   window: {
     minimize: () => getCurrentWindow().minimize(),
     toggleMaximize: () => getCurrentWindow().toggleMaximize(),

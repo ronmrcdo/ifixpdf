@@ -2169,10 +2169,22 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the is_store_install command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-is-store-install",
+          "markdownDescription": "Enables the is_store_install command without any pre-configured scope."
+        },
+        {
           "description": "Enables the save_as command without any pre-configured scope.",
           "type": "string",
           "const": "allow-save-as",
           "markdownDescription": "Enables the save_as command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the is_store_install command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-is-store-install",
+          "markdownDescription": "Denies the is_store_install command without any pre-configured scope."
         },
         {
           "description": "Denies the save_as command without any pre-configured scope.",

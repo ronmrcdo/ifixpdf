@@ -18,7 +18,8 @@ export type UpdateStatus =
   | 'installing'
   | 'save-error'
   | 'install-error'
-  | 'restart';
+  | 'restart'
+  | 'store';
 
 export interface UpdateState {
   status: UpdateStatus;
@@ -38,7 +39,8 @@ export type UpdateEvent =
         | 'install'
         | 'save-failed'
         | 'installed'
-        | 'install-failed';
+        | 'install-failed'
+        | 'store';
     }
   | {type: 'found'; version: string; notes?: string}
   | {type: 'check-failed'; reason: 'unconfigured' | 'offline' | 'error'}
@@ -63,6 +65,7 @@ function progressed(s: UpdateState, event: DownloadEvent): UpdateState {
 }
 
 export function reduce(s: UpdateState, e: UpdateEvent): UpdateState {
+  if (s.status === 'store') return e.type === 'store' ? {status: 'store'} : s; // terminal: the Store updates this build
   switch (e.type) {
     case 'check':
       return {status: 'checking'};
@@ -88,6 +91,8 @@ export function reduce(s: UpdateState, e: UpdateEvent): UpdateState {
       return keep(s, 'restart');
     case 'install-failed':
       return keep(s, 'install-error');
+    case 'store':
+      return {status: 'store'};
   }
 }
 
@@ -105,13 +110,18 @@ export interface UpdateDeps {
   busy(): boolean;
   saveDraft(): Promise<void>;
   notify(text: string): void;
+  storeInstall(): Promise<boolean>;
 }
 type Dispatch = (e: UpdateEvent) => void;
 
 export async function runCheck(
-  deps: Pick<UpdateDeps, 'check' | 'online'>,
+  deps: Pick<UpdateDeps, 'check' | 'online' | 'storeInstall'>,
   dispatch: Dispatch,
 ): Promise<UpdateHandle | null> {
+  if (await deps.storeInstall()) {
+    dispatch({type: 'store'});
+    return null;
+  }
   dispatch({type: 'check'});
   try {
     const update = await deps.check();
@@ -166,3 +176,8 @@ export const useUpdates = create<UpdateState>()(() => ({
   status: platform.native ? 'idle' : 'browser',
 }));
 export const dispatchUpdate: Dispatch = (e) => useUpdates.setState((s) => reduce(s, e), true);
+
+let store: Promise<boolean> | undefined;
+/** Memoized: the answer cannot change while the app runs. */
+export const storeInstall = () => (store ??= platform.storeInstall());
+if (platform.native) void storeInstall().then((yes) => yes && dispatchUpdate({type: 'store'}));

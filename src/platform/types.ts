@@ -21,6 +21,8 @@ export interface Platform {
   openPath(path: string, fallbackBytes?: Uint8Array): Promise<void>;
   reveal(path: string): Promise<void>;
   openUrl(url: string): Promise<void>;
+  /** True in the Microsoft Store (MSIX) build, whose updates come from the Store. */
+  storeInstall(): Promise<boolean>;
   window: {
     minimize(): Promise<void>;
     toggleMaximize(): Promise<void>;

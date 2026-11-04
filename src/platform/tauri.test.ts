@@ -47,6 +47,22 @@ afterEach(() => {
 describe('tauri platform', () => {
   test('is native', () => expect(p.native).toBe(true));
 
+  describe('storeInstall', () => {
+    test.each([
+      [true, true],
+      [null, false],
+    ])('invoke returning %s resolves %s', async (answer, expected) => {
+      mockTauri({is_store_install: () => answer});
+      expect(await p.storeInstall()).toBe(expected);
+      expect(cmds()).toEqual(['is_store_install']);
+    });
+
+    test('resolves false when invoke rejects', async () => {
+      mockTauri({is_store_install: () => Promise.reject('denied')});
+      expect(await p.storeInstall()).toBe(false);
+    });
+  });
+
   describe('pickPdfs', () => {
     test('opens the dialog with the PDF filter, then reads each picked path', async () => {
       mockTauri({
