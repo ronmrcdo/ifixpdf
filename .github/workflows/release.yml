@@ -182,6 +182,33 @@ jobs:
           uploadUpdaterJson: true
           args: >-
             ${{ matrix.args }} --config '{"bundle":{"createUpdaterArtifacts":true},"plugins":{"updater":{"pubkey":"${{ vars.TAURI_UPDATER_PUBKEY }}","endpoints":["https://github.com/ronmrcdo/ifixpdf/releases/latest/download/latest.json"]}}}'
+      # Store package only: an artifact for the Partner Center upload, never attached to the GitHub release.
+      # GitHub release must not depend on the Store package; store.yml fails if the artifact is missing.
+      - &msix
+        name: Package MSIX
+        continue-on-error: true
+        if: matrix.platform == 'windows-latest'
+        run: node scripts/msix.ts src-tauri/target/release/ifixpdf.exe msix-out
+      - &msix-check
+        name: Check MSIX manifest version
+        continue-on-error: true
+        if: matrix.platform == 'windows-latest'
+        run: |
+          $v = (Get-Content package.json | ConvertFrom-Json).version
+          $makeappx = Get-ChildItem 'C:\Program Files (x86)\Windows Kits\10\bin\*\x64\makeappx.exe' | Sort-Object FullName | Select-Object -Last 1
+          & $makeappx.FullName unpack /p (Get-ChildItem msix-out/*.msix).FullName /d unpacked /o
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (-not (Select-String -Path unpacked/AppxManifest.xml -SimpleMatch "Version=`"$v.0`"" -Quiet)) { throw "AppxManifest.xml lacks Version=$v.0" }
+      - &msix-upload
+        name: Upload MSIX
+        continue-on-error: true
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-artifact@v7.0.2
+        with:
+          name: msix
+          path: msix-out/*.msix
+          if-no-files-found: error
+          retention-days: 90
 
   verify:
     # Checks the draft's update feed lists every chosen OS and writes the next steps to the run summary.
@@ -231,3 +258,6 @@ jobs:
             src-tauri/target/**/bundle/appimage/*.AppImage
             src-tauri/target/**/bundle/deb/*.deb
           if-no-files-found: error
+      - *msix
+      - *msix-check
+      - *msix-upload

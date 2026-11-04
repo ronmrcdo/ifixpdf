@@ -1,0 +1,76 @@
+name: Store
+
+# Manual: submits a tag's MSIX (the `msix` artifact of its Release run) to the Microsoft Store.
+# Started by `pnpm release:publish`; the release environment's approval gates it. See RELEASE.md.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Release tag to submit, e.g. v0.1.4
+        required: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  submit:
+    runs-on: windows-latest
+    environment: release
+    defaults:
+      run:
+        shell: bash
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      TAG: ${{ inputs.tag }}
+    steps:
+      - name: Check Store secrets
+        env:
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+        run: |
+          # The release environment only admits v* tag refs, so the workflow must run from the tag.
+          [ "$TAG" = "$GITHUB_REF_NAME" ] || { echo "::error::Run the Store workflow from tag $TAG (Use workflow from: $TAG)"; exit 1; }
+          missing=''
+          [ -n "$TENANT" ] || missing="$missing secret MSSTORE_TENANT_ID,"
+          [ -n "$SELLER" ] || missing="$missing secret MSSTORE_SELLER_ID,"
+          [ -n "$CLIENT" ] || missing="$missing secret MSSTORE_CLIENT_ID,"
+          [ -n "$SECRET" ] || missing="$missing secret MSSTORE_CLIENT_SECRET,"
+          if [ -n "$missing" ]; then
+            echo "::error::Store submission is not configured. Missing:${missing%,}. Add them under Settings > Environments > release."
+            exit 1
+          fi
+      - name: Download the tag's MSIX
+        run: |
+          [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::Tag $TAG is not in the form vX.Y.Z"; exit 1; }
+          id=$(gh run list --workflow release.yml --branch "$TAG" --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId')
+          [ -n "$id" ] || { echo "::error::No successful Release run for $TAG"; exit 1; }
+          gh run download "$id" -n msix -D msix || {
+            echo "::error::$TAG's Release run has no MSIX (Windows not in that release, or the artifact expired)"
+            exit 1
+          }
+      - name: Check package version
+        run: |
+          files=(msix/*)
+          if [ "${#files[@]}" -ne 1 ] || [ "$(basename "${files[0]}")" != "iFixPDF_${TAG#v}.0_x64.msix" ]; then
+            echo "::error::Expected exactly msix/iFixPDF_${TAG#v}.0_x64.msix, found: ${files[*]}"
+            exit 1
+          fi
+      # Pinned to the v1.4 commit; the CLI version is pinned by `version`.
+      - uses: microsoft/setup-msstore-cli@cc9910a8d59f2eb55cbb83df0a3800cf3b5300e0 # v1.4
+        with:
+          version: v0.4.4
+      - name: Configure the Store CLI
+        env:
+          TENANT: ${{ secrets.MSSTORE_TENANT_ID }}
+          SELLER: ${{ secrets.MSSTORE_SELLER_ID }}
+          CLIENT: ${{ secrets.MSSTORE_CLIENT_ID }}
+          SECRET: ${{ secrets.MSSTORE_CLIENT_SECRET }}
+        run: msstore reconfigure --tenantId "$TENANT" --sellerId "$SELLER" --clientId "$CLIENT" --clientSecret "$SECRET"
+      - name: Submit to the Store
+        run: |
+          msstore publish "msix/iFixPDF_${TAG#v}.0_x64.msix" --appId 9NC8SDLBTL8H
+          echo "Submitted $TAG to the Microsoft Store; it goes live after certification. Track it in Partner Center." >> "$GITHUB_STEP_SUMMARY"

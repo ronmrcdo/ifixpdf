@@ -188,3 +188,15 @@ xattr -cr /Applications/iFixPDF.app
   ];
   return `${sections.filter(Boolean).join('\n\n')}\n`;
 }
+
+export const offersStore = (platforms: Platform[]): boolean => platforms.includes('windows');
+
+export const storeSubmitCommand = (tag: string): string[] => [
+  'workflow',
+  'run',
+  'store.yml',
+  '--ref',
+  tag,
+  '-f',
+  `tag=${tag}`,
+];

@@ -1,7 +1,13 @@
 import {execFileSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
 import {confirm, isCancel} from '@clack/prompts';
-import {missingUpdaterKeys, PLATFORMS, releasePlatforms} from './release-lib.ts';
+import {
+  missingUpdaterKeys,
+  offersStore,
+  PLATFORMS,
+  releasePlatforms,
+  storeSubmitCommand,
+} from './release-lib.ts';
 
 const FEED = 'https://github.com/ronmrcdo/ifixpdf/releases/latest/download/latest.json';
 const run = (cmd: string, ...args: string[]) =>
@@ -47,13 +53,30 @@ async function main(): Promise<void> {
 
   run('gh', 'release', 'edit', tag, '--draft=false', '--latest');
   console.log(`Published ${tag}.`);
-  const res = await fetch(FEED);
-  const live = res.ok ? ((await res.json()) as {version?: string}).version : undefined;
+  const res = await fetch(FEED).catch(() => null);
+  const live = res?.ok ? ((await res.json()) as {version?: string}).version : undefined;
   console.log(
     live === tag.slice(1)
       ? `Update feed now offers ${live}.`
-      : `Update feed shows ${live ?? `HTTP ${res.status}`}; it can lag a minute. Check later: curl -sL ${FEED}`,
+      : `Update feed shows ${live ?? `HTTP ${res?.status ?? 'error'}`}; it can lag a minute. Check later: curl -sL ${FEED}`,
   );
+  if (!offersStore(platforms)) return;
+  const store = await confirm({
+    message: `Also submit ${tag} to the Microsoft Store? It goes live once Microsoft certifies it.`,
+    initialValue: false,
+  });
+  if (isCancel(store) || !store) return console.log('Not submitted to the Microsoft Store.');
+  const submit = storeSubmitCommand(tag);
+  try {
+    run('gh', ...submit);
+    console.log(
+      'Store submission started: https://github.com/ronmrcdo/ifixpdf/actions/workflows/store.yml (approve the release environment)',
+    );
+  } catch {
+    fail(
+      `Couldn't start the Store submission. ${tag} is published on GitHub. Retry with: gh ${submit.join(' ')}`,
+    );
+  }
 }
 
 await main();
