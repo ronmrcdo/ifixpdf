@@ -4,7 +4,7 @@ import {describe, expect, test} from 'vitest';
 
 const read = (p: string) => readFileSync(p, 'utf8'); // vitest runs from the repo root
 const PRIVACY =
-  'Your PDFs are opened, edited and saved only on this computer. iFixPDF has no account, no analytics and no tracking. iFixPDF only connects to the internet when you press Check for updates.';
+  'Your PDFs are opened, edited and saved only on this computer. iFixPDF has no account, no analytics and no tracking. iFixPDF only connects to the internet when you press Check for updates. The Microsoft Store version never connects; the Store updates it.';
 
 describe('legal files', () => {
   const license = read('LICENSE');
