@@ -10,11 +10,13 @@ import {
   checkVersions,
   featFixSubjects,
   isNewer,
+  offersStore,
   missingUpdaterKeys,
   parseVersion,
   releaseBody,
   releasePlatforms,
   setCargoPackageVersion,
+  storeSubmitCommand,
   stampUnreleased,
   unreleasedSection,
 } from '../../scripts/release-lib.ts';
@@ -258,5 +260,25 @@ describe('releaseBody', () => {
     expect(body).toContain('asks for your password');
     expect(body).not.toContain('downloading the new');
     expect(body).toContain('https://github.com/ronmrcdo/ifixpdf/blob/main/EULA.txt');
+  });
+});
+
+describe('Store submit helpers', () => {
+  it('offers the Store only when Windows is released', () => {
+    expect(offersStore(['windows', 'macos'])).toBe(true);
+    expect(offersStore(['macos', 'linux'])).toBe(false);
+    expect(offersStore([])).toBe(false);
+  });
+
+  it('builds the gh workflow run command', () => {
+    expect(storeSubmitCommand('v0.1.4')).toEqual([
+      'workflow',
+      'run',
+      'store.yml',
+      '--ref',
+      'v0.1.4',
+      '-f',
+      'tag=v0.1.4',
+    ]);
   });
 });
