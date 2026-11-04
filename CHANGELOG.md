@@ -1,5 +1,9 @@
 What's new in iFixPDF, newest first.
 
+## v0.2.1 — November 2026
+
+Small improvements and fixes.
+
 ## v0.2.0 — November 2026
 
 - **New** — Fill in and sign PDFs in Edit: add text, check marks, crosses and dots, and type into a PDF's own form fields
