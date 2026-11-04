@@ -90,6 +90,24 @@ async fn save_as(window: tauri::Window, request: Request<'_>) -> Result<Option<S
     Ok(Some(path.to_string_lossy().into_owned()))
 }
 
+/// True when running from an MSIX package (the Microsoft Store build): its updates come from the Store.
+#[tauri::command]
+fn is_store_install() -> bool {
+    #[cfg(windows)]
+    {
+        #[link(name = "kernel32")]
+        extern "system" {
+            fn GetCurrentPackageFullName(len: *mut u32, name: *mut u16) -> i32;
+        }
+        const APPMODEL_ERROR_NO_PACKAGE: i32 = 15700;
+        let mut len = 0u32;
+        // SAFETY: length 0 with a null buffer only queries; it returns NO_PACKAGE when unpackaged.
+        unsafe { GetCurrentPackageFullName(&mut len, std::ptr::null_mut()) != APPMODEL_ERROR_NO_PACKAGE }
+    }
+    #[cfg(not(windows))]
+    false
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_updater::Builder::new().build())
@@ -98,7 +116,7 @@ fn main() {
         // After fs: it restores and saves the fs scope (picked and dropped files) across restarts.
         .plugin(tauri_plugin_persisted_scope::init())
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![save_as])
+        .invoke_handler(tauri::generate_handler![save_as, is_store_install])
         .run(tauri::generate_context!())
         .expect("iFixPDF could not start");
 }
@@ -168,6 +186,12 @@ mod tests {
         assert_eq!(decode_uri("bad%+1"), None);
         assert_eq!(decode_uri("bad%zz"), None);
         assert_eq!(decode_uri("%FF"), None); // not UTF-8
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn is_store_install_is_false_off_windows() {
+        assert!(!is_store_install());
     }
 
     #[test]

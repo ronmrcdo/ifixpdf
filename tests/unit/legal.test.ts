@@ -65,6 +65,7 @@ describe('legal files', () => {
       'dialog:allow-open',
       'fs:allow-read-file',
       'allow-save-as',
+      'allow-is-store-install',
       'opener:allow-reveal-item-in-dir',
       'opener:allow-open-path',
       'opener:allow-open-url',

@@ -64,6 +64,7 @@ describe('security', () => {
     expect(ids).not.toContain('fs:allow-write-file');
     expect(ids).not.toContain('dialog:allow-save');
     expect(ids).toContain('allow-save-as');
+    expect(ids).toContain('allow-is-store-install');
     // fs:allow-read-file grants the command only; paths come from dialog picks and saves (persisted scope).
     expect(ids.filter((id) => id.startsWith('fs:'))).toEqual(['fs:allow-read-file']);
   });

@@ -9,6 +9,7 @@ import {
   runCheck,
   runDownload,
   runInstall,
+  storeInstall,
   useUpdates,
   type UpdateDeps,
   type UpdateHandle,
@@ -59,6 +60,7 @@ const view: Record<UpdateStatus, (s: UpdateState) => [string, Button?]> = {
     RETRY_INSTALL,
   ],
   restart: () => ['Update installed. Restart iFixPDF to finish.'],
+  store: () => ['Updates come from the Microsoft Store.'],
 };
 const SHOW_NOTES: UpdateStatus[] = ['available', 'download-error', 'ready', 'save-error'];
 
@@ -68,6 +70,7 @@ const defaultDeps: UpdateDeps = {
   busy,
   saveDraft: saveDraftNow,
   notify: (text) => useApp.getState().notify(text),
+  storeInstall,
 };
 // Held here, not in the store: the plugin's Update is a native resource, and it must outlive the row.
 let update: UpdateHandle | null = null;

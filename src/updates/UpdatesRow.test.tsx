@@ -51,6 +51,7 @@ describe('UpdatesRow copy and controls', () => {
       'Retry',
     ],
     [{status: 'restart', ...info}, 'Update installed. Restart iFixPDF to finish.', null],
+    [{status: 'store'}, 'Updates come from the Microsoft Store.', null],
   ])('%j', (state, text, button) => {
     set(state);
     render(<UpdatesRow />);
@@ -127,6 +128,7 @@ describe('UpdatesRow actions', () => {
           busy: () => false,
           saveDraft: async () => {},
           notify: vi.fn(),
+          storeInstall: async () => false,
         }}
       />,
     );

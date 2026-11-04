@@ -75,6 +75,19 @@ test.describe('native', () => {
     await page.addInitScript(mockUpdater);
   });
 
+  test('a Microsoft Store install shows the Store copy and no update controls', async ({
+    app,
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.__tauri.is_store_install = () => true;
+    });
+    await app.goto('view=home');
+    await app.view('Settings');
+    await expect(updates(page).getByText('Updates come from the Microsoft Store.')).toBeVisible();
+    await expect(updates(page).getByRole('button')).toHaveCount(0);
+  });
+
   test('checks only on demand: unconfigured, up to date, offline, error and retry', async ({
     app,
     page,

@@ -55,6 +55,10 @@ describe('browser platform', () => {
     });
   });
 
+  test('is never a Store install', async () => {
+    expect(await p.storeInstall()).toBe(false);
+  });
+
   describe('saveAs', () => {
     test('with the save picker, writes and returns the chosen name', async () => {
       const writes: Uint8Array[] = [];

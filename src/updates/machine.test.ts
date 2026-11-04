@@ -123,17 +123,51 @@ const handle = (over: Partial<UpdateHandle> = {}): UpdateHandle => ({
   ...over,
 });
 
+describe('store status', () => {
+  it('is entered from any state', () => {
+    expect(reduce(at('idle'), {type: 'store'})).toEqual(at('store'));
+  });
+  it.each<UpdateEvent>([
+    {type: 'check'},
+    {type: 'found', ...info},
+    {type: 'download'},
+    {type: 'install'},
+  ])('ignores %j', (e) => {
+    const s = at('store');
+    expect(reduce(s, e)).toBe(s);
+  });
+});
+
 describe('runCheck', () => {
   it('finds an update and returns the handle', async () => {
     const h = harness(at('idle')),
       u = handle();
-    expect(await runCheck({check: async () => u, online: () => true}, h.dispatch)).toBe(u);
+    expect(
+      await runCheck(
+        {check: async () => u, online: () => true, storeInstall: async () => false},
+        h.dispatch,
+      ),
+    ).toBe(u);
     expect(h.seen).toEqual(['checking', 'available']);
     expect(h.state).toEqual(at('available', info));
   });
+  it('a Store install never checks: it ends in the store state', async () => {
+    const h = harness(at('idle')),
+      check = vi.fn(async () => handle());
+    expect(
+      await runCheck({check, online: () => true, storeInstall: async () => true}, h.dispatch),
+    ).toBeNull();
+    expect(check).not.toHaveBeenCalled();
+    expect(h.seen).toEqual(['store']);
+  });
   it('up to date', async () => {
     const h = harness(at('idle'));
-    expect(await runCheck({check: async () => null, online: () => true}, h.dispatch)).toBeNull();
+    expect(
+      await runCheck(
+        {check: async () => null, online: () => true, storeInstall: async () => false},
+        h.dispatch,
+      ),
+    ).toBeNull();
     expect(h.state.status).toBe('current');
   });
   it.each([
@@ -164,6 +198,7 @@ describe('runCheck', () => {
             throw error;
           },
           online: () => online,
+          storeInstall: async () => false,
         },
         h.dispatch,
       ),
