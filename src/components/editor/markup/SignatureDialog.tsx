@@ -74,7 +74,7 @@ function SignatureForm({onClose, onUse}: Omit<Props, 'open'>) {
   const [drawn, setDrawn] = useState(false);
   const [imported, setImported] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [remember, setRemember] = useState(true);
+  const [remember, setRemember] = useState(false);
   const pad = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
 
