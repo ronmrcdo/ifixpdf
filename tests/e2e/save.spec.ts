@@ -188,6 +188,7 @@ test.describe('native', () => {
   test('Extract saves the selected pages with an en-dash range name', async ({app, page}) => {
     await app.openPdf(await report());
     await app.view('Edit PDF');
+    await app.tab('Pages').click();
     const check = (n: number) => page.getByRole('checkbox', {name: `Select page ${n}`});
     const extract = page.getByRole('button', {name: 'Extract selected pages'});
     await check(1).check();
@@ -210,6 +211,7 @@ test.describe('native', () => {
   test('Split: cancelling the save keeps the form open', async ({app, page}) => {
     await app.openPdf(await report());
     await app.view('Edit PDF');
+    await app.tab('Pages').click();
     await page.getByRole('button', {name: 'Split PDF'}).click();
     const dialog = page.getByRole('dialog');
     await dialog.getByRole('combobox', {name: 'Split by'}).selectOption('every');
@@ -511,6 +513,7 @@ test.describe('native', () => {
       buffer: Buffer.from(await doc.save()),
     });
     await app.view('Edit PDF');
+    await app.tab('Pages').click();
     // Displayed order 3, 1, 2 with the (new) second page rotated.
     await page.getByRole('button', {name: 'Preview page 3'}).focus();
     await page.keyboard.press('Alt+ArrowLeft');

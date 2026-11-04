@@ -50,6 +50,7 @@ test.describe('accessibility', () => {
     page,
   }) => {
     await openEdit(app);
+    await app.tab('Pages').click();
     const box = page.getByRole('checkbox', {name: 'Select page 1'});
     const border = () => box.evaluate((el) => getComputedStyle(el).borderTopColor);
     await box.hover();
@@ -104,6 +105,7 @@ test.describe('accessibility', () => {
     page,
   }) => {
     await openEdit(app);
+    await app.tab('Pages').click();
     const opener = page.getByRole('button', {name: 'Split PDF'});
     await opener.click();
     await expect(page.getByRole('dialog')).toBeVisible();

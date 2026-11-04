@@ -178,7 +178,7 @@ describe('navigate with a view transition that applies later', () => {
     expect(documentStore.getState().tab).toBe('document');
     applyTransitions();
     expect(useApp.getState().view).toBe('edit');
-    expect(documentStore.getState().tab).toBe('pages');
+    expect(documentStore.getState().tab).toBe('document'); // from Preview, Edit opens on the document
   });
 
   it('the last navigation wins even when an earlier one has not applied yet', () => {

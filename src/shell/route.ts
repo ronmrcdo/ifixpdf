@@ -42,13 +42,14 @@ export function writeRoute(view: View, doc: {files: SourceFile[]; recentId?: str
   replace(q.toString());
 }
 
-/** Switches view; Preview opens on the Document tab and Edit on Pages, as today. */
+/** Switches view; Preview opens on the Document tab, Edit on Pages, or on the Document coming from Preview. */
 export function navigate(view: View): void {
   if (view === 'merge') void flushDraft(); // leaving the document workspace writes its pending draft now, as legacy did
   const change = () => {
+    const from = useApp.getState().view;
     useApp.getState().setView(view);
     if (view === 'preview') documentStore.getState().setTab('document');
-    if (view === 'edit') documentStore.getState().setTab('pages');
+    if (view === 'edit') documentStore.getState().setTab(from === 'preview' ? 'document' : 'pages');
   };
   // Cross-fade only a real change; while an earlier fade may still be waiting to apply, the shown view is not the latest one.
   if (useApp.getState().view === view && !isTransitioning()) return change();

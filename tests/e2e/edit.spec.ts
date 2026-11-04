@@ -58,6 +58,7 @@ test('Edit PDF from Preview keeps the pages and history; Edit has no sources pan
   await app.view('Preview PDF');
   await page.locator('.header-actions').getByRole('button', {name: 'Edit PDF'}).click();
   await expect(page.getByRole('button', {name: 'Undo'})).toBeEnabled();
+  await app.tab('Pages').click();
   await expect(page.locator('.page-card')).toHaveCount(2);
 });
 
