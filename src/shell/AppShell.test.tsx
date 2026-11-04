@@ -136,7 +136,7 @@ describe('header', () => {
     expect(actions()).toEqual([]);
   });
 
-  it('Preview with a document adds Print and enables Edit PDF, which opens Edit on Pages', async () => {
+  it('Preview with a document adds Print and enables Edit PDF, which opens Edit on the document', async () => {
     fill(documentStore, [file('a', 2)]);
     useApp.setState({view: 'preview'});
     render(<AppShell />);
@@ -148,7 +148,7 @@ describe('header', () => {
     expect(edit).toBeEnabled();
     await userEvent.click(edit);
     expect(useApp.getState().view).toBe('edit');
-    expect(documentStore.getState().tab).toBe('pages');
+    expect(documentStore.getState().tab).toBe('document');
   });
 
   it('Edit PDF is disabled in Preview with no document', () => {
