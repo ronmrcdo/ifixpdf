@@ -211,6 +211,10 @@ A neutral cover contains the actual first PDF page. Checkboxes and More controls
 
 Selected pages use the dedicated pale fill and blue outline. The white selection toolbar stays within the neutral canvas. Preserve keyed thumbnail identity during reordering. Preview remains read-only; Edit owns mutations and its save settings. Save/Done must distinguish a real download from an explicitly labeled demonstration. Notifications enter with a small (5px) translation over (160ms); ordinary control feedback uses (120ms) transitions and `cubic-bezier(.23,1,.32,1)`. Reduced-motion mode removes animations and transitions.
 
+### Fill, sign and redact
+
+Edit's Document tab carries a tool strip ("Fill and sign tools"): Add text, Add cross, Add check, Add dot, Sign (with a menu of remembered signatures and Add signature) and Redact. A selected tool shows as pressed; pressing it again clears it. While a tool is active, form-field controls let clicks through to the markup layer. Placed items select with a dashed accent outline and resize from a corner handle. A text item opens a small popup: A− and A+ for size, a Font menu (Helvetica, Times, Courier, Bold) and Delete. The signature dialog draws or imports a signature, and "Remember this signature on this device" starts unchecked. The PDF's own form fields appear as native controls over the page. Redactions are solid black boxes. Preview shows everything read-only and hides fields under a redaction, as the saved file does. Coming from Preview, Edit opens on the Document tab. While an export runs, fields and markup take no input.
+
 ## Do's and Don'ts
 
 ### Do:

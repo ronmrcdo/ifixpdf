@@ -3,8 +3,9 @@ What's new in iFixPDF, newest first.
 ## Unreleased
 
 - **New** — Fill in and sign PDFs in Edit: add text, check marks, crosses and dots, and type into a PDF's own form fields
-- **New** — Sign with a signature you draw or import (PNG or JPEG); remember it on this device to reuse it, then place, move and resize it on the page
+- **New** — Sign with a signature you draw or import (PNG or JPEG); tick Remember to keep it on this device for reuse, then place, move and resize it on the page
 - **New** — Redact: cover areas in black. Pages with a redaction are saved as images, so the covered text can't be recovered
+- **New** — Choose Helvetica, Times or Courier and Bold for added text, and resize text and marks from a corner
 - **New** — Saved copies are flattened: filled fields, text, marks and signatures become part of the page and can't be edited by the recipient. Your original PDF is untouched
 
 ## v0.1.3 — November 2026
