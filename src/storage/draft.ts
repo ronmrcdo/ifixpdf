@@ -1,6 +1,7 @@
 import type {Fills} from '../domain/markup';
 import type {ExportSettings, FileId, PageInstance, PageUid, SourceFile} from '../domain/types';
 import {ensureStores, openDb, req, withDb} from './idb';
+import {PNG_PREFIX} from './signatures';
 
 export interface DraftRecord {
   files: SourceFile[];
@@ -25,9 +26,29 @@ const open = () =>
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
 
-// Shape check for a record from storage; page.local must exist in its file. Deeper fields are trusted.
+const MARKS = new Set(['cross', 'check', 'dot', 'redact']);
+const isRect = (r: unknown) =>
+  isObj(r) && [r.x, r.y, r.w, r.h].every((n) => typeof n === 'number' && Number.isFinite(n));
+// Enough to draw and export it; a bad item would crash the overlay or fail every save.
+const isMarkup = (m: unknown) => {
+  if (!isObj(m) || typeof m.id !== 'string' || !isRect(m.rect) || typeof m.angle !== 'number')
+    return false;
+  if (m.kind === 'text') return typeof m.text === 'string' && typeof m.size === 'number';
+  if (m.kind === 'signature') return typeof m.image === 'string' && m.image.startsWith(PNG_PREFIX);
+  return typeof m.kind === 'string' && MARKS.has(m.kind);
+};
+const isFills = (f: unknown) =>
+  isObj(f) &&
+  Object.values(f).every(
+    (vals) =>
+      isObj(vals) &&
+      Object.values(vals).every((x) => typeof x === 'string' || typeof x === 'boolean'),
+  );
+
+// Shape check for a record from storage; page.local must exist in its file, markup and fills must draw.
 export function isDraftRecord(v: unknown): v is DraftRecord {
   if (!isObj(v) || !Array.isArray(v.files) || !Array.isArray(v.pages)) return false;
+  if (v.fills !== undefined && !isFills(v.fills)) return false;
   if (!Array.isArray(v.selection) || !isObj(v.exportSettings)) return false;
   if (v.view !== 'preview' && v.view !== 'edit') return false;
   if (typeof v.currentPage !== 'number') return false;
@@ -43,7 +64,8 @@ export function isDraftRecord(v: unknown): v is DraftRecord {
       typeof n === 'number' &&
       typeof p.local === 'number' &&
       p.local >= 0 &&
-      p.local < n
+      p.local < n &&
+      (p.markup === undefined || (Array.isArray(p.markup) && p.markup.every(isMarkup)))
     );
   });
 }

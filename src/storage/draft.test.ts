@@ -1,7 +1,7 @@
 import {IDBFactory} from 'fake-indexeddb';
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest';
 import type {PageInstance, SourceFile} from '../domain/types';
-import {clearDraft, readDraft, writeDraft, type DraftRecord} from './draft';
+import {clearDraft, isDraftRecord, readDraft, writeDraft, type DraftRecord} from './draft';
 import {openDb, req, tx} from './idb';
 
 const file = (id: string): SourceFile => ({id, name: `${id}.pdf`, pages: 1, size: 1});
@@ -139,5 +139,48 @@ describe('draft', () => {
     await writeDraft(record('a'), bytesOf('a'));
     await clearDraft();
     expect(await readDraft()).toBeNull();
+  });
+});
+
+describe('isDraftRecord markup and fills', () => {
+  const rect = {x: 0, y: 0, w: 1, h: 1};
+  const withMarkup = (...markup: unknown[]) => ({
+    ...record('a'),
+    pages: [{...page('a'), markup}],
+  });
+  const PNG = 'data:image/png;base64,AA==';
+
+  it('accepts every known kind with a numeric rect', () => {
+    expect(
+      isDraftRecord(
+        withMarkup(
+          {id: '1', kind: 'text', text: 'Hi', size: 12, rect, angle: 0},
+          {id: '2', kind: 'check', rect, angle: 90},
+          {id: '3', kind: 'signature', image: PNG, rect, angle: 0},
+          {id: '4', kind: 'redact', rect, angle: 0},
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it.each([
+    ['a non-array markup', 'x'],
+    ['an item without a rect', [{id: '1', kind: 'text', text: 'Hi', size: 12, angle: 0}]],
+    ['an unknown kind', [{id: '1', kind: 'stamp', rect, angle: 0}]],
+    ['a non-numeric rect field', [{id: '1', kind: 'dot', rect: {...rect, w: '1'}, angle: 0}]],
+    ['text without its text', [{id: '1', kind: 'text', size: 12, rect, angle: 0}]],
+    [
+      'a signature that is not a PNG data URL',
+      [{id: '1', kind: 'signature', image: 'http://x', rect, angle: 0}],
+    ],
+  ])('rejects %s', (_, markup) => {
+    expect(isDraftRecord({...record('a'), pages: [{...page('a'), markup}]})).toBe(false);
+  });
+
+  it('rejects fills that are not objects of strings and booleans', () => {
+    expect(isDraftRecord({...record('a'), fills: {a: {n: 'x', b: true}}})).toBe(true);
+    expect(isDraftRecord({...record('a'), fills: 'x'})).toBe(false);
+    expect(isDraftRecord({...record('a'), fills: {a: 'x'}})).toBe(false);
+    expect(isDraftRecord({...record('a'), fills: {a: {n: 3}}})).toBe(false);
   });
 });
