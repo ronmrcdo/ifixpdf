@@ -1,6 +1,6 @@
 What's new in iFixPDF, newest first.
 
-## Unreleased
+## v0.2.0 — November 2026
 
 - **New** — Fill in and sign PDFs in Edit: add text, check marks, crosses and dots, and type into a PDF's own form fields
 - **New** — Sign with a signature you draw or import (PNG or JPEG); tick Remember to keep it on this device for reuse, then place, move and resize it on the page
