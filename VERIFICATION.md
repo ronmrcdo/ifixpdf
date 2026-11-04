@@ -4,8 +4,8 @@
 
 Browser only, against the mocked Tauri bridge in Chrome; nothing here ran on Windows.
 
-- `pnpm test` (Vitest, jsdom): 1026 tests in 62 files passed.
-- `pnpm exec playwright test --workers=1`: 118/118 passed.
+- `pnpm test` (Vitest, jsdom): 1068 tests in 63 files passed after the audit fixes; under parallel load one test, a different one each run, can time out at about 1.7 s.
+- `pnpm exec playwright test --workers=1`: 118/118 passed before the audit fixes; after them, `edit.spec.ts` and `save.spec.ts` were re-run (27/27 passed).
 - Redaction extraction checks passed for Save as and for Print from Preview: the covered text is gone from page 1 by pdf.js text extraction and by a raw scan of the saved bytes, and page 2 keeps its text.
 - Signature: drawn, remembered, placed and saved; the saved page has an image XObject, and the reopened Sign menu lists the remembered signature. The same signature on two pages is embedded once.
 - Startup JS budget: 123,230 B gzipped against the 120,511 B baseline (+2.7 KB, under the 5 KB limit). The tool strip, Sign menu, signature dialog, signature storage and the markup and field layers load as lazy chunks.
