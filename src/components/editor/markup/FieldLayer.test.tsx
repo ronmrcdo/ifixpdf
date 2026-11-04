@@ -1,4 +1,4 @@
-import {render, screen} from '@testing-library/react';
+import {act, render, screen} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import type {PDFPageProxy, PageViewport} from 'pdfjs-dist';
 import {afterEach, beforeEach, describe, expect, it, type Mock, vi} from 'vitest';
@@ -139,6 +139,46 @@ describe('FieldLayer', () => {
     expect(setField).toHaveBeenCalledWith('f', 'agree', true);
   });
 
+  it('text: the field MaxLen caps the input', async () => {
+    getAnnotations.mockResolvedValue([
+      widget({fieldType: 'Tx', fieldName: 'zip', fieldValue: '', maxLen: 5}),
+      widget({fieldType: 'Tx', fieldName: 'free', fieldValue: '', maxLen: 0}),
+    ]);
+    setup();
+    expect(await screen.findByRole('textbox', {name: 'zip'})).toHaveAttribute('maxLength', '5');
+    expect(screen.getByRole('textbox', {name: 'free'})).not.toHaveAttribute('maxLength');
+  });
+
+  it('checkbox: widgets sharing a name with different exports store the ticked one', async () => {
+    const box = (alternativeText: string, exportValue: string) =>
+      widget({
+        fieldType: 'Btn',
+        fieldName: 'q1',
+        alternativeText,
+        checkBox: true,
+        exportValue,
+        fieldValue: 'Off',
+      });
+    getAnnotations.mockResolvedValue([box('Q1 yes', 'Yes'), box('Q1 no', 'No')]);
+    setup();
+    await userEvent.click(await screen.findByRole('checkbox', {name: 'Q1 no'}));
+    expect(setField).toHaveBeenCalledWith('f', 'q1', 'No');
+    expect(screen.getByRole('checkbox', {name: 'Q1 no'})).toBeChecked();
+    expect(screen.getByRole('checkbox', {name: 'Q1 yes'})).not.toBeChecked();
+    await userEvent.click(screen.getByRole('checkbox', {name: 'Q1 no'}));
+    expect(setField).toHaveBeenLastCalledWith('f', 'q1', false);
+  });
+
+  it('controls are disabled while an export runs', async () => {
+    setup();
+    await screen.findByRole('combobox', {name: 'city'});
+    act(() => {
+      store.getState().beginExport();
+    });
+    for (const el of document.querySelectorAll('input, textarea, select'))
+      expect(el).toBeDisabled();
+  });
+
   it('radio: choosing net60 sets pay to net60', async () => {
     setup();
     const net60 = await screen.findByRole('radio', {name: 'pay: net60'});
@@ -165,6 +205,35 @@ describe('FieldLayer', () => {
     await screen.findByRole('combobox', {name: 'city'});
     for (const el of document.querySelectorAll('input, textarea, select'))
       expect(el).toBeDisabled();
+  });
+
+  it('readOnly hides fields under a redaction on the page, as the saved file does', async () => {
+    getAnnotations.mockResolvedValue([
+      widget({fieldType: 'Tx', fieldName: 'secret', fieldValue: 'x'}),
+      widget({fieldType: 'Tx', fieldName: 'open', fieldValue: 'y', rect: [20, 100, 170, 120]}),
+    ]);
+    const redact = {
+      id: 'r',
+      kind: 'redact' as const,
+      rect: {x: 100, y: 710, w: 5, h: 5},
+      angle: 0 as const,
+    };
+    store.setState({pages: [{...page, markup: [redact]}]});
+    setup(true);
+    await screen.findByRole('textbox', {name: 'open'});
+    expect(screen.queryByRole('textbox', {name: 'secret'})).toBeNull();
+  });
+
+  it('Edit keeps fields under a redaction so they stay editable', async () => {
+    const redact = {
+      id: 'r',
+      kind: 'redact' as const,
+      rect: {x: 100, y: 710, w: 5, h: 5},
+      angle: 0 as const,
+    };
+    store.setState({pages: [{...page, markup: [redact]}]});
+    setup();
+    expect(await screen.findByRole('textbox', {name: 'name'})).toBeInTheDocument();
   });
 
   it('marks the layer while a tool is active so the markup layer takes the clicks', async () => {

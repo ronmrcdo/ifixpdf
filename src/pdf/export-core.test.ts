@@ -425,6 +425,24 @@ describe('export-core', () => {
       }
     });
 
+    it('ticks the named box of a checkbox field whose widgets have different on-states', async () => {
+      const doc = await PDFDocument.create();
+      const page = doc.addPage([300, 300]);
+      const q1 = doc.getForm().createCheckBox('q1');
+      q1.addToPage(page, {x: 20, y: 200, width: 15, height: 15});
+      q1.addToPage(page, {x: 60, y: 200, width: 15, height: 15});
+      const second = q1.acroField.getWidgets()[1]!;
+      const n = second.getAppearances()?.normal as PDFDict;
+      n.set(PDFName.of('No'), n.get(PDFName.of('Yes'))!);
+      n.delete(PDFName.of('Yes'));
+      const flatten = vi.spyOn(doc.getForm(), 'flatten').mockImplementation(() => {});
+      applyFills(doc, {q1: 'No'});
+      flatten.mockRestore();
+      const states = q1.acroField.getWidgets().map((w) => w.getAppearanceState()?.decodeText());
+      expect(states).toEqual(['Off', 'No']);
+      expect(q1.acroField.getValue().decodeText()).toBe('No');
+    });
+
     it('fills a list box', async () => {
       const doc = await PDFDocument.load(await makeFormPdf());
       const list = doc.getForm().createOptionList('size');

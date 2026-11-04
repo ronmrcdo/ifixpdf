@@ -122,6 +122,15 @@ export function applyFills(doc: PDFDocument, values: Readonly<Record<string, Fie
       } else if (field instanceof PDFCheckBox && typeof value === 'boolean') {
         if (value) field.check();
         else field.uncheck();
+      } else if (field instanceof PDFCheckBox && typeof value === 'string') {
+        // Widgets sharing the name with different on-states: tick the one whose state is the value.
+        // check() can't, it only takes the first widget's on-state.
+        const widgets = field.acroField.getWidgets();
+        const on = widgets.map((w) => w.getOnValue()).find((v) => v?.decodeText() === value);
+        if (!on) continue;
+        field.acroField.dict.set(PDFName.of('V'), on);
+        for (const w of widgets)
+          w.setAppearanceState(w.getOnValue() === on ? on : PDFName.of('Off'));
       } else if (field instanceof PDFRadioGroup && typeof value === 'string') {
         // The value is a widget's appearance state (pdf.js buttonValue); with /Opt, the option
         // at that widget's position is what select() takes. Without /Opt the two lists match.

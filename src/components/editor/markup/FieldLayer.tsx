@@ -23,6 +23,7 @@ interface Widget {
   hidden?: boolean;
   readOnly?: boolean;
   multiLine?: boolean;
+  maxLen?: number;
   checkBox?: boolean;
   radioButton?: boolean;
   exportValue?: string;
@@ -74,6 +75,7 @@ function TextField({w, shown, style, disabled, onCommit}: TextProps) {
     value: draft,
     style,
     disabled,
+    maxLength: w.maxLen || undefined,
     onChange: (e: {target: {value: string}}) => setDraft(cleanText(e.target.value)),
     onBlur: () => {
       if (!error && draft !== shown) onCommit(draft);
@@ -117,6 +119,19 @@ export function FieldLayer({
   const fileId = page.fileId;
   const fills = useStore(store, (s) => s.fills[fileId]) ?? NONE;
   const tool = useTool((s) => s.tool);
+  const exporting = useStore(store, (s) => s.exporting);
+  const markup = useStore(store, (s) => s.pages.find((p) => p.uid === page.uid)?.markup);
+  // Preview shows what the file will: a redaction paints over any field under it.
+  const redacted = (w: Widget) =>
+    readOnly &&
+    !!markup?.some(
+      ({kind, rect: r}) =>
+        kind === 'redact' &&
+        r.x < w.rect[2]! &&
+        w.rect[0]! < r.x + r.w &&
+        r.y < w.rect[3]! &&
+        w.rect[1]! < r.y + r.h,
+    );
   const [widgets, setWidgets] = useState<Widget[]>([]);
   useEffect(() => {
     let live = true;
@@ -127,17 +142,24 @@ export function FieldLayer({
   }, [pdfPage]);
 
   const set = (name: string, value: FieldValue) => store.getState().setField(fileId, name, value);
+  // Checkboxes sharing a name with different on-states act as radios: the fill is the ticked state.
+  const shared = (w: Widget) =>
+    widgets.some(
+      (o) => o.checkBox && o.fieldName === w.fieldName && o.exportValue !== w.exportValue,
+    );
 
   return (
     <div className="field-layer" data-tool={tool && !readOnly ? '' : undefined}>
       {widgets.map((w, i) => {
+        if (redacted(w)) return null;
         const box = viewportBox(viewport, w.rect);
         const style = {...box, fontSize: Math.min(box.height * 0.7, 12 * viewport.scale)};
-        const disabled = readOnly || !!w.readOnly;
+        const disabled = readOnly || exporting || !!w.readOnly;
         const label = w.alternativeText || w.fieldName;
         const fill = fills[w.fieldName];
         const key = `${i}:${w.fieldName}`;
-        if (w.checkBox)
+        if (w.checkBox) {
+          const on = shared(w) && w.exportValue ? w.exportValue : true;
           return (
             <input
               key={key}
@@ -146,10 +168,11 @@ export function FieldLayer({
               aria-label={label}
               style={style}
               disabled={disabled}
-              checked={typeof fill === 'boolean' ? fill : w.fieldValue === w.exportValue}
-              onChange={(e) => set(w.fieldName, e.target.checked)}
+              checked={typeof fill === 'boolean' ? fill : (fill ?? w.fieldValue) === w.exportValue}
+              onChange={(e) => set(w.fieldName, e.target.checked && on)}
             />
           );
+        }
         if (w.radioButton && w.buttonValue)
           return (
             <input
