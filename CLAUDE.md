@@ -37,8 +37,8 @@ Desktop PDF tool (Windows, macOS, Linux; Windows is the primary target). Fronten
 | `tests/e2e/`, `tests/unit/` | Playwright specs and fixtures; unit tests outside `src/` |
 | `public/brand/` | Brand mark, wordmark, icons |
 | `vite.config.ts` | Serves and bundles pdf.js CMaps and standard fonts under `/pdfjs/` |
-| `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS, dmg, AppImage and deb bundles; CSP), capabilities (no `core:default`; window minimize, toggle-maximize, close, destroy, start-dragging, internal-toggle-maximize; event listen/unlisten; resources close; updater check/download/install; dialog open; fs read-file; app `allow-save-as`; opener reveal-item-in-dir, open-path `**/*.pdf`, open-url to the GitHub repo) |
-| `scripts/`, `.github/workflows/` | Release scripts (`pnpm release`, `pnpm release:publish`) and the release workflow (draft release, installers for the OSes in `releasePlatforms`) |
+| `src-tauri/` | Rust shell, `tauri.conf.json` (NSIS, dmg, AppImage and deb bundles; CSP), capabilities (no `core:default`; window minimize, toggle-maximize, close, destroy, start-dragging, internal-toggle-maximize; event listen/unlisten; resources close; updater check/download/install; dialog open; fs read-file; app `allow-save-as`, `allow-is-store-install`; opener reveal-item-in-dir, open-path `**/*.pdf`, open-url to the GitHub repo) |
+| `scripts/`, `.github/workflows/` | Release scripts (`pnpm release`, `pnpm release:publish`), MSIX packaging for the Microsoft Store, the release workflow (draft release, installers for the OSes in `releasePlatforms`) and `store.yml` (manual Microsoft Store submission) |
 | `CHANGELOG.md`, `licenses/` | User-facing release notes; bundled third-party license texts (`licenses/generated/` is gitignored) |
 | `docs/adr/` | Architecture decision records (`<timestamp>_<title>.md`) |
 
