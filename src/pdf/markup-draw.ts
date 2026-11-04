@@ -24,20 +24,31 @@ import {
   type Markup,
   markStroke,
   type Rect,
+  type TextFont,
   topLeft,
 } from '../domain/markup';
 import type {Rotation} from '../domain/types';
 
 const BLACK = rgb(0, 0, 0);
-const fonts = new WeakMap<PDFDocument, Promise<PDFFont>>();
-
-function helvetica(doc: PDFDocument): Promise<PDFFont> {
-  let font = fonts.get(doc);
-  if (!font) {
-    font = doc.embedFont(StandardFonts.Helvetica);
-    fonts.set(doc, font);
-  }
-  return font;
+// Regular and bold.
+const STANDARD: Record<TextFont, [StandardFonts, StandardFonts]> = {
+  helvetica: [StandardFonts.Helvetica, StandardFonts.HelveticaBold],
+  times: [StandardFonts.TimesRoman, StandardFonts.TimesRomanBold],
+  courier: [StandardFonts.Courier, StandardFonts.CourierBold],
+};
+// Each font is embedded once per document.
+const fonts = new WeakMap<PDFDocument, Map<StandardFonts, Promise<PDFFont>>>();
+function standardFont(
+  doc: PDFDocument,
+  font: TextFont = 'helvetica',
+  bold = false,
+): Promise<PDFFont> {
+  const name = STANDARD[font][bold ? 1 : 0];
+  const byName = fonts.get(doc) ?? new Map<StandardFonts, Promise<PDFFont>>();
+  fonts.set(doc, byName);
+  const embedded = byName.get(name) ?? doc.embedFont(name);
+  byName.set(name, embedded);
+  return embedded;
 }
 
 // The same signature on many pages is embedded once per document.
@@ -69,7 +80,7 @@ export async function drawMarkup(
       case 'text':
         page.drawText(m.text, {
           ...at(m.size),
-          font: await helvetica(doc),
+          font: await standardFont(doc, m.font, m.bold),
           size: m.size,
           lineHeight: m.size * 1.2,
           color: BLACK,

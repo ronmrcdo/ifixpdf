@@ -6,18 +6,27 @@ import {TextPopup} from './TextPopup';
 const setup = () =>
   render(
     <>
-      <TextPopup size={12} style={{}} onSize={vi.fn()} onDuplicate={vi.fn()} onDelete={vi.fn()} />
+      <TextPopup
+        size={12}
+        font="helvetica"
+        style={{}}
+        onSize={vi.fn()}
+        bold={false}
+        onFont={vi.fn()}
+        onBold={vi.fn()}
+        onDelete={vi.fn()}
+      />
       <button type="button">Elsewhere</button>
     </>,
   );
-const more = () => screen.getByRole('button', {name: 'More'});
+const more = () => screen.getByRole('button', {name: 'Font'});
 const open = async () => {
   await userEvent.click(more());
-  expect(screen.getByRole('menuitem', {name: 'Duplicate'})).toHaveFocus();
+  expect(screen.getByRole('menuitemradio', {name: 'Arial (Helvetica)'})).toHaveFocus();
 };
 
-describe('TextPopup More menu', () => {
-  it('Escape closes it and returns focus to More', async () => {
+describe('TextPopup Font menu', () => {
+  it('Escape closes it and returns focus to Font', async () => {
     setup();
     await open();
     await userEvent.keyboard('{Escape}');
@@ -25,10 +34,10 @@ describe('TextPopup More menu', () => {
     expect(more()).toHaveFocus();
   });
 
-  it('a pointerdown outside closes it without moving focus; on More or the menu it does not', async () => {
+  it('a pointerdown outside closes it without moving focus; on Font or the menu it does not', async () => {
     setup();
     await open();
-    fireEvent.pointerDown(screen.getByRole('menuitem', {name: 'Duplicate'}));
+    fireEvent.pointerDown(screen.getByRole('menuitemradio', {name: 'Times'}));
     expect(screen.getByRole('menu')).toBeInTheDocument();
     await userEvent.click(more()); // the toggle closes it, not the dismiss then a reopen
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();

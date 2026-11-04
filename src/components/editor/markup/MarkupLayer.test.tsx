@@ -18,6 +18,7 @@ const viewport = {
   width: 600,
   height: H,
   convertToPdfPoint: (x: number, y: number) => [x, H - y],
+  convertToViewportPoint: (x: number, y: number) => [x, H - y],
   convertToViewportRectangle: ([x1, y1, x2, y2]: number[]) => [x1, H - y1!, x2, H - y2!],
 } as unknown as PageViewport;
 const page: PageInstance = {uid: 'u0', fileId: 'f', local: 0, rotation: 0};
@@ -56,10 +57,12 @@ const redact: Markup = {id: 'r1', kind: 'redact', angle: 0, rect: {x: 10, y: 10,
 beforeEach(() => {
   store = createWorkspaceStore('document');
   store.setState({files: [{id: 'f', name: 'A.pdf', pages: 1, size: 1}], pages: [page]});
-  // jsdom has no canvas: 6 px per character at any size is enough to size a text rect.
+  // jsdom has no canvas: 6 px per character at any size (7 in bold) is enough to size a text rect.
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({
     font: '',
-    measureText: (s: string) => ({width: s.length * 6}),
+    measureText(this: {font: string}, s: string) {
+      return {width: s.length * (this.font.startsWith('bold ') ? 7 : 6)};
+    },
   } as unknown as CanvasRenderingContext2D);
 });
 afterEach(() => {
@@ -113,6 +116,15 @@ describe('MarkupLayer placing', () => {
     fireEvent.pointerDown(layer(), {clientX: 10, clientY: 10, pointerId: 1});
     fireEvent.pointerUp(layer(), {clientX: 11, clientY: 11, pointerId: 1});
     expect(markup()[0]?.rect).toMatchObject({w: 4, h: 4});
+  });
+
+  it('while an export runs, a click places and selects nothing', () => {
+    useTool.setState({tool: 'check'});
+    store.getState().beginExport();
+    setup();
+    click(100, 100);
+    expect(markup()).toEqual([]);
+    expect(useTool.getState().selected).toBeNull();
   });
 
   it('with no tool, a click places nothing', () => {
@@ -214,18 +226,46 @@ describe('MarkupLayer popup', () => {
     expect(markup()).toEqual([]);
   });
 
-  it('More has one item, Duplicate, which adds a copy 12 pt down-right', async () => {
+  it('Font sets the font of a text item, re-measured, in one step, and draws it in that font', async () => {
     seed(text());
     useTool.setState({selected: 't1'});
     setup();
-    await userEvent.click(screen.getByRole('button', {name: 'More'}));
-    const items = screen.getAllByRole('menuitem');
-    expect(items.map((i) => i.textContent)).toEqual(['Duplicate']);
-    await userEvent.click(items[0]!);
-    const [, copy] = markup();
-    expect(copy).toMatchObject({kind: 'text', text: 'Hi', rect: {x: 112, y: 588}});
-    expect(copy?.id).not.toBe('t1');
-    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', {name: 'Font'}));
+    await userEvent.click(screen.getByRole('menuitemradio', {name: 'Courier'}));
+    expect(markup()[0]).toMatchObject({
+      font: 'courier',
+      rect: near({x: 100, y: 600, w: 12, h: 14.4}),
+    });
+    expect(document.querySelector('.markup-shape svg')).toHaveStyle({
+      fontFamily: '"Courier New", Courier, monospace',
+    });
+    act(() => store.getState().undo());
+    expect(markup()[0]).not.toHaveProperty('font');
+  });
+
+  it('Font lists only the fonts and Bold; Bold toggles, re-measured, and draws bold', async () => {
+    seed(text());
+    useTool.setState({selected: 't1'});
+    setup();
+    const font = screen.getByRole('button', {name: 'Font'});
+    await userEvent.click(font);
+    expect(screen.queryAllByRole('menuitem')).toEqual([]);
+    expect(screen.getAllByRole('menuitemradio').map((i) => [i.textContent, i.ariaChecked])).toEqual(
+      [
+        ['Arial (Helvetica)', 'true'],
+        ['Times', 'false'],
+        ['Courier', 'false'],
+      ],
+    );
+    await userEvent.click(screen.getByRole('menuitemcheckbox', {name: 'Bold', checked: false}));
+    expect(markup()[0]).toMatchObject({bold: true, rect: near({x: 100, y: 600, w: 14, h: 14.4})});
+    expect(document.querySelector('.markup-shape svg')).toHaveAttribute(
+      'style',
+      expect.stringContaining('font-weight: bold'),
+    );
+    await userEvent.click(font);
+    await userEvent.click(screen.getByRole('menuitemcheckbox', {name: 'Bold', checked: true}));
+    expect(markup()[0]).toMatchObject({bold: false});
   });
 
   it('only the selected text item has a popup', () => {
@@ -233,6 +273,134 @@ describe('MarkupLayer popup', () => {
     useTool.setState({selected: 'c1'});
     setup();
     expect(screen.queryByRole('button', {name: 'Larger text'})).not.toBeInTheDocument();
+  });
+});
+
+describe('MarkupLayer text while typing', () => {
+  const zoomed = {
+    ...viewport,
+    scale: 2,
+    convertToPdfPoint: (x: number, y: number) => [x / 2, H - y / 2],
+    convertToViewportPoint: (x: number, y: number) => [x * 2, (H - y) * 2],
+  } as unknown as PageViewport;
+  const editor = () => document.querySelector<HTMLElement>('.markup-editor')!;
+
+  it('the open input follows the page when it zooms', () => {
+    useTool.setState({tool: 'text'});
+    const {rerender} = setup();
+    click(100, 100);
+    expect(editor()).toHaveStyle({left: '100px', top: '100px'});
+    rerender(<MarkupLayer store={store} view={{...view, viewport: zoomed}} />);
+    expect(editor()).toHaveStyle({left: '200px', top: '200px'});
+    expect(screen.getByRole('textbox', {name: 'Text'})).toHaveStyle({fontSize: '24px'});
+  });
+
+  it('shows A−, A+, Font and Delete; A+ keeps the input open and sizes the new item', async () => {
+    useTool.setState({tool: 'text'});
+    setup();
+    click(100, 100);
+    const input = screen.getByRole('textbox', {name: 'Text'});
+    await userEvent.type(input, 'Hi');
+    await userEvent.click(screen.getByRole('button', {name: 'Larger text'}));
+    expect(markup()).toEqual([]);
+    expect(input).toHaveFocus();
+    expect(input).toHaveStyle({fontSize: '14px'});
+    await userEvent.click(screen.getByRole('button', {name: 'Font'}));
+    await userEvent.click(screen.getByRole('menuitemradio', {name: 'Times'}));
+    expect(input).toHaveFocus();
+    await userEvent.click(screen.getByRole('button', {name: 'Font'}));
+    await userEvent.click(screen.getByRole('menuitemcheckbox', {name: 'Bold'}));
+    expect(input).toHaveFocus();
+    expect(input).toHaveAttribute('style', expect.stringContaining('font-weight: bold'));
+    await userEvent.keyboard('{Enter}');
+    expect(markup()).toEqual([
+      expect.objectContaining({text: 'Hi', size: 14, font: 'times', bold: true}),
+    ]);
+  });
+
+  it('Ctrl+B or Cmd+B toggles bold while typing, keeping the input open', async () => {
+    useTool.setState({tool: 'text'});
+    setup();
+    click(100, 100);
+    const input = screen.getByRole('textbox', {name: 'Text'});
+    await userEvent.type(input, 'Hi{Control>}b{/Control}');
+    expect(input).toHaveValue('Hi');
+    expect(input).toHaveAttribute('style', expect.stringContaining('font-weight: bold'));
+    await userEvent.keyboard('{Meta>}b{/Meta}{Control>}b{/Control}{Enter}');
+    expect(markup()).toEqual([expect.objectContaining({text: 'Hi', bold: true})]);
+  });
+
+  it('Ctrl+B on a selected text item toggles bold in one step; on a mark it does nothing', async () => {
+    seed(text(), check);
+    setup();
+    screen.getByRole('button', {name: 'Text: Hi'}).focus();
+    await userEvent.keyboard('{Control>}b{/Control}');
+    expect(markup()[0]).toMatchObject({bold: true});
+    act(() => store.getState().undo());
+    expect(markup()[0]).not.toHaveProperty('bold');
+    screen.getByRole('button', {name: 'Check mark'}).focus();
+    await userEvent.keyboard('{Control>}b{/Control}');
+    expect(markup()[1]).not.toHaveProperty('bold');
+  });
+
+  it('Delete while retyping removes the item; on a new input it just closes', async () => {
+    seed(text());
+    setup();
+    screen.getByRole('button', {name: 'Text: Hi'}).focus();
+    await userEvent.keyboard('{Enter}');
+    await userEvent.click(screen.getByRole('button', {name: 'Delete text'}));
+    expect(markup()).toEqual([]);
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+
+  it('a click on the page outside the input commits it', async () => {
+    useTool.setState({tool: 'text'});
+    setup();
+    click(100, 100);
+    await userEvent.type(screen.getByRole('textbox', {name: 'Text'}), 'Hi');
+    await userEvent.click(document.body);
+    expect(markup()).toEqual([expect.objectContaining({text: 'Hi'})]);
+  });
+});
+
+describe('MarkupLayer resizing marks and text', () => {
+  const drag = (name: string, from: [number, number], to: [number, number]) => {
+    const handle = screen.getByRole('button', {name});
+    fireEvent.pointerDown(handle, {clientX: from[0], clientY: from[1], pointerId: 1});
+    fireEvent.pointerMove(handle, {clientX: to[0], clientY: to[1], pointerId: 1});
+    fireEvent.pointerUp(handle, {clientX: to[0], clientY: to[1], pointerId: 1});
+  };
+
+  it.each([
+    ['check', 'Check mark'],
+    ['cross', 'Cross mark'],
+    ['dot', 'Dot'],
+  ] as const)('a %s scales from its corner, keeping the aspect', (kind, name) => {
+    seed({...check, kind});
+    useTool.setState({selected: 'c1'});
+    setup();
+    // the box is left 200, top 186, 14 × 14
+    drag(`Resize ${name.toLowerCase()}, bottom-right`, [214, 200], [228, 200]);
+    expect(markup()[0]?.rect).toEqual(near({x: 200, y: 586, w: 28, h: 28}));
+  });
+
+  it('a mark stops at 6 pt', () => {
+    seed(check);
+    useTool.setState({selected: 'c1'});
+    setup();
+    drag('Resize check mark, bottom-right', [214, 200], [201, 187]);
+    expect(markup()[0]?.rect).toEqual(near({x: 200, y: 608, w: 6, h: 6}));
+  });
+
+  it('text scales its size with its box, stopping at 6 pt type', () => {
+    seed(text());
+    useTool.setState({selected: 't1'});
+    setup();
+    // the box is left 100, top 185.6, 12 × 14.4
+    drag('Resize text, bottom-right', [112, 200], [124, 200]);
+    expect(markup()[0]).toMatchObject({size: 24, rect: near({x: 100, y: 585.6, w: 24, h: 28.8})});
+    drag('Resize text, bottom-right', [124, 214.4], [101, 186]);
+    expect(markup()[0]).toMatchObject({size: expect.closeTo(6)});
   });
 });
 
@@ -324,9 +492,9 @@ describe('MarkupLayer signatures', () => {
     expect(markup()).toEqual([]);
   });
 
-  it('a selected signature has 4 corner handles; others and text have none', () => {
-    seed(sig, check);
-    useTool.setState({selected: 'c1'});
+  it('a selected signature has 4 corner handles; a redaction has none', () => {
+    seed(sig, redact);
+    useTool.setState({selected: 'r1'});
     const {rerender} = setup();
     expect(screen.queryAllByRole('button', {name: /^Resize signature/})).toHaveLength(0);
     act(() => useTool.setState({selected: 's1'}));

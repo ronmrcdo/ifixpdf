@@ -92,7 +92,6 @@
 }
 .markup-shape text {
   stroke: none;
-  font-family: Helvetica, Arial, sans-serif;
   white-space: pre;
 }
 .markup-shape path {
@@ -160,6 +159,7 @@
 }
 .markup-menu > button {
   width: 100%;
+  white-space: nowrap;
   height: 28px;
   min-height: 0;
   justify-content: flex-start;
@@ -360,4 +360,20 @@ textarea.form-field {
   position: relative;
   display: flex;
   align-items: center;
+}
+/* While typing, the popup sits above the input's left edge. */
+.markup-editor .markup-popup {
+  left: 0;
+  top: 0;
+  transform: translateY(calc(-100% - 8px));
+}
+.markup-menu > hr {
+  margin: 4px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.markup-menu > [aria-checked='true']::after {
+  content: '✓';
+  margin-left: auto;
+  padding-left: 12px;
 }
