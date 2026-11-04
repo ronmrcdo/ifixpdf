@@ -6,7 +6,7 @@ export interface SavedSignature {
   createdAt: number;
 }
 
-const PNG_PREFIX = 'data:image/png;base64,';
+export const PNG_PREFIX = 'data:image/png;base64,';
 const open = () =>
   openDb('ifixpdf-signatures', 1, (db) => ensureStores(db, {signatures: {keyPath: 'id'}}));
 
