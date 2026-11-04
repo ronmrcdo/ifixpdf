@@ -142,6 +142,9 @@ describe('SignMenu', () => {
     expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     const pad = screen.getByLabelText('Draw your signature');
     await userEvent.pointer({keys: '[MouseLeft]', target: pad});
+    await userEvent.click(
+      screen.getByRole('checkbox', {name: 'Remember this signature on this device'}),
+    );
     await userEvent.click(screen.getByRole('button', {name: 'Use signature'}));
     expect(save).toHaveBeenCalledWith(png);
     expect(useTool.getState()).toMatchObject({signature: png, tool: 'sign'});

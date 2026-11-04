@@ -198,9 +198,9 @@ test.describe('native', () => {
     await page.mouse.move(pad.x + 120, pad.y + 40, {steps: 5});
     await page.mouse.move(pad.x + 220, pad.y + 110, {steps: 5});
     await page.mouse.up();
-    await expect(
-      page.getByRole('checkbox', {name: 'Remember this signature on this device'}),
-    ).toBeChecked();
+    const remember = page.getByRole('checkbox', {name: 'Remember this signature on this device'});
+    await expect(remember).not.toBeChecked();
+    await remember.check();
     await use.click();
     await expect(sign).toHaveAttribute('aria-pressed', 'true');
 

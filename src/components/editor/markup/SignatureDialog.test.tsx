@@ -55,24 +55,24 @@ describe('SignatureDialog draw', () => {
     expect(use()).toBeDisabled();
   });
 
-  it('Use passes a PNG data URL and remember, checked by default', async () => {
+  it('Use passes a PNG data URL and remember false: unchecked by default', async () => {
     setup();
     stroke();
     expect(
       screen.getByRole('checkbox', {name: 'Remember this signature on this device'}),
-    ).toBeChecked();
+    ).not.toBeChecked();
     await userEvent.click(use());
-    expect(onUse).toHaveBeenCalledWith(expect.stringMatching(/^data:image\/png/), true);
+    expect(onUse).toHaveBeenCalledWith(expect.stringMatching(/^data:image\/png/), false);
   });
 
-  it('unchecking Remember passes false', async () => {
+  it('checking Remember passes true', async () => {
     setup();
     stroke();
     await userEvent.click(
       screen.getByRole('checkbox', {name: 'Remember this signature on this device'}),
     );
     await userEvent.click(use());
-    expect(onUse).toHaveBeenCalledWith(PNG, false);
+    expect(onUse).toHaveBeenCalledWith(PNG, true);
   });
 
   it('crops to the ink plus 4 px', async () => {
@@ -140,6 +140,6 @@ describe('SignatureDialog import', () => {
     expect(close).toHaveBeenCalled();
     expect(screen.getByRole('img', {name: 'Imported signature'})).toHaveAttribute('src', PNG);
     await userEvent.click(use());
-    expect(onUse).toHaveBeenCalledWith(PNG, true);
+    expect(onUse).toHaveBeenCalledWith(PNG, false);
   });
 });
