@@ -33,7 +33,7 @@ vi.mock('./markup-draw', async (actual) => {
 
 const PNG =
   'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
-const hello = (angle: Markup['angle'] = 0): Markup => ({
+const hello = (angle: Markup['angle'] = 0): Extract<Markup, {kind: 'text'}> => ({
   id: 't1',
   kind: 'text',
   text: 'Hello',
@@ -198,6 +198,57 @@ describe('export-core', () => {
     });
     const pages = await textItems(out);
     expect(pages.map((p) => p.map((i) => i.str))).toEqual([['Hello'], []]);
+  });
+
+  // Guards pdf-lib's autoNormalizeCTM: it wraps the copied content in q/Q before markup is appended.
+  it('draws markup in default user space when the page content leaves a transform set', async () => {
+    const pdf = async (scaled: boolean) => {
+      const doc = await PDFDocument.create();
+      const page = doc.addPage([300, 300]);
+      // Unbalanced: no q/Q around it, as some generators write.
+      if (scaled)
+        page.pushOperators(
+          PDFOperator.of(
+            PDFOperatorNames.ConcatTransformationMatrix,
+            [2, 0, 0, 2, 0, 0].map((n) => doc.context.obj(n)),
+          ),
+        );
+      return doc.save();
+    };
+    const at = async (scaled: boolean) => {
+      const out = await buildPdf({
+        title: 't',
+        sources: {a: await pdf(scaled)},
+        pages: [{fileId: 'a', local: 0, rotation: 0, markup: [hello()]}],
+      });
+      return (await textItems(out))[0]!.map((i) => [i.str, i.m[4], i.m[5]]);
+    };
+    expect(await at(true)).toEqual(await at(false));
+  });
+
+  it('draws text in its font and weight; Helvetica when it has none', async () => {
+    const out = await buildPdf({
+      title: 't',
+      sources: {a: await makePdf(1)},
+      pages: [
+        {
+          fileId: 'a',
+          local: 0,
+          rotation: 0,
+          markup: [
+            hello(),
+            {...hello(), id: 't2', font: 'courier'},
+            {...hello(), id: 't3', font: 'times', bold: true},
+          ],
+        },
+      ],
+    });
+    const doc = await PDFDocument.load(out);
+    const fonts = doc.getPage(0).node.Resources()?.lookup(PDFName.of('Font'), PDFDict);
+    const names = fonts
+      ?.values()
+      .map((f) => doc.context.lookup(f, PDFDict).get(PDFName.of('BaseFont'))?.toString());
+    expect(names?.sort()).toEqual(['/Courier', '/Helvetica', '/Times-Bold']);
   });
 
   it('draws text upright at the final rotation (intrinsic 90 + user 90, placed at 180)', async () => {

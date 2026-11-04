@@ -14,13 +14,22 @@ interface Base {
   angle: Rotation;
 }
 export type MarkKind = 'cross' | 'check' | 'dot';
+export type TextFont = 'helvetica' | 'times' | 'courier';
 export type Markup =
-  | (Base & {kind: 'text'; text: string; size: number})
+  | (Base & {kind: 'text'; text: string; size: number; font?: TextFont; bold?: boolean}) // no font: Helvetica
   | (Base & {kind: MarkKind})
   | (Base & {kind: 'signature'; image: string}) // PNG data URL
   | (Base & {kind: 'redact'});
 export type FieldValue = string | boolean;
 export type Fills = Readonly<Record<FileId, Readonly<Record<string, FieldValue>>>>;
+
+// The PDF standard fonts text can use, with the CSS that shows them on screen.
+// Arial can't be embedded (license); Helvetica has its metrics and viewers show it as Arial.
+export const TEXT_FONTS: Readonly<Record<TextFont, {label: string; css: string}>> = {
+  helvetica: {label: 'Arial (Helvetica)', css: 'Helvetica, Arial, sans-serif'},
+  times: {label: 'Times', css: '"Times New Roman", Times, serif'},
+  courier: {label: 'Courier', css: '"Courier New", Courier, monospace'},
+};
 
 export const TEXT_SIZES: readonly number[] = [8, 10, 12, 14, 18, 24, 32];
 
@@ -89,12 +98,6 @@ export function rectAt(
   const x1 = x + right[0] * w + down[0] * h;
   const y1 = y + right[1] * w + down[1] * h;
   return {x: Math.min(x, x1), y: Math.min(y, y1), w: Math.abs(x1 - x), h: Math.abs(y1 - y)};
-}
-
-/** Moves a rect `by` points right and down on the display at `angle`. */
-export function shift(r: Rect, angle: Rotation, by: number): Rect {
-  const {right, down} = axes(angle);
-  return {...r, x: r.x + (right[0] + down[0]) * by, y: r.y + (right[1] + down[1]) * by};
 }
 
 // Mark paths in a w × h box, y down from the display top-left (SVG and pdf-lib drawSvgPath agree).

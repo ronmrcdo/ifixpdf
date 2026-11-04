@@ -6,7 +6,6 @@ import {
   type Markup,
   pngSize,
   rectAt,
-  shift,
   stepSize,
   topLeft,
   unsupportedChars,
@@ -81,14 +80,6 @@ describe('rectAt and topLeft', () => {
     expect(rectAt([10, 100], 270, 50, 20)).toEqual({x: -10, y: 50, w: 20, h: 50});
     for (const angle of [0, 90, 180, 270] as const)
       expect(topLeft(rectAt([10, 100], angle, 50, 20), angle)).toEqual([10, 100]);
-  });
-
-  it('shift moves along the display right and down of the angle', () => {
-    const r = {x: 0, y: 0, w: 1, h: 1};
-    expect(shift(r, 0, 12)).toEqual({x: 12, y: -12, w: 1, h: 1});
-    expect(shift(r, 90, 12)).toEqual({x: 12, y: 12, w: 1, h: 1});
-    expect(shift(r, 180, 12)).toEqual({x: -12, y: 12, w: 1, h: 1});
-    expect(shift(r, 270, 12)).toEqual({x: -12, y: -12, w: 1, h: 1});
   });
 });
 
